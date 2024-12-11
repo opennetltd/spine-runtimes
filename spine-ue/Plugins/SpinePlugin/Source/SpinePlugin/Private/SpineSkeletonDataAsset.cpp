@@ -83,7 +83,7 @@ void USpineSkeletonDataAsset::GetAssetRegistryTags(
 
 void USpineSkeletonDataAsset::Serialize(FArchive &Ar) {
 	Super::Serialize(Ar);
-	if (Ar.IsLoading() && Ar.UE4Ver() < VER_UE4_ASSET_IMPORT_DATA_AS_JSON &&
+	if (Ar.IsLoading() && Ar.UEVer() < VER_UE4_ASSET_IMPORT_DATA_AS_JSON &&
 		!importData)
 		importData = NewObject<UAssetImportData>(this, TEXT("AssetImportData"));
 	LoadInfo();

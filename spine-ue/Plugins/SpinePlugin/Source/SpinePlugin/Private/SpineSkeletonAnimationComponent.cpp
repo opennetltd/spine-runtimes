@@ -83,9 +83,6 @@ void USpineSkeletonAnimationComponent::BeginPlay() {
 }
 
 void UTrackEntry::BeginDestroy() {
-	if (entry) {
-		entry->setRendererObject(nullptr);
-	}
 	Super::BeginDestroy();
 }
 
