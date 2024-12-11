@@ -1149,18 +1149,19 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 
 		this.intersectionObserver = new IntersectionObserver((widgets) => {
 			widgets.forEach(({ isIntersecting, target, intersectionRatio }) => {
-				const widget = this.skeletonList.find(w => w.getHTMLElementReference() == target);
-				if (!widget) return;
+				this.skeletonList.forEach(widget => {
+					if (widget.getHTMLElementReference() != target) return;
 
-				// old browsers do not have isIntersecting
-				if (isIntersecting === undefined) {
-					isIntersecting = intersectionRatio > 0;
-				}
+					// old browsers do not have isIntersecting
+					if (isIntersecting === undefined) {
+						isIntersecting = intersectionRatio > 0;
+					}
 
-				widget.onScreen = isIntersecting;
-				if (isIntersecting) {
-					widget.onScreenFunction(widget);
-				}
+					widget.onScreen = isIntersecting;
+					if (isIntersecting) {
+						widget.onScreenFunction(widget);
+					}
+				});
 			})
 		}, { rootMargin: "30px 20px 30px 20px" });
 
