@@ -1311,47 +1311,21 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 			this.renderer.context.gl.clear(this.renderer.context.gl.COLOR_BUFFER_BIT);
 		}
 
-		const clipToBoundStart = (divBounds: Rectangle) => {
-			// break current batch and start a new one
+		const startScissor = (divBounds: Rectangle) => {
 			this.renderer.end();
-
-			// set the new viewport to the div bound
-			const viewportWidth = this.screenToWorldLength(divBounds.width);
-			const viewporthHeight = this.screenToWorldLength(divBounds.height);
-			this.renderer.context.gl.viewport(
+			this.renderer.begin();
+			this.renderer.context.gl.enable(this.renderer.context.gl.SCISSOR_TEST);
+			this.renderer.context.gl.scissor(
 				this.screenToWorldLength(divBounds.x),
 				this.canvas.height - this.screenToWorldLength(divBounds.y + divBounds.height),
-				viewportWidth,
-				viewporthHeight
+				this.screenToWorldLength(divBounds.width),
+				this.screenToWorldLength(divBounds.height)
 			);
-			this.renderer.camera.setViewport(viewportWidth, viewporthHeight);
-			this.renderer.camera.update();
-
-			// start the new batch that will be filled with only this skeleton
-			this.renderer.begin();
-
-			// Debug viewport
-			// if (true) {
-			//     this.renderer.circle(true, -viewportWidth / 2, -viewporthHeight / 2, 20, red);
-			//     this.renderer.circle(true, viewportWidth / 2, -viewporthHeight / 2, 20, red);
-			//     this.renderer.circle(true, -viewportWidth / 2, viewporthHeight / 2, 20, red);
-			//     this.renderer.circle(true, viewportWidth / 2, viewporthHeight / 2, 20, red);
-			//     this.renderer.circle(true, 0, 0, 10, red);
-
-			//     this.renderer.rect(true, 0, 0, -viewportWidth, -viewporthHeight, transparentWhite);
-			//     this.renderer.rect(true, 0, 0, viewportWidth, viewporthHeight, transparentWhite);
-			// }
 		}
 
-		const clipToBoundEnd = () => {
-			// end clip batch
+		const endScissor = () => {
 			this.renderer.end();
-
-			this.renderer.context.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
-			this.renderer.camera.setViewport(this.canvas.width, this.canvas.height);
-			this.renderer.camera.update();
-
-			// start new normal batch
+			this.renderer.context.gl.disable(this.renderer.context.gl.SCISSOR_TEST);
 			this.renderer.begin();
 		}
 
@@ -1380,33 +1354,27 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 				const { padLeft, padRight, padTop, padBottom } = widget
 				const paddingShiftHorizontal = (padLeft - padRight) / 2;
 				const paddingShiftVertical = (padTop - padBottom) / 2;
-				let divOriginX = 0;
-				let divOriginY = 0;
-				if (clip) {
-					// in clip mode, the world origin is the div center (divBounds center)
-					clipToBoundStart(divBounds);
-					divOriginX = this.screenToWorldLength(divBounds.width * (xAxis + paddingShiftHorizontal));
-					divOriginY = this.screenToWorldLength(divBounds.height * (yAxis - paddingShiftVertical));
-				} else {
-					// get the desired point into the the div (center by default) in world coordinate
-					const divX = divBounds.x + divBounds.width * ((xAxis + .5) + paddingShiftHorizontal);
-					const divY = divBounds.y + divBounds.height * ((-yAxis + .5) + paddingShiftVertical) - 1;
-					this.screenToWorld(tempVector, divX, divY);
-					divOriginX = tempVector.x;
-					divOriginY = tempVector.y;
-				}
+
+				// get the desired point into the the div (center by default) in world coordinate
+				const divX = divBounds.x + divBounds.width * ((xAxis + .5) + paddingShiftHorizontal);
+				const divY = divBounds.y + divBounds.height * ((-yAxis + .5) + paddingShiftVertical) - 1;
+				this.screenToWorld(tempVector, divX, divY);
+				let divOriginX = tempVector.x;
+				let divOriginY = tempVector.y;
 
 				const paddingShrinkWidth = 1 - (padLeft + padRight);
 				const paddingShrinkHeight = 1 - (padTop + padBottom);
 				const divWidthWorld = this.screenToWorldLength(divBounds.width * paddingShrinkWidth);
 				const divHeightWorld = this.screenToWorldLength(divBounds.height * paddingShrinkHeight);
 
+				if (clip) startScissor(divBounds);
+
 				if (loading) {
 					if (loadingSpinner) {
 						if (!widget.loadingScreen) widget.loadingScreen = new LoadingScreen(renderer);
 						widget.loadingScreen!.drawInCoordinates(divOriginX, divOriginY);
 					}
-					if (clip) clipToBoundEnd();
+					if (clip) endScissor();
 					return;
 				}
 
@@ -1499,18 +1467,13 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 						widget.dragBoundsRectangle.width = this.worldToScreenLength(aw * skeleton.scaleX);
 						widget.dragBoundsRectangle.height = this.worldToScreenLength(ah * skeleton.scaleY);
 
-						if (clip) {
-							widget.dragBoundsRectangle.x += divBounds.x;
-							widget.dragBoundsRectangle.y += divBounds.y;
+						if (debug) {
+							widget.debugDragDiv.style.left = `${widget.dragBoundsRectangle.x - this.overflowLeftSize}px`;
+							widget.debugDragDiv.style.top = `${widget.dragBoundsRectangle.y - this.overflowTopSize}px`;
+							widget.debugDragDiv.style.width = `${widget.dragBoundsRectangle.width}px`;
+							widget.debugDragDiv.style.height = `${widget.dragBoundsRectangle.height}px`;
+							if (!widget.debugDragDiv.isConnected) document.body.appendChild(widget.debugDragDiv);
 						}
-
-						if (debug && !widget.debugDragDiv.isConnected) {
-							document.body.appendChild(widget.debugDragDiv);
-						}
-						widget.debugDragDiv.style.left = `${widget.dragBoundsRectangle.x - this.overflowLeftSize}px`;
-						widget.debugDragDiv.style.top = `${widget.dragBoundsRectangle.y - this.overflowTopSize}px`;
-						widget.debugDragDiv.style.width = `${widget.dragBoundsRectangle.width}px`;
-						widget.debugDragDiv.style.height = `${widget.dragBoundsRectangle.height}px`;
 
 						if (!debug && widget.debugDragDiv.isConnected) widget.debugDragDiv.remove();
 					} else {
@@ -1549,7 +1512,7 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 						if (elementRef === widget) widget.classList.remove("debug-background-color");
 					}
 
-					if (clip) clipToBoundEnd();
+					if (clip) endScissor();
 				}
 			});
 
