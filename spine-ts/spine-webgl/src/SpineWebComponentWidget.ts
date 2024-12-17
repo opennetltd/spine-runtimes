@@ -50,6 +50,7 @@ import {
 	TimeKeeper,
 	Vector2,
 	Vector3,
+	Utils,
 } from "./index.js";
 
 interface Point {
@@ -161,8 +162,6 @@ interface WidgetInternalProperties {
 	dragging: boolean
 	dragX: number
 	dragY: number
-	dragBoundsRectangle: Rectangle
-	debugDragDiv: HTMLDivElement
 }
 
 export class SpineWebComponentWidget extends HTMLElement implements Disposable, WidgetAttributes, WidgetOverridableMethods, WidgetInternalProperties, Partial<WidgetPublicProperties> {
@@ -602,19 +601,6 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 	public dragging = false;
 
 	/**
-	 * The rectangle in the screen space used to determine if a click is within the skeleton bounds,
-	 * so if to start the drag action.
-	 * Do not rely on this properties. It might be made private in the future.
-	 */
-	public dragBoundsRectangle: Rectangle = { x: 0, y: 0, width: 0, height: 0 };
-
-	/**
-	 * An HTMLDivElement used to show the drag surface in debug mode
-	 * Do not rely on this properties. It might be made private in the future.
-	 */
-	public debugDragDiv: HTMLDivElement;
-
-	/**
 	 * If true, indicate {@link dispose} has been called and the widget cannot be used anymore
 	 */
 	public disposed = false;
@@ -679,11 +665,6 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 		super();
 		this.root = this.attachShadow({ mode: "closed" });
 
-		this.debugDragDiv = document.createElement("div");
-		this.debugDragDiv.style.position = "absolute";
-		this.debugDragDiv.style.backgroundColor = "rgba(255, 0, 0, .3)";
-		this.debugDragDiv.style.setProperty("pointer-events", "none");
-
 		// these two are terrible code smells
 		this.loadingPromise = new Promise<this>((resolve) => {
 			this.resolveLoadingPromise = resolve;
@@ -731,7 +712,6 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 		if (index !== -1) {
 			this.overlay!.skeletonList.splice(index, 1);
 		}
-		this.debugDragDiv?.remove();
 	}
 
 	/**
@@ -910,10 +890,6 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
                 width:  ${width};
                 height: ${height};
             }
-
-			:host(.debug-background-color) {
-				background-color: rgba(255, 0, 0, 0.3);
-			}
         </style>
         `;
 	}
@@ -965,6 +941,15 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 			width: maxX - minX,
 			height: maxY - minY,
 		}
+	}
+
+	private pointTemp = new Vector2();
+	public cursorInsideBounds (): boolean {
+		this.pointTemp.set(
+			this.cursorWorldX / (this.skeleton?.scaleX || 1),
+			this.cursorWorldY / (this.skeleton?.scaleY || 1),
+		);
+		return inside(this.pointTemp, this.bounds);
 	}
 
 }
@@ -1458,34 +1443,21 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 						}
 					});
 
-					// store the draggable surface to make drag logic easier
-					if (isDraggable) {
-						let { x: ax, y: ay, width: aw, height: ah } = bounds;
-						this.worldToScreen(tempVector, ax * skeleton.scaleX + worldOffsetX, ay * skeleton.scaleY + worldOffsetY);
-						widget.dragBoundsRectangle.x = tempVector.x + window.scrollX;
-						widget.dragBoundsRectangle.y = tempVector.y - this.worldToScreenLength(ah * skeleton.scaleY) + window.scrollY;
-						widget.dragBoundsRectangle.width = this.worldToScreenLength(aw * skeleton.scaleX);
-						widget.dragBoundsRectangle.height = this.worldToScreenLength(ah * skeleton.scaleY);
-
-						if (debug) {
-							widget.debugDragDiv.style.left = `${widget.dragBoundsRectangle.x - this.overflowLeftSize}px`;
-							widget.debugDragDiv.style.top = `${widget.dragBoundsRectangle.y - this.overflowTopSize}px`;
-							widget.debugDragDiv.style.width = `${widget.dragBoundsRectangle.width}px`;
-							widget.debugDragDiv.style.height = `${widget.dragBoundsRectangle.height}px`;
-							if (!widget.debugDragDiv.isConnected) document.body.appendChild(widget.debugDragDiv);
-						}
-
-						if (!debug && widget.debugDragDiv.isConnected) widget.debugDragDiv.remove();
-					} else {
-						if (widget.debugDragDiv.isConnected) widget.debugDragDiv.remove();
-					}
-
 					// drawing debug stuff
 					if (debug) {
 						// if (true) {
 						let { x: ax, y: ay, width: aw, height: ah } = bounds;
 
 						// show bounds and its center
+						if (isDraggable) {
+							renderer.rect(true,
+								ax * skeleton.scaleX + worldOffsetX,
+								ay * skeleton.scaleY + worldOffsetY,
+								aw * skeleton.scaleX,
+								ah * skeleton.scaleY,
+								transparentRed);
+						}
+
 						renderer.rect(false,
 							ax * skeleton.scaleX + worldOffsetX,
 							ay * skeleton.scaleY + worldOffsetY,
@@ -1507,9 +1479,6 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 
 						// show line from origin to bounds center
 						renderer.line(originX, originY, bbCenterX, bbCenterY, green);
-						if (elementRef === widget) widget.classList.add("debug-background-color");
-					} else {
-						if (elementRef === widget) widget.classList.remove("debug-background-color");
 					}
 
 					if (clip) endScissor();
@@ -1539,6 +1508,7 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 		const green = new Color(0, 1, 0, 1);
 		const blue = new Color(0, 0, 1, 1);
 		const transparentWhite = new Color(1, 1, 1, .3);
+		const transparentRed = new Color(1, 0, 0, .3);
 	}
 
 	public cursorCanvasX = 1;
@@ -1589,10 +1559,12 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 				const input = getInput(ev);
 				this.skeletonList.forEach(widget => {
 					if (!widget.isDraggable || (!widget.onScreen && widget.dragX === 0 && widget.dragY === 0)) return;
-					if (inside(input, widget.dragBoundsRectangle)) {
+
+					if (widget.cursorInsideBounds()) {
 						widget.dragging = true;
 						ev?.preventDefault();
 					}
+
 				});
 				prevX = input.x;
 				prevY = input.y;
