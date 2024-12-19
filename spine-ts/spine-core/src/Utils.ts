@@ -174,8 +174,8 @@ export class Color {
 		return Number("0x" + hex(this.r) + hex(this.g) + hex(this.b));
 	}
 
-	static fromString (hex: string): Color {
-		return new Color().setFromString(hex);
+	static fromString (hex: string, color = new Color()): Color {
+		return color.setFromString(hex);
 	}
 }
 

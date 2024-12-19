@@ -2530,6 +2530,107 @@ const updateControl = (widget, controlBone, mouse, tempVector) => {
     /////////////////////
     -->
 
+        <!--
+    /////////////////////
+    // start section //
+    /////////////////////
+    -->
+
+    <div class="section vertical-split" id="above-popup">
+
+        <div class="split-top split">
+            <div class="split-left">
+                You can attach callback to your widget to react at pointer interactions. Just make it <code>isinteractive</code>.
+                <br>
+                <br>
+                You can attach a callback for interactions with the widget <code>bounds</code> or with <code>slots</code>.
+                The available events are <code>down</code>, <code>up</code>, <code>enter</code>, <code>leave</code>, <code>move</code>, and <code>drag</code>.
+                <br>
+                <br>
+                In the following example, if the cursor enters the bounds, the jump animation is set, while the wave animation is set when the cursor leaves.
+                <br>
+                If you click on the <code>head-base</code> slot (the face), you can change the normal and dark tint with the colors selected in the two following selectors.
+
+                <ul>
+                    <li>Tint normal: <input type="color" id="color-picker" value="#ffffff" /></li>
+                    <li>Tint black: <input type="color" id="dark-picker" value="#000000" /></li>
+                </ul>
+
+            </div>
+            <div class="split-right">
+                <spine-widget
+                    identifier="interactive"
+                    atlas="assets/chibi-stickers-pma.atlas",
+                    skeleton="assets/chibi-stickers.json",
+                    skin="mario"
+                    animation="emotes/wave"
+                    pad-top="0.05"
+                    pad-bottom="0.05"
+                    isinteractive
+                ></spine-widget>
+
+                <script>
+                    (async () => {
+                        const colorPicker = document.getElementById("color-picker");
+                        const darkPicker = document.getElementById("dark-picker");
+
+                        const widget = await spine.getSpineWidget("interactive").loadingPromise;
+
+                        widget.cursorBoundsEventCallback = (event) => {
+                            if (event === "enter") widget.state.setAnimation(0, "emotes/hooray", true).mixDuration = .15;
+                            if (event === "leave") widget.state.setAnimation(0, "emotes/wave", true).mixDuration = .25;
+                        }
+
+                        const tempColor = new spine.Color();
+                        const slot = widget.skeleton.findSlot("head-base");
+                        slot.darkColor = new spine.Color(0, 0, 0, 1);
+                        widget.addCursorSlotEventCallbacks(slot, (slot, event) => {
+                            if (event === "down") {
+                                slot.darkColor.setFromColor(spine.Color.fromString(darkPicker.value, tempColor));
+                                slot.color.setFromColor(spine.Color.fromString(colorPicker.value, tempColor));
+                            }
+                        });
+                    })();
+                </script>
+            </div>
+        </div>
+
+        <div class="split-bottom">
+            <pre><code id="code-display">
+                <script>escapeHTMLandInject(`
+(async () => {
+    const colorPicker = document.getElementById("color-picker");
+    const darkPicker = document.getElementById("dark-picker");
+
+    const widget = await spine.getSpineWidget("interactive").loadingPromise;
+
+    widget.cursorBoundsEventCallback = (event) => {
+        if (event === "enter") widget.state.setAnimation(0, "emotes/hooray", true).mixDuration = .15;
+        if (event === "leave") widget.state.setAnimation(0, "emotes/wave", true).mixDuration = .25;
+    }
+
+    const tempColor = new spine.Color();
+    const slot = widget.skeleton.findSlot("head-base");
+    slot.darkColor = new spine.Color(0, 0, 0, 1);
+    widget.addCursorSlotEventCallbacks(slot, (slot, event) => {
+        if (event === "down") {
+            slot.darkColor.setFromColor(spine.Color.fromString(darkPicker.value, tempColor));
+            slot.color.setFromColor(spine.Color.fromString(colorPicker.value, tempColor));
+        }
+    });
+})();`
+);</script>
+            </code></pre>
+        </div>
+
+    </div>
+
+    <!--
+    /////////////////////
+    // end section //
+    /////////////////////
+    -->
+
 
 <script>
     spine.SpineWebComponentWidget.SHOW_FPS = true;

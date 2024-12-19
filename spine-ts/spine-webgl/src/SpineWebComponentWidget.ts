@@ -51,6 +51,10 @@ import {
 	Vector2,
 	Vector3,
 	Utils,
+	NumberArrayLike,
+	Slot,
+	RegionAttachment,
+	MeshAttachment,
 } from "./index.js";
 
 interface Point {
@@ -98,6 +102,9 @@ function isFitType (value: string | null): value is FitType {
 
 export type AttributeTypes = "string" | "number" | "boolean" | "string-number" | "fitType" | "modeType" | "offScreenUpdateBehaviourType";
 
+export type CursorEventTypes = "down" | "up" | "enter" | "leave" | "move" | "drag";
+export type CursorEventTypesInput = Exclude<CursorEventTypes, "enter" | "leave">;
+
 // The properties that map to widget attributes
 interface WidgetAttributes {
 	atlasPath?: string
@@ -124,6 +131,7 @@ interface WidgetAttributes {
 	width: number
 	height: number
 	isDraggable: boolean
+	isInteractive: boolean
 	debug: boolean
 	identifier: string
 	manualStart: boolean
@@ -412,13 +420,13 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 	 * The x of the root relative to the canvas/webgl context center in spine world coordinates.
 	 * This is an experimental property and might be removed in the future.
 	 */
-	public worldX = 0;
+	public worldX = Infinity;
 
 	/**
 	 * The y of the root relative to the canvas/webgl context center in spine world coordinates.
 	 * This is an experimental property and might be removed in the future.
 	 */
-	public worldY = 0;
+	public worldY = Infinity;
 
 	/**
 	 * The x coordinate of the cursor relative to the cursor relative to the skeleton root in spine world coordinates.
@@ -431,6 +439,31 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 	 * This is an experimental property and might be removed in the future.
 	 */
 	public cursorWorldY = 1;
+
+	/**
+	 * If true, the widget is interactive
+	 * Connected to `isinteractive` attribute.
+	 * This is an experimental property and might be removed in the future.
+	 */
+	public isInteractive = false;
+
+	/**
+	 * If the widget is interactive, this method is invoked with a {@link CursorEventTypes} when the cursor
+	 * performs actions within the widget bounds (for example, it enter or leaves the bounds).
+	 * By default, the function does nothing.
+	 * This is an experimental property and might be removed in the future.
+	 */
+	public cursorBoundsEventCallback = (event: CursorEventTypes) => {}
+
+	/**
+	 * This methods allows to associate to a Slot a callback. For these slots, ff the widget is interactive,
+	 * when the cursor performs actions within the slot's attachment the associated callback is invoked with
+	 * a {@link CursorEventTypes} (for example, it enter or leaves the slot's attachment bounds).
+	 * This is an experimental property and might be removed in the future.
+	 */
+	public addCursorSlotEventCallbacks(slot: Slot, slotFunction: (slot: Slot, event: CursorEventTypes ) => void) {
+		this.cursorSlotEventCallbacks.set(slot, { slotFunction, inside: false });
+	}
 
 	/**
 	 * If true, some convenience elements are drawn to show the skeleton world origin (green),
@@ -632,6 +665,7 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 		width: { propertyName: "width", type: "number", defaultValue: -1 },
 		height: { propertyName: "height", type: "number", defaultValue: -1 },
 		isdraggable: { propertyName: "isDraggable", type: "boolean" },
+		isinteractive: { propertyName: "isInteractive", type: "boolean" },
 		"x-axis": { propertyName: "xAxis", type: "number" },
 		"y-axis": { propertyName: "yAxis", type: "number" },
 		"offset-x": { propertyName: "offsetX", type: "number" },
@@ -895,6 +929,146 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 	}
 
 	/*
+	* Interaction utilities
+	*/
+
+	/**
+	 * @internal
+	 */
+	public cursorInsideBounds = false;
+
+	private pointTemp = new Vector2();
+	private verticesTemp = Utils.newFloatArray(2 * 1024);
+
+	/**
+	 * @internal
+	 */
+	public cursorSlotEventCallbacks: Map<Slot, {
+		slotFunction: (slot: Slot, event: CursorEventTypes ) => void,
+		inside: boolean,
+	}> = new Map();
+
+	/**
+	 * @internal
+	 */
+	public cursorEventUpdate (type: CursorEventTypesInput) {
+		if (!this.isInteractive) return;
+
+		this.checkBoundsInteraction(type);
+		this.checkSlotInteraction(type);
+	}
+
+	private checkBoundsInteraction (type: CursorEventTypesInput) {
+		if ((type === "down"|| type === "up") && this.cursorInsideBounds) {
+			this.cursorBoundsEventCallback(type);
+			return;
+		}
+
+		if (this.checkCursorInsideBounds()) {
+
+			if (!this.cursorInsideBounds) {
+				this.cursorBoundsEventCallback("enter");
+			}
+			this.cursorInsideBounds = true;
+
+			this.cursorBoundsEventCallback(type);
+
+		} else {
+
+			if (this.cursorInsideBounds) {
+				this.cursorBoundsEventCallback("leave");
+			}
+			this.cursorInsideBounds = false;
+
+		}
+	}
+
+	private checkCursorInsideBounds (): boolean {
+		if (!this.onScreen || !this.skeleton) return false;
+
+		this.pointTemp.set(
+			this.cursorWorldX / this.skeleton.scaleX,
+			this.cursorWorldY / this.skeleton.scaleY,
+		);
+
+		return inside(this.pointTemp, this.bounds);
+	}
+
+	private checkSlotInteraction(type: CursorEventTypesInput) {
+		for (let [slot, interactionState] of this.cursorSlotEventCallbacks) {
+			if (!slot.bone.active) continue;
+			let attachment = slot.getAttachment();
+
+			if (!(attachment instanceof RegionAttachment || attachment instanceof MeshAttachment)) continue;
+
+			const { slotFunction, inside } = interactionState
+
+			if (type === "down" || type === "up") {
+				if (inside) {
+					slotFunction(slot, type);
+				}
+				return;
+			}
+
+			let vertices = this.verticesTemp;
+			let hullLength = 8;
+
+			// we could probably cache the vertices from rendering if interaction with this slot is enabled
+			if (attachment instanceof RegionAttachment) {
+				let regionAttachment = <RegionAttachment>attachment;
+				regionAttachment.computeWorldVertices(slot, vertices, 0, 2);
+			} else if (attachment instanceof MeshAttachment) {
+				let mesh = <MeshAttachment>attachment;
+				mesh.computeWorldVertices(slot, 0, mesh.worldVerticesLength, vertices, 0, 2);
+				hullLength = mesh.hullLength;
+			}
+
+			// here we have only "move" and "drag" events
+			if (this.isPointInPolygon(vertices, hullLength, [this.cursorWorldX, this.cursorWorldY])) {
+
+				if (!inside) {
+					interactionState.inside = true;
+					slotFunction(slot, "enter");
+				}
+
+				slotFunction(slot, type);
+
+			} else {
+
+				if (inside) {
+					interactionState.inside = false;
+					slotFunction(slot, "leave");
+				}
+
+			}
+		}
+	}
+
+	private isPointInPolygon(vertices: NumberArrayLike, hullLength: number, point: number[]) {
+		const [px, py] = point;
+
+		if (hullLength < 6) {
+			throw new Error("A polygon must have at least 3 vertices (6 numbers in the array). ");
+		}
+
+		let isInside = false;
+
+		for (let i = 0, j = hullLength - 2; i < hullLength; i += 2) {
+			const xi = vertices[i], yi = vertices[i + 1];
+			const xj = vertices[j], yj = vertices[j + 1];
+
+			const intersects = ((yi > py) !== (yj > py)) &&
+				(px < ((xj - xi) * (py - yi)) / (yj - yi) + xi);
+
+			if (intersects) isInside = !isInside;
+
+			j = i;
+		}
+
+		return isInside;
+	}
+
+	/*
 	* Other utilities
 	*/
 
@@ -941,15 +1115,6 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 			width: maxX - minX,
 			height: maxY - minY,
 		}
-	}
-
-	private pointTemp = new Vector2();
-	public cursorInsideBounds (): boolean {
-		this.pointTemp.set(
-			this.cursorWorldX / (this.skeleton?.scaleX || 1),
-			this.cursorWorldY / (this.skeleton?.scaleY || 1),
-		);
-		return inside(this.pointTemp, this.bounds);
 	}
 
 }
@@ -1519,14 +1684,32 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 	private setupDragUtility (): Input {
 		// TODO: we should use document - body might have some margin that offset the click events - Meanwhile I take event pageX/Y
 		const inputManager = new Input(document.body, false)
-		const point: Point = { x: 0, y: 0 };
+		const inputPointTemp: Point = new Vector2();
 		const tempVector = new Vector3();
 
 		const getInput = (ev?: MouseEvent | TouchEvent): Point => {
 			const originalEvent = ev instanceof MouseEvent ? ev : ev!.changedTouches[0];
-			point.x = originalEvent.pageX + this.overflowLeftSize;
-			point.y = originalEvent.pageY + this.overflowTopSize;
-			return point;
+			inputPointTemp.x = originalEvent.pageX + this.overflowLeftSize;
+			inputPointTemp.y = originalEvent.pageY + this.overflowTopSize;
+			return inputPointTemp;
+		}
+
+		const cursorUpdate = (input: Point) => {
+			this.cursorCanvasX = input.x - window.scrollX;
+			this.cursorCanvasY = input.y - window.scrollY;
+
+			const ref = this.parentElement!.getBoundingClientRect();
+			if (this.scrollable) {
+				this.cursorCanvasX -= ref.left;
+				this.cursorCanvasY -= ref.top;
+			}
+
+			tempVector.set(this.cursorCanvasX, this.cursorCanvasY, 0);
+			this.renderer.camera.screenToWorld(tempVector, this.canvas.clientWidth, this.canvas.clientHeight);
+
+			if (Number.isNaN(tempVector.x) || Number.isNaN(tempVector.y)) return;
+			this.cursorWorldX = tempVector.x;
+			this.cursorWorldY = tempVector.y;
 		}
 
 		let prevX = 0;
@@ -1535,32 +1718,29 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 			// moved is used to pass curson position wrt to canvas and widget position and currently is EXPERIMENTAL
 			moved: (x, y, ev) => {
 				const input = getInput(ev);
-				this.cursorCanvasX = input.x - window.scrollX;
-				this.cursorCanvasY = input.y - window.scrollY;
+				cursorUpdate(input);
 
-				const ref = this.parentElement!.getBoundingClientRect();
-				if (this.scrollable) {
-					this.cursorCanvasX -= ref.left;
-					this.cursorCanvasY -= ref.top;
-				}
-
-				tempVector.set(this.cursorCanvasX, this.cursorCanvasY, 0);
-				this.renderer.camera.screenToWorld(tempVector, this.canvas.clientWidth, this.canvas.clientHeight);
-
-				if (Number.isNaN(tempVector.x) || Number.isNaN(tempVector.y)) return;
-				this.cursorWorldX = tempVector.x;
-				this.cursorWorldY = tempVector.y;
 				this.skeletonList.forEach(widget => {
+
 					widget.cursorWorldX = this.cursorWorldX - widget.worldX;
 					widget.cursorWorldY = this.cursorWorldY - widget.worldY;
+
+					if (!widget.onScreen) return;
+
+					widget.cursorEventUpdate("move");
 				});
 			},
 			down: (x, y, ev) => {
 				const input = getInput(ev);
 				this.skeletonList.forEach(widget => {
-					if (!widget.isDraggable || (!widget.onScreen && widget.dragX === 0 && widget.dragY === 0)) return;
+					if (!widget.onScreen && widget.dragX === 0 && widget.dragY === 0) return;
 
-					if (widget.cursorInsideBounds()) {
+					widget.cursorEventUpdate("down");
+
+					if (widget.cursorInsideBounds) {
+
+						if (!widget.isDraggable) return;
+
 						widget.dragging = true;
 						ev?.preventDefault();
 					}
@@ -1571,10 +1751,22 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 			},
 			dragged: (x, y, ev) => {
 				const input = getInput(ev);
+
 				let dragX = input.x - prevX;
 				let dragY = input.y - prevY;
+
+				cursorUpdate(input);
+
 				this.skeletonList.forEach(widget => {
-					if (!widget.dragging || (!widget.onScreen && widget.dragX === 0 && widget.dragY === 0)) return;
+					widget.cursorWorldX = this.cursorWorldX - widget.worldX;
+					widget.cursorWorldY = this.cursorWorldY - widget.worldY;
+
+					if (!widget.onScreen && widget.dragX === 0 && widget.dragY === 0) return;
+
+					widget.cursorEventUpdate("drag");
+
+					if (!widget.dragging) return;
+
 					const skeleton = widget.skeleton!;
 					widget.dragX += this.screenToWorldLength(dragX);
 					widget.dragY -= this.screenToWorldLength(dragY);
@@ -1588,6 +1780,10 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 			up: () => {
 				this.skeletonList.forEach(widget => {
 					widget.dragging = false;
+
+					if (widget.cursorInsideBounds) {
+						widget.cursorEventUpdate("up");
+					}
 				});
 			}
 		});
