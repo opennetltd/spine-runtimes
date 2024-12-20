@@ -983,7 +983,10 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 		}
 	}
 
-	private checkCursorInsideBounds (): boolean {
+	/**
+	 * @internal
+	 */
+	public checkCursorInsideBounds (): boolean {
 		if (!this.onScreen || !this.skeleton) return false;
 
 		this.pointTemp.set(
@@ -1681,11 +1684,39 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 	public cursorWorldX = 1;
 	public cursorWorldY = 1;
 
+	private tempVector = new Vector3();
+	private cursorUpdate (input: Point) {
+		this.cursorCanvasX = input.x - window.scrollX;
+		this.cursorCanvasY = input.y - window.scrollY;
+
+		const ref = this.parentElement!.getBoundingClientRect();
+		if (this.scrollable) {
+			this.cursorCanvasX -= ref.left;
+			this.cursorCanvasY -= ref.top;
+		}
+
+		let tempVector = this.tempVector;
+		tempVector.set(this.cursorCanvasX, this.cursorCanvasY, 0);
+		this.renderer.camera.screenToWorld(tempVector, this.canvas.clientWidth, this.canvas.clientHeight);
+
+		if (Number.isNaN(tempVector.x) || Number.isNaN(tempVector.y)) return;
+		this.cursorWorldX = tempVector.x;
+		this.cursorWorldY = tempVector.y;
+	}
+
+	private cursorWidgetUpdate (widget: SpineWebComponentWidget): boolean {
+		if (widget.worldX === Infinity) return false;
+
+		widget.cursorWorldX = this.cursorWorldX - widget.worldX;
+		widget.cursorWorldY = this.cursorWorldY - widget.worldY;
+
+		return true;
+	}
+
 	private setupDragUtility (): Input {
 		// TODO: we should use document - body might have some margin that offset the click events - Meanwhile I take event pageX/Y
 		const inputManager = new Input(document.body, false)
 		const inputPointTemp: Point = new Vector2();
-		const tempVector = new Vector3();
 
 		const getInput = (ev?: MouseEvent | TouchEvent): Point => {
 			const originalEvent = ev instanceof MouseEvent ? ev : ev!.changedTouches[0];
@@ -1694,38 +1725,16 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 			return inputPointTemp;
 		}
 
-		const cursorUpdate = (input: Point) => {
-			this.cursorCanvasX = input.x - window.scrollX;
-			this.cursorCanvasY = input.y - window.scrollY;
-
-			const ref = this.parentElement!.getBoundingClientRect();
-			if (this.scrollable) {
-				this.cursorCanvasX -= ref.left;
-				this.cursorCanvasY -= ref.top;
-			}
-
-			tempVector.set(this.cursorCanvasX, this.cursorCanvasY, 0);
-			this.renderer.camera.screenToWorld(tempVector, this.canvas.clientWidth, this.canvas.clientHeight);
-
-			if (Number.isNaN(tempVector.x) || Number.isNaN(tempVector.y)) return;
-			this.cursorWorldX = tempVector.x;
-			this.cursorWorldY = tempVector.y;
-		}
-
 		let prevX = 0;
 		let prevY = 0;
 		inputManager.addListener({
 			// moved is used to pass curson position wrt to canvas and widget position and currently is EXPERIMENTAL
 			moved: (x, y, ev) => {
 				const input = getInput(ev);
-				cursorUpdate(input);
+				this.cursorUpdate(input);
 
 				this.skeletonList.forEach(widget => {
-
-					widget.cursorWorldX = this.cursorWorldX - widget.worldX;
-					widget.cursorWorldY = this.cursorWorldY - widget.worldY;
-
-					if (!widget.onScreen) return;
+					if (!this.cursorWidgetUpdate(widget) || !widget.onScreen) return;
 
 					widget.cursorEventUpdate("move");
 				});
@@ -1737,12 +1746,13 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 
 					widget.cursorEventUpdate("down");
 
-					if (widget.cursorInsideBounds) {
+					if ((widget.isInteractive && widget.cursorInsideBounds) || (!widget.isInteractive && widget.checkCursorInsideBounds())) {
 
 						if (!widget.isDraggable) return;
 
 						widget.dragging = true;
 						ev?.preventDefault();
+
 					}
 
 				});
@@ -1755,13 +1765,10 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 				let dragX = input.x - prevX;
 				let dragY = input.y - prevY;
 
-				cursorUpdate(input);
+				this.cursorUpdate(input);
 
 				this.skeletonList.forEach(widget => {
-					widget.cursorWorldX = this.cursorWorldX - widget.worldX;
-					widget.cursorWorldY = this.cursorWorldY - widget.worldY;
-
-					if (!widget.onScreen && widget.dragX === 0 && widget.dragY === 0) return;
+					if (!this.cursorWidgetUpdate(widget) || !widget.onScreen && widget.dragX === 0 && widget.dragY === 0) return;
 
 					widget.cursorEventUpdate("drag");
 

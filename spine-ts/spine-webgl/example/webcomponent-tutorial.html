@@ -2378,13 +2378,14 @@ function createCircleOfDivs(numDivs = 8) {
         customElements.whenDefined('spine-widget').then(async () => {
             const widget = spine.getSpineWidget(\`owl\${i}\`);
             await widget.loadingPromise;
-            widget.state.setAnimation(1, "blink", true)
+            widget.state.setAnimation(1, "blink", true);
 
             const control = widget.skeleton.findBone("control");
             const tempVector = new spine.Vector3();
-            const mouse = Ola({ x: 0, y: 0 }, 200);
+            const mouseX = Smooth(0, 200);
+            const mouseY = Smooth(0, 200);
             widget.afterUpdateWorldTransforms = () => {
-                updateControl(widget, control, mouse, tempVector);
+                updateControl(widget, control, mouseX, mouseY, tempVector);
             }
         });
 
@@ -2401,7 +2402,7 @@ const checkbox = document.getElementById('owl-checkbox');
 let limitOwl = true;
 checkbox.addEventListener('change', () => limitOwl = checkbox.checked);
 
-const updateControl = (widget, controlBone, mouse, tempVector) => {
+const updateControl = (widget, controlBone, mouseX, mouseY, tempVector) => {
     controlBone.parent.worldToLocal(tempVector.set(
         widget.cursorWorldX,
         widget.cursorWorldY,
@@ -2415,10 +2416,8 @@ const updateControl = (widget, controlBone, mouse, tempVector) => {
         y = y / widget.overlay.canvas.height * 30;
     }
 
-    mouse.set({ x, y });
-
-    controlBone.x = controlBone.data.x + mouse.x;
-    controlBone.y = controlBone.data.y + mouse.y;
+    controlBone.x = controlBone.data.x + mouseX(x);
+    controlBone.y = controlBone.data.y + mouseY(y);
 }
 `
 );</script>
@@ -2429,99 +2428,98 @@ const updateControl = (widget, controlBone, mouse, tempVector) => {
     </div>
 
     <script>
-        function createCircleOfDivs(numDivs = 8) {
-            const container = document.createElement('div');
-            container.style.position = 'relative';
-            container.style.width = '400px';
-            container.style.height = '400px';
-            container.style.backgroundColor = '#f3f4f6';
-            container.style.borderRadius = '50%';
-            container.style.display = 'flex';
-            container.style.justifyContent = 'center';
-            container.style.alignItems = 'center';
+function createCircleOfDivs(numDivs = 8) {
+    const container = document.createElement('div');
+    container.style.position = 'relative';
+    container.style.width = '400px';
+    container.style.height = '400px';
+    container.style.backgroundColor = '#f3f4f6';
+    container.style.borderRadius = '50%';
+    container.style.display = 'flex';
+    container.style.justifyContent = 'center';
+    container.style.alignItems = 'center';
 
-            const radius = 150;
+    const radius = 150;
 
-            for (let i = 0; i < numDivs; i++) {
-                const angle = (i / numDivs) * 2 * Math.PI;
-                const x = Math.cos(angle) * radius;
-                const y = Math.sin(angle) * radius;
+    for (let i = 0; i < numDivs; i++) {
+        const angle = (i / numDivs) * 2 * Math.PI;
+        const x = Math.cos(angle) * radius;
+        const y = Math.sin(angle) * radius;
 
-                const div = document.createElement('div');
-                div.style.position = 'absolute';
-                div.style.width = '100px';
-                div.style.height = '100px';
-                div.style.backgroundColor = '#3b82f6';
-                div.style.borderRadius = '8px';
-                div.style.display = 'flex';
-                div.style.justifyContent = 'center';
-                div.style.alignItems = 'center';
-                div.style.color = 'white';
-                div.style.fontWeight = 'bold';
-                div.style.transform = `translate(${x}px, ${y}px)`;
-                div.innerHTML = `
-                    <spine-widget
-                        identifier="owl${i}"
-                        atlas="../demos/assets/atlas2.atlas"
-                        skeleton="../demos/assets/demos.json"
-                        json-skeleton-key="owl"
-                        animation="idle"
-                        isdraggable
-                    ></spine-widget>
-                `;
+        const div = document.createElement('div');
+        div.style.position = 'absolute';
+        div.style.width = '100px';
+        div.style.height = '100px';
+        div.style.backgroundColor = '#3b82f6';
+        div.style.borderRadius = '8px';
+        div.style.display = 'flex';
+        div.style.justifyContent = 'center';
+        div.style.alignItems = 'center';
+        div.style.color = 'white';
+        div.style.fontWeight = 'bold';
+        div.style.transform = `translate(${x}px, ${y}px)`;
+        div.innerHTML = `
+            <spine-widget
+                identifier="owl${i}"
+                atlas="../demos/assets/atlas2.atlas"
+                skeleton="../demos/assets/demos.json"
+                json-skeleton-key="owl"
+                animation="idle"
+                isdraggable
+            ></spine-widget>
+        `;
 
-                container.appendChild(div);
+        container.appendChild(div);
 
-                customElements.whenDefined('spine-widget').then(async () => {
-                    const widget = spine.getSpineWidget(`owl${i}`);
-                    await widget.loadingPromise;
-                    widget.state.setAnimation(1, "blink", true);
+        customElements.whenDefined('spine-widget').then(async () => {
+            const widget = spine.getSpineWidget(`owl${i}`);
+            await widget.loadingPromise;
+            widget.state.setAnimation(1, "blink", true);
 
-                    const control = widget.skeleton.findBone("control");
-                    const tempVector = new spine.Vector3();
-                    const mouse = Ola({ x: 0, y: 0 }, 200);
-                    widget.afterUpdateWorldTransforms = () => {
-                        updateControl(widget, control, mouse, tempVector);
-                    }
-                });
-
-
+            const control = widget.skeleton.findBone("control");
+            const tempVector = new spine.Vector3();
+            const mouseX = Smooth(0, 200);
+            const mouseY = Smooth(0, 200);
+            widget.afterUpdateWorldTransforms = () => {
+                updateControl(widget, control, mouseX, mouseY, tempVector);
             }
+        });
 
-            return container;
-        }
 
-        document.getElementById('section-owls').appendChild(createCircleOfDivs(8));
+    }
 
-        const checkbox = document.getElementById('owl-checkbox');
+    return container;
+}
 
-        let limitOwl = true;
-        checkbox.addEventListener('change', () => limitOwl = checkbox.checked);
+document.getElementById('section-owls').appendChild(createCircleOfDivs(8));
 
-        const updateControl = (widget, controlBone, mouse, tempVector) => {
-            controlBone.parent.worldToLocal(tempVector.set(
-                widget.cursorWorldX,
-                widget.cursorWorldY,
-            ));
+const checkbox = document.getElementById('owl-checkbox');
 
-            let x = tempVector.x;
-            let y = tempVector.y;
+let limitOwl = true;
+checkbox.addEventListener('change', () => limitOwl = checkbox.checked);
 
-            if (limitOwl) {
-                x = x / widget.overlay.canvas.width * 30;
-                y = y / widget.overlay.canvas.height * 30;
-            }
+const updateControl = (widget, controlBone, mouseX, mouseY, tempVector) => {
+    controlBone.parent.worldToLocal(tempVector.set(
+        widget.cursorWorldX,
+        widget.cursorWorldY,
+    ));
 
-            mouse.set({ x, y });
+    let x = tempVector.x;
+    let y = tempVector.y;
 
-            controlBone.x = controlBone.data.x + mouse.x;
-            controlBone.y = controlBone.data.y + mouse.y;
-        }
+    if (limitOwl) {
+        x = x / widget.overlay.canvas.width * 30;
+        y = y / widget.overlay.canvas.height * 30;
+    }
+
+    controlBone.x = controlBone.data.x + mouseX(x);
+    controlBone.y = controlBone.data.y + mouseY(y);
+}
     </script>
 
 
     <script>
-        (function(global,factory){typeof exports==="object"&&typeof module!=="undefined"?module.exports=factory():typeof define==="function"&&define.amd?define(factory):(global=global||self,global.Ola=factory())})(this,function(){"use strict";const position=(x0,v0,t1,t)=>{const a=(v0*t1+2*x0)/t1**3;const b=-(2*v0*t1+3*x0)/t1**2;const c=v0;const d=x0;return a*t**3+b*t**2+c*t+d};const speed=(x0,v0,t1,t)=>{const a=(v0*t1+2*x0)/t1**3;const b=-(2*v0*t1+3*x0)/t1**2;const c=v0;return 3*a*t**2+2*b*t+c};const each=function(values,cb){const multi=typeof values==="number"?{value:values}:values;Object.entries(multi).map(([key,value])=>cb(value,key))};function Single(init,time){this.start=new Date/1e3;this.time=time;this.from=init;this.current=init;this.to=init;this.speed=0}Single.prototype.get=function(now){const t=now/1e3-this.start;if(t<0){throw new Error("Cannot read in the past")}if(t>=this.time){return this.to}return this.to-position(this.to-this.from,this.speed,this.time,t)};Single.prototype.getSpeed=function(now){const t=now/1e3-this.start;if(t>=this.time){return 0}return speed(this.to-this.from,this.speed,this.time,t)};Single.prototype.set=function(value,time){const now=new Date;const current=this.get(now);this.speed=this.getSpeed(now);this.start=now/1e3;this.from=current;this.to=value;if(time){this.time=time}return current};function Ola(values,time=300){if(typeof values==="number"){values={value:values}}each(values,(init,key)=>{const value=new Single(init,time/1e3);Object.defineProperty(values,"_"+key,{value:value});Object.defineProperty(values,"$"+key,{get:()=>value.to});Object.defineProperty(values,key,{get:()=>value.get(new Date),set:val=>value.set(val),enumerable:true})});Object.defineProperty(values,"get",{get:()=>(function(name="value",now=new Date){return this["_"+name].get(now)})});Object.defineProperty(values,"set",{get:()=>(function(values,time=0){each(values,(value,key)=>{this["_"+key].set(value,time/1e3)})})});return values}return Ola});
+        function Smooth(f,t){var p=performance,b=p.now(),o=f,s=0,m,n,x,d,k=f;return function(v){n=p.now()-b;m=t*t/n/n;d=o-f;x=s*t+d+d;if(n>0)k=n<t?o-x/m/t*n+(x+x-d)/m-s*n-d:o;if(v!=void 0&&v!=o){f=k;b+=n;o=v;s=n>0&&n<t?s+3*x/m/t-(4*x-d-d)/m/n:0}return k}}
     </script>
 
     <!--
@@ -2538,71 +2536,58 @@ const updateControl = (widget, controlBone, mouse, tempVector) => {
 
     <div class="section vertical-split" id="above-popup">
 
-        <div class="split-top split">
-            <div class="split-left">
-                You can attach callback to your widget to react at pointer interactions. Just make it <code>isinteractive</code>.
-                <br>
-                <br>
-                You can attach a callback for interactions with the widget <code>bounds</code> or with <code>slots</code>.
-                The available events are <code>down</code>, <code>up</code>, <code>enter</code>, <code>leave</code>, <code>move</code>, and <code>drag</code>.
-                <br>
-                <br>
-                In the following example, if the cursor enters the bounds, the jump animation is set, while the wave animation is set when the cursor leaves.
-                <br>
-                If you click on the <code>head-base</code> slot (the face), you can change the normal and dark tint with the colors selected in the two following selectors.
+        <div class="split-left" style="width: 80%; box-sizing: border-box;">
+            You can attach callback to your widget to react at pointer interactions. Just make it <code>isinteractive</code>.
+            <br>
+            <br>
+            You can attach a callback for interactions with the widget <code>bounds</code> or with <code>slots</code>.
+            The available events are <code>down</code>, <code>up</code>, <code>enter</code>, <code>leave</code>, <code>move</code>, and <code>drag</code>.
+            <br>
+            <br>
+            In the following example, if the cursor enters the bounds, the jump animation is set, while the wave animation is set when the cursor leaves.
+            <br>
+            If you click on the <code>head-base</code> slot (the face), you can change the normal and dark tint with the colors selected in the two following selectors.
 
-                <ul>
-                    <li>Tint normal: <input type="color" id="color-picker" value="#ffffff" /></li>
-                    <li>Tint black: <input type="color" id="dark-picker" value="#000000" /></li>
-                </ul>
+            <div style="display: flex; align-items: center; justify-content: space-around">
+                <div>
+                    <p>
+                        Tint normal: <input type="color" id="color-picker" value="#ffffff" />
+                    </p>
 
-            </div>
-            <div class="split-right">
+                    <p>
+                        Tint black: <input type="color" id="dark-picker" value="#000000" />
+                    </p>
+                </div>
+
                 <spine-widget
-                    identifier="interactive"
+                    identifier="interactive0"
                     atlas="assets/chibi-stickers-pma.atlas",
                     skeleton="assets/chibi-stickers.json",
                     skin="mario"
                     animation="emotes/wave"
-                    pad-top="0.05"
-                    pad-bottom="0.05"
                     isinteractive
+                    style="width: 150px; height: 150px;"
                 ></spine-widget>
 
-                <script>
-                    (async () => {
-                        const colorPicker = document.getElementById("color-picker");
-                        const darkPicker = document.getElementById("dark-picker");
+                <spine-widget
+                    identifier="interactive1"
+                    atlas="assets/chibi-stickers-pma.atlas",
+                    skeleton="assets/chibi-stickers.json",
+                    skin="nate"
+                    animation="emotes/wave"
+                    isinteractive
+                    style="width: 150px; height: 150px;"
+                ></spine-widget>
 
-                        const widget = await spine.getSpineWidget("interactive").loadingPromise;
-
-                        widget.cursorBoundsEventCallback = (event) => {
-                            if (event === "enter") widget.state.setAnimation(0, "emotes/hooray", true).mixDuration = .15;
-                            if (event === "leave") widget.state.setAnimation(0, "emotes/wave", true).mixDuration = .25;
-                        }
-
-                        const tempColor = new spine.Color();
-                        const slot = widget.skeleton.findSlot("head-base");
-                        slot.darkColor = new spine.Color(0, 0, 0, 1);
-                        widget.addCursorSlotEventCallbacks(slot, (slot, event) => {
-                            if (event === "down") {
-                                slot.darkColor.setFromColor(spine.Color.fromString(darkPicker.value, tempColor));
-                                slot.color.setFromColor(spine.Color.fromString(colorPicker.value, tempColor));
-                            }
-                        });
-                    })();
-                </script>
             </div>
         </div>
 
-        <div class="split-bottom">
-            <pre><code id="code-display">
-                <script>escapeHTMLandInject(`
-(async () => {
-    const colorPicker = document.getElementById("color-picker");
-    const darkPicker = document.getElementById("dark-picker");
+        <script>
+const colorPicker = document.getElementById("color-picker");
+const darkPicker = document.getElementById("dark-picker");
 
-    const widget = await spine.getSpineWidget("interactive").loadingPromise;
+[0, 1].forEach(async (i) => {
+    const widget = await spine.getSpineWidget(`interactive${i}`).loadingPromise;
 
     widget.cursorBoundsEventCallback = (event) => {
         if (event === "enter") widget.state.setAnimation(0, "emotes/hooray", true).mixDuration = .15;
@@ -2618,7 +2603,50 @@ const updateControl = (widget, controlBone, mouse, tempVector) => {
             slot.color.setFromColor(spine.Color.fromString(colorPicker.value, tempColor));
         }
     });
-})();`
+})
+        </script>
+
+        <div class="split-bottom">
+            <pre><code id="code-display">
+                <script>escapeHTMLandInject(`
+<spine-widget
+    identifier="interactive0"
+    atlas="assets/chibi-stickers-pma.atlas",
+    skeleton="assets/chibi-stickers.json",
+    skin="mario"
+    animation="emotes/wave"
+    isinteractive
+    style="width: 150px; height: 150px;"
+></spine-widget>
+
+<spine-widget
+    identifier="interactive1"
+    atlas="assets/chibi-stickers-pma.atlas",
+    skeleton="assets/chibi-stickers.json",
+    skin="nate"
+    animation="emotes/wave"
+    isinteractive
+    style="width: 150px; height: 150px;"
+></spine-widget>
+
+[0, 1].forEach(async (i) => {
+    const widget = await spine.getSpineWidget(\`interactive\${i}\`).loadingPromise;
+
+    widget.cursorBoundsEventCallback = (event) => {
+        if (event === "enter") widget.state.setAnimation(0, "emotes/hooray", true).mixDuration = .15;
+        if (event === "leave") widget.state.setAnimation(0, "emotes/wave", true).mixDuration = .25;
+    }
+
+    const tempColor = new spine.Color();
+    const slot = widget.skeleton.findSlot("head-base");
+    slot.darkColor = new spine.Color(0, 0, 0, 1);
+    widget.addCursorSlotEventCallbacks(slot, (slot, event) => {
+        if (event === "down") {
+            slot.darkColor.setFromColor(spine.Color.fromString(darkPicker.value, tempColor));
+            slot.color.setFromColor(spine.Color.fromString(colorPicker.value, tempColor));
+        }
+    });
+})`
 );</script>
             </code></pre>
         </div>
