@@ -1416,8 +1416,12 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 	addWidget (widget: SpineWebComponentWidget) {
 		this.skeletonList.push(widget);
 		this.intersectionObserver?.observe(widget.getHTMLElementReference());
-		if (this.loaded && (this.compareDocumentPosition(widget) & Node.DOCUMENT_POSITION_FOLLOWING)) {
-			this.parentElement!.appendChild(this);
+		if (this.loaded) {
+			const comparison = this.compareDocumentPosition(widget);
+			// DOCUMENT_POSITION_DISCONNECTED is needed when a widget is inside the overlay (due to followBone)
+			if ((comparison & Node.DOCUMENT_POSITION_FOLLOWING) && !(comparison & Node.DOCUMENT_POSITION_DISCONNECTED)) {
+				this.parentElement!.appendChild(this);
+			}
 		}
 	}
 
