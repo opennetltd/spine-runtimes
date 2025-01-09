@@ -1781,7 +1781,7 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 					const skeleton = widget.skeleton!;
 					widget.dragX += this.screenToWorldLength(dragX);
 					widget.dragY -= this.screenToWorldLength(dragY);
-					skeleton.physicsTranslate(dragX, dragY);
+					skeleton.physicsTranslate(dragX, -dragY);
 					ev?.preventDefault();
 					ev?.stopPropagation();
 				});
