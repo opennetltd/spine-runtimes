@@ -55,6 +55,7 @@ import {
 	Slot,
 	RegionAttachment,
 	MeshAttachment,
+	Bone,
 } from "./index.js";
 
 interface Point {
@@ -708,7 +709,7 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 		});
 	}
 
-	connectedCallback () {
+	connectedCallback (): void {
 		if (this.disposed) {
 			throw new Error("You cannot attach a disposed widget");
 		};
@@ -1075,6 +1076,38 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 	* Other utilities
 	*/
 
+	public boneFollowerList: Array<{ slot: Slot, bone: Bone, element: HTMLElement, followAttachmentAttach: boolean, followRotation: boolean, followOpacity: boolean, followScale: boolean, hideAttachment: boolean }> = [];
+	public followSlot(slotName: string | Slot, element: HTMLElement, options: { followAttachmentAttach?: boolean, followRotation?: boolean, followOpacity?: boolean, followScale?: boolean, hideAttachment?: boolean } = {}) {
+		const {
+			followAttachmentAttach = false,
+			followRotation = true,
+			followOpacity = true,
+			followScale = true,
+			hideAttachment = false,
+		} = options;
+
+		const slot = typeof slotName === 'string' ? this.skeleton?.findSlot(slotName) : slotName;
+		if (!slot) return;
+
+		if (hideAttachment) {
+			slot.setAttachment(null);
+		}
+
+		element.style.position = 'absolute';
+		element.style.top = '0px';
+		element.style.left = '0px';
+		element.style.display = 'none';
+
+		this.boneFollowerList.push({ slot, bone: slot.bone, element, followAttachmentAttach, followRotation, followOpacity, followScale, hideAttachment });
+		this.overlay.slotFollowerElementsHolder.appendChild(element);
+	}
+	public unfollowSlot(element: HTMLElement): HTMLElement | undefined {
+		const index = this.boneFollowerList.findIndex(e => e.element === element);
+		if (index > -1) {
+			return this.boneFollowerList.splice(index, 1)[0].element;
+		}
+	}
+
 	private calculateAnimationViewport (animation?: Animation): Rectangle {
 		const renderer = this.overlay.renderer;
 		const { skeleton } = this;
@@ -1230,6 +1263,7 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 	private root: ShadowRoot;
 
 	private div: HTMLDivElement;
+	public slotFollowerElementsHolder: HTMLDivElement;
 	private canvas: HTMLCanvasElement;
 	private fps: HTMLSpanElement;
 	private fpsAppended = false;
@@ -1263,11 +1297,20 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 		this.root.appendChild(this.div);
 
 		this.canvas = document.createElement("canvas");
+		this.slotFollowerElementsHolder = document.createElement("div");
 
 		this.div.appendChild(this.canvas);
 		this.canvas.style.position = "absolute";
 		this.canvas.style.top = "0";
 		this.canvas.style.left = "0";
+
+		this.div.appendChild(this.slotFollowerElementsHolder);
+		this.slotFollowerElementsHolder.style.position = "absolute";
+		this.slotFollowerElementsHolder.style.top = "0";
+		this.slotFollowerElementsHolder.style.left = "0";
+		this.slotFollowerElementsHolder.style.whiteSpace = "nowrap";
+		this.slotFollowerElementsHolder.style.setProperty("pointer-events", "none");
+		this.slotFollowerElementsHolder.style.transform = `translate(0px,0px)`;
 
 		this.canvas.style.setProperty("pointer-events", "none");
 		this.canvas.style.transform = `translate(0px,0px)`;
@@ -1425,6 +1468,7 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 		}
 	}
 
+	private tempFollowBoneVector = new Vector3();
 	private startRenderingLoop () {
 		if (this.running) return;
 
@@ -1660,6 +1704,41 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 			renderer.end();
 		}
 
+		const updateFollowSlotsPosition = () => {
+			this.skeletonList.forEach((widget) => {
+				if (widget.skeleton && widget.onScreen) {
+					widget.boneFollowerList.forEach(({ slot, bone, element, followAttachmentAttach, followRotation, followOpacity, followScale, hideAttachment }) => {
+
+						this.worldToScreen(this.tempFollowBoneVector, bone.worldX + widget.worldX, bone.worldY + widget.worldY);
+
+						if (Number.isNaN(this.tempFollowBoneVector.x)) return;
+
+						let x = this.tempFollowBoneVector.x - this.overflowLeftSize;
+						let y = this.tempFollowBoneVector.y - this.overflowTopSize;
+
+						if (!this.scrollable) {
+							x += window.scrollX;
+							y += window.scrollY;
+						}
+
+						element.style.transform = `translate(calc(-50% + ${x.toFixed(2)}px),calc(-50% + ${y.toFixed(2)}px))`
+							+ (followRotation ? ` rotate(${-bone.getWorldRotationX()}deg)` : "")
+							+ (followScale ? ` scale(${bone.getWorldScaleX()}, ${bone.getWorldScaleY()})` : "")
+						;
+
+						element.style.display = ""
+
+						if (followAttachmentAttach && !slot.attachment) {
+							element.style.opacity = "0";
+						} else if (followOpacity) {
+							element.style.opacity = `${slot.color.a}`;
+						}
+
+					});
+				};
+			});
+		}
+
 		const loop = () => {
 			if (this.disposed || !this.isConnected) {
 				this.running = false;
@@ -1671,6 +1750,7 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 			this.translateCanvas();
 			updateWidgets();
 			renderWidgets();
+			updateFollowSlotsPosition();
 		}
 
 		requestAnimationFrame(loop);
