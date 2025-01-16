@@ -551,7 +551,7 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 	 * By default, the function does nothing.
 	 * This is an experimental property and might be removed in the future.
 	 */
-	public cursorBoundsEventCallback = (event: CursorEventTypes) => {}
+	public cursorBoundsEventCallback = (event: CursorEventTypes, originalEvent?: UIEvent) => {}
 
 	/**
 	 * This methods allows to associate to a Slot a callback. For these slots, if the widget is interactive,
@@ -1105,39 +1105,39 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 	 * @internal
 	 */
 	public cursorSlotEventCallbacks: Map<Slot, {
-		slotFunction: (slot: Slot, event: CursorEventTypes ) => void,
+		slotFunction: (slot: Slot, event: CursorEventTypes, originalEvent?: UIEvent) => void,
 		inside: boolean,
 	}> = new Map();
 
 	/**
 	 * @internal
 	 */
-	public cursorEventUpdate (type: CursorEventTypesInput) {
+	public cursorEventUpdate (type: CursorEventTypesInput, originalEvent?: UIEvent) {
 		if (!this.isInteractive) return;
 
-		this.checkBoundsInteraction(type);
-		this.checkSlotInteraction(type);
+		this.checkBoundsInteraction(type, originalEvent);
+		this.checkSlotInteraction(type, originalEvent);
 	}
 
-	private checkBoundsInteraction (type: CursorEventTypesInput) {
+	private checkBoundsInteraction (type: CursorEventTypesInput, originalEvent?: UIEvent) {
 		if ((type === "down"|| type === "up") && this.cursorInsideBounds) {
-			this.cursorBoundsEventCallback(type);
+			this.cursorBoundsEventCallback(type, originalEvent);
 			return;
 		}
 
 		if (this.checkCursorInsideBounds()) {
 
 			if (!this.cursorInsideBounds) {
-				this.cursorBoundsEventCallback("enter");
+				this.cursorBoundsEventCallback("enter", originalEvent);
 			}
 			this.cursorInsideBounds = true;
 
-			this.cursorBoundsEventCallback(type);
+			this.cursorBoundsEventCallback(type, originalEvent);
 
 		} else {
 
 			if (this.cursorInsideBounds) {
-				this.cursorBoundsEventCallback("leave");
+				this.cursorBoundsEventCallback("leave", originalEvent);
 			}
 			this.cursorInsideBounds = false;
 
@@ -1158,7 +1158,7 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 		return inside(this.pointTemp, this.bounds);
 	}
 
-	private checkSlotInteraction(type: CursorEventTypesInput) {
+	private checkSlotInteraction(type: CursorEventTypesInput, originalEvent?: UIEvent) {
 		for (let [slot, interactionState] of this.cursorSlotEventCallbacks) {
 			if (!slot.bone.active) continue;
 			let attachment = slot.getAttachment();
@@ -1169,7 +1169,7 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 
 			if (type === "down" || type === "up") {
 				if (inside) {
-					slotFunction(slot, type);
+					slotFunction(slot, type, originalEvent);
 				}
 				return;
 			}
@@ -1192,7 +1192,7 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 
 				if (!inside) {
 					interactionState.inside = true;
-					slotFunction(slot, "enter");
+					slotFunction(slot, "enter", originalEvent);
 				}
 
 				slotFunction(slot, type);
@@ -1201,7 +1201,7 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 
 				if (inside) {
 					interactionState.inside = false;
-					slotFunction(slot, "leave");
+					slotFunction(slot, "leave", originalEvent);
 				}
 
 			}
@@ -1982,7 +1982,7 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 				this.skeletonList.forEach(widget => {
 					if (!this.cursorWidgetUpdate(widget) || !widget.onScreen) return;
 
-					widget.cursorEventUpdate("move");
+					widget.cursorEventUpdate("move", ev);
 				});
 			},
 			down: (x, y, ev) => {
@@ -1990,10 +1990,9 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 				this.skeletonList.forEach(widget => {
 					if (!widget.onScreen && widget.dragX === 0 && widget.dragY === 0) return;
 
-					widget.cursorEventUpdate("down");
+					widget.cursorEventUpdate("down", ev);
 
 					if ((widget.isInteractive && widget.cursorInsideBounds) || (!widget.isInteractive && widget.checkCursorInsideBounds())) {
-
 						if (!widget.isDraggable) return;
 
 						widget.dragging = true;
@@ -2016,7 +2015,7 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 				this.skeletonList.forEach(widget => {
 					if (!this.cursorWidgetUpdate(widget) || !widget.onScreen && widget.dragX === 0 && widget.dragY === 0) return;
 
-					widget.cursorEventUpdate("drag");
+					widget.cursorEventUpdate("drag", ev);
 
 					if (!widget.dragging) return;
 
@@ -2030,12 +2029,12 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 				prevX = input.x;
 				prevY = input.y;
 			},
-			up: () => {
+			up: (x, y, ev) => {
 				this.skeletonList.forEach(widget => {
 					widget.dragging = false;
 
 					if (widget.cursorInsideBounds) {
-						widget.cursorEventUpdate("up");
+						widget.cursorEventUpdate("up", ev);
 					}
 				});
 			}

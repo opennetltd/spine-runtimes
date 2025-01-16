@@ -3223,7 +3223,7 @@ const darkPicker = document.getElementById("dark-picker");
                     await widgetButton.loadingPromise;
 
                     widgetButton.skeleton.color.set(.85, .85, .85, 1);
-                    widgetButton.cursorBoundsEventCallback = (event) => {
+                    widgetButton.cursorBoundsEventCallback = (event, originalEvent) => {
                         if (event === "enter") {
                             widgetButton.state.setAnimation(0, "enhance-in", false);
                             widgetButton.state.setAnimation(1, "shadow-in", false);
@@ -3236,6 +3236,7 @@ const darkPicker = document.getElementById("dark-picker");
                         };
                         if (event === "down") {
                             widgetButton.state.setAnimation(0, "enhance-in", false).timeScale = 2;
+                            originalEvent.preventDefault();
                             if (form.reportValidity()) {
                                 if (passwordInput.value === "password") {
                                     widget.state.setAnimation(0, "interactive/pwd/hooray", 0);
