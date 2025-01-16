@@ -640,6 +640,307 @@
     -->
 
     <div class="section vertical-split">
+
+        <div class="split-top split">
+            <div class="split-left">
+                <p>To change animation, we could also just change the animation attribute. The widget will reinitiate itself and change animation.</p>
+                <p>In this case you would use <code>auto-recalculate-bounds</code> to ask the widget to always recalculate the bounds, as in the top example.</p>
+                <p>If want to keep the scale consistent, but fit multiple animations in the container, you can use the <code>animation-bounds</code> attribute to define a bounds containing a list of animations, as in the bottom example.</p>
+
+            </div>
+            <div class="split-right" style="display: flex; flex-direction: column;">
+                <spine-widget
+                    style="width: 100%; flex: 1; border: 1px solid black; box-sizing: border-box;"
+                    identifier="spineboy-change-animation"
+                    atlas="assets/spineboy-pma.atlas"
+                    skeleton="assets/spineboy-pro.skel"
+                    animation="jump"
+                    auto-recalculate-bounds
+                ></spine-widget>
+                <spine-widget
+                    style="width: 100%; flex: 1; border: 1px solid black; box-sizing: border-box;"
+                    identifier="spineboy-change-animation2"
+                    atlas="assets/spineboy-pma.atlas"
+                    skeleton="assets/spineboy-pro.skel"
+                    animation="jump"
+                    animation-bounds="jump,death"
+                ></spine-widget>
+            </div>
+        </div>
+
+        <script>
+            (async () => {
+
+                {
+                    const widget = await spine.getSpineWidget("spineboy-change-animation").loadingPromise;
+                    let toogleAnimation = false;
+                    setInterval(() => {
+                        const newAnimation = toogleAnimation ? "jump" : "death";
+                        widget.setAttribute("animation", newAnimation)
+                        toogleAnimation = !toogleAnimation;
+                    }, 4000);
+                }
+
+                {
+                    const widget = await spine.getSpineWidget("spineboy-change-animation2").loadingPromise;
+                    let toogleAnimation = false;
+                    setInterval(() => {
+                        const newAnimation = toogleAnimation ? "jump" : "death";
+                        widget.setAttribute("animation", newAnimation)
+                        toogleAnimation = !toogleAnimation;
+                    }, 4000);
+                }
+            })();
+        </script>
+
+                <div class="split-bottom">
+            <pre><code id="code-display">
+                <script>escapeHTMLandInject(`
+// access the spine widget
+<spine-widget
+    style="width: 100%; height: 150px; border: 1px solid black;"
+    identifier="spineboy-change-animation"
+    atlas="assets/spineboy-pma.atlas"
+    skeleton="assets/spineboy-pro.skel"
+    animation="jump"
+    auto-recalculate-bounds
+></spine-widget>
+<spine-widget
+    style="width: 100%; height: 150px; border: 1px solid black;"
+    identifier="spineboy-change-animation2"
+    atlas="assets/spineboy-pma.atlas"
+    skeleton="assets/spineboy-pro.skel"
+    animation="jump"
+    animation-bounds="jump,death"
+></spine-widget>
+
+...
+
+// using js, access the skeleton and the state asynchronously
+{
+    const widget = document.querySelector('[identifier="spineboy-change-animation"]');
+    let toogleAnimation = false;
+    setInterval(() => {
+        const newAnimation = toogleAnimation ? "jump" : "death";
+        widget.setAttribute("animation", newAnimation)
+        toogleAnimation = !toogleAnimation;
+    }, 4000);
+}
+
+{
+    const widget = document.querySelector('[identifier="spineboy-change-animation2"]');
+    let toogleAnimation = false;
+    setInterval(() => {
+        const newAnimation = toogleAnimation ? "jump" : "death";
+        widget.setAttribute("animation", newAnimation)
+        toogleAnimation = !toogleAnimation;
+    }, 4000);
+}
+
+`);</script>
+            </code></pre>
+        </div>
+    </div>
+
+
+    <!--
+    /////////////////////
+    // end section //
+    /////////////////////
+    -->
+
+    <!--
+    /////////////////////
+    // start section //
+    /////////////////////
+    -->
+
+    <div class="section vertical-split">
+
+        <div class="split" style="flex-direction: column;">
+            <div class="split-nosize full-width" style="width: 80%; padding: 1em;">
+                <p>If you want to display a sequence of animations without using js or on multiple tracks, you can use the <code>animations</code> attribute.</p>
+
+                <p>It accepts a string composed of groups surrounded by square brackets, like this: <code>[...][...][...]</code></p>
+
+                <p>Each square bracket represents an animation to play, with some parameters. It contains a comma separated list with the following:
+                    <ol>
+                        <li><code>track</code>: the number of the track on which to play the animation</li>
+                        <li><code>animation name</code>: the name of the animation to play</li>
+                        <li><code>loop</code>: true, if this animation has to loop. False, otherwise</li>
+                        <li><code>delay</code>: the seconds to wait after the start of the previous animation, to play the animatino of this group (not available for the first animation on this track)</li>
+                        <li><code>mixDuration</code>: the mix duration between this animation and the previous (not available for the first animation on this track)</li>
+                    </ol>
+                </p>
+
+                <p>Once you composed your animation, if you that is loops once it reaches the end, you can add the special group <code>[loop, trackNumber]</code>, where:
+                    <ul>
+                        <li><code>loop</code>: is the "loop" string to identify this special group</li>
+                        <li><code>trackNumber</code>: is the number of the track you want to be looped</li>
+                    </ul>
+                </p>
+
+                <p>
+                    The parameters of the first group of each track are passed to the `setAnimation` method, while the remaining groups on the track use `addAnimation`.
+                </p>
+
+                <p>
+                    You can use respectively use `setEmptyAnimation` or `addEmptyAnimation`, by using the string <code>#EMPTY#</code> as animation name. In this case the <code>loop</code> parameter is ignored.
+                </p>
+
+                <p>
+                    The <code>default-mix</code> attribute allow to the the default mix of the <code>AnimationState</code>.
+                </p>
+
+                <p>Have a look at the two examples below.</p>
+            </div>
+
+            <div class="split-nosize full-width" style="width: 80%; min-height: 300px; margin: 1em; padding: 1em;">
+                <spine-widget
+                    atlas="assets/spineboy-pma.atlas"
+                    skeleton="assets/spineboy-pro.skel"
+                    animation-bounds="jump,death"
+                    default-mix="0.05"
+                    animations="
+                        [loop, 0]
+                        [0, idle, true]
+                        [0, run, false, 2, 0.25]
+                        [0, run, false]
+                        [0, run, false]
+                        [0, run-to-idle, false, 0, 0.15]
+                        [0, idle, true]
+                        [0, jump, false, 0, 0.15]
+                        [0, walk, false, 0, 0.05]
+                        [0, death, false, 0, 0.05]
+                    "
+	            ></spine-widget>
+            </div>
+
+            <div class="split-nosize full-width" style="width: 80%; padding: 1em;">
+                <p>Spineboy here uses the following value for <code>animations</code> attribute.</p>
+                <p>
+                    <textarea style="font-size: 0.6rem; width: 100%;" rows="10" readonly>
+[loop, 0]
+[0, idle, true]
+[0, run, false, 2, 0.25]
+[0, run, false]
+[0, run, false]
+[0, run-to-idle, false, 0, 0.15]
+[0, idle, true]
+[0, jump, false, 0, 0.15]
+[0, walk, false, 0, 0.05]
+[0, death, false, 0, 0.05]</textarea>
+                </p>
+
+                We use a single track for this animation. Let's analyze it:
+                <ol>
+                    <li><code>[loop, 0]</code>: when the track 0 reaches the end, start from the beginning</li>
+                    <li><code>[0, idle, true]</code>: set the idle animation in loop</li>
+                    <li><code>[0, run, true, 2, 0.25]</code>: queue a cycle of the run animation, start it after 2 seconds from the beginning of the previous one, set a mix of 0.25 seconds from the previous one.</li>
+                    <li><code>[0, run, false]</code>: queue a cycle of run animation</li>
+                    <li><code>[0, run, false]</code>: queue a cycle of run animation</li>
+                    <li><code>[0, run-to-idle, false, 0, 0.15]</code>: queue a cycle of run-to-idle animation, with no delay, and a mix of 0.15 seconds</li>
+                    <li><code>[0, idle, true]</code>: queue the idle animation in loop</li>
+                    <li><code>[0, jump, false, 0, 0.15]</code>: queue a cycle of jump animation in loop, with no delay, and a mix of 0.15 seconds</li>
+                    <li><code>[0, walk, false, 0, 0.05]</code>: queue a cycle of walk animation in loop, with no delay, and a mix of 0.05 seconds</li>
+                    <li><code>[0, death, false, 0, 0.05]</code>: queue a cycle of death animation in loop, with no delay, and a mix of 0.05 seconds</li>
+                </ol>
+            </div>
+
+            <div class="split-nosize full-width" style="width: 80%; min-height: 300px; margin: 1em; padding: 1em;">
+                <spine-widget
+                    identifier="celeste-animations"
+                    atlas="assets/celestial-circus-pma.atlas"
+                    skeleton="assets/celestial-circus-pro.skel"
+                    animations="
+                        [0, wings-and-feet, true]
+                        [loop, 1]
+                        [1, #EMPTY#, false]
+                        [1, eyeblink, false, 2]
+                    "
+                ></spine-widget>
+            </div>
+
+            <div class="split-nosize full-width" style="width: 80%; padding: 1em;">
+                <p>Celeste here uses the following value for <code>animations</code> attribute.</p>
+                <p>
+                    <textarea id="celeste-animations-text-area" style="font-size: 0.6rem; width: 100%;" rows="5">
+[0, wings-and-feet, true]
+[loop, 1]
+[1, #EMPTY#, false]
+[1, eyeblink, false, 2]</textarea>
+                </p>
+
+                <p>
+                    It uses two tracks. In track 0 we simply set the wings-and-feet animation. <br>
+                    In track 1 we loop over the entire animation, set an empty animation and queue an eyeblink animation with a 2 seconds delay.
+                </p>
+
+                <p>You can modify the textarea above and experiment with the values. For example, change the delay from 2 to 0.5, or add the swing animation to track 0 like this <code>[0, swing, true, 5, .5]</code>  with a delay of 5 seconds and a mix of 0.5 seconds. Click the button below and Celeste will start to blink the eyes more frequently.</p>
+
+                <input type="button" value="Update animation" onclick="updateCelesteAnimations(this)">
+            </div>
+
+
+        </div>
+
+        <script>
+            async function updateCelesteAnimations() {
+                const celesteAnimations = await spine.getSpineWidget("celeste-animations").loadingPromise;
+                var celesteAnimationsTextArea = document.getElementById("celeste-animations-text-area");
+                celesteAnimations.setAttribute("animations", celesteAnimationsTextArea.value)
+            }
+        </script>
+
+
+        <div class="split-bottom">
+            <pre><code id="code-display">
+                <script>escapeHTMLandInject(`
+// access the spine widget
+<spine-widget
+    identifier="raptor"
+    atlas="assets/raptor-pma.atlas"
+    skeleton="assets/raptor-pro.skel"
+    animation="walk"
+></spine-widget>
+
+...
+
+// using js, access the skeleton and the state asynchronously
+(async () => {
+    const widget = spine.getSpineWidget("raptor");
+    const { state } = await widget.loadingPromise;
+    let isRoaring = false;
+    setInterval(() => {
+        const newAnimation = isRoaring ? "walk" : "roar";
+        state.setAnimation(0, newAnimation, true);
+        widget.recalculateBounds(); // scale the skeleton based on the new animation
+        isRoaring = !isRoaring;
+    }, 4000);
+})();
+
+`);</script>
+            </code></pre>
+        </div>
+    </div>
+
+
+    <!--
+    /////////////////////
+    // end section //
+    /////////////////////
+    -->
+
+
+
+
+    <!--
+    /////////////////////
+    // start section //
+    /////////////////////
+    -->
+
+    <div class="section vertical-split">
         <div class="split high-page" style="flex-direction: column;">
             <div class="split-nosize full-width" style="width: 80%; padding: 1em;">
                 Moving the div will move the skeleton origin.

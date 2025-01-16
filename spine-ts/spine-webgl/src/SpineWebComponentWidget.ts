@@ -101,7 +101,64 @@ function isFitType (value: string | null): value is FitType {
 	);
 }
 
-export type AttributeTypes = "string" | "number" | "boolean" | "string-number" | "fitType" | "modeType" | "offScreenUpdateBehaviourType";
+const animatonTypeRegExp = /\[([^\]]+)\]/g;
+
+export type AnimationsInfo = Record<string, { cycle?: boolean, animations: Array<AnimationsType> }>;
+export type AnimationsType = { animationName: string | "#EMPTY#", loop?: boolean, delay?: number, mixDuration?: number };
+
+function castToAnimationsInfo (value: string | null): AnimationsInfo | undefined {
+	if (value === null) {
+		return undefined;
+	}
+
+	const matches = value.match(animatonTypeRegExp);
+	if (!matches) return undefined;
+
+	return matches.reduce((obj, group) => {
+		const [trackIndexStringOrLoopDefinition, animationNameOrTrackIndexStringCycle, loop, delayString, mixDurationString] = group.slice(1, -1).split(',').map(v => v.trim());
+
+		if (trackIndexStringOrLoopDefinition === "loop") {
+			if (!Number.isInteger(Number(animationNameOrTrackIndexStringCycle))) {
+				throw new Error(`Track index of cycle in ${group} must be a positive integer number, instead it is ${animationNameOrTrackIndexStringCycle}. Original value: ${value}`);
+			}
+			const animationInfoObject = obj[animationNameOrTrackIndexStringCycle] ||= { animations: [] };
+			animationInfoObject.cycle = true;
+			return obj;
+		}
+
+		const trackIndex = Number(trackIndexStringOrLoopDefinition);
+		if (!Number.isInteger(trackIndex)) {
+			throw new Error(`Track index in ${group} must be a positive integer number, instead it is ${trackIndexStringOrLoopDefinition}. Original value: ${value}`);
+		}
+
+		let delay;
+		if (delayString !== undefined) {
+			delay = parseFloat(delayString);
+			if (isNaN(delay)) {
+				throw new Error(`Delay in ${group} must be a positive number, instead it is ${delayString}. Original value: ${value}`);
+			}
+		}
+
+		let mixDuration;
+		if (mixDurationString !== undefined) {
+			mixDuration = parseFloat(mixDurationString);
+			if (isNaN(mixDuration)) {
+				throw new Error(`mixDuration in ${group} must be a positive number, instead it is ${mixDurationString}. Original value: ${value}`);
+			}
+		}
+
+		const animationInfoObject = obj[trackIndexStringOrLoopDefinition] ||= { animations: [] };
+		animationInfoObject.animations.push({
+			animationName: animationNameOrTrackIndexStringCycle,
+			loop: loop.trim().toLowerCase() === "true",
+			delay,
+			mixDuration,
+		});
+		return obj;
+	}, {} as AnimationsInfo);
+}
+
+export type AttributeTypes = "string" | "number" | "boolean" | "array-number" | "array-string" | "fitType" | "modeType" | "offScreenUpdateBehaviourType" | "animationsInfo";
 
 export type CursorEventTypes = "down" | "up" | "enter" | "leave" | "move" | "drag";
 export type CursorEventTypesInput = Exclude<CursorEventTypes, "enter" | "leave">;
@@ -113,6 +170,8 @@ interface WidgetAttributes {
 	jsonSkeletonKey?: string
 	scale: number
 	animation?: string
+	animations?: AnimationsInfo
+	defaultMix?: number
 	skin?: string
 	fit: FitType
 	mode: ModeType
@@ -124,6 +183,7 @@ interface WidgetAttributes {
 	padRight: number
 	padTop: number
 	padBottom: number
+	animationsBound?: string[]
 	boundsX: number
 	boundsY: number
 	boundsWidth: number
@@ -221,7 +281,7 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 	public scale = 1;
 
 	/**
-	 * Optional: The name of the animation to be played
+	 * Optional: The name of the animation to be played. When set, the widget is reinitialized.
 	 * Connected to `animation` attribute.
 	 */
 	public get animation (): string | undefined {
@@ -233,6 +293,37 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 		this.initWidget();
 	}
 	private _animation?: string
+
+	/**
+	 * An {@link AnimationsInfo} that describes a sequence of animations on different tracks.
+	 * Connected to `animations` attribute, but since attributes are string, there's a different form to pass it.
+	 * It is a string composed of groups surrounded by square brackets. Each group has 5 parameters, the firsts 2 mandatory. They corresponds to: track, animation name, loop, delay, mix time.
+	 * For the first group on a track {@link AnimationState.setAnimation} is used, while {@link AnimationState.addAnimation} is used for the others.
+	 * If you use the special token #EMPTY# as animation name {@link AnimationState.setEmptyAnimation} and {@link AnimationState.addEmptyAnimation} iare used respectively.
+	 * Use the special group [loop, trackNumber], to allow the animation of the track on the given trackNumber to restart from the beginning once finished.
+	 */
+	public get animations (): AnimationsInfo | undefined {
+		return this._animations;
+	}
+	public set animations (value: AnimationsInfo | undefined) {
+		if (value === undefined) value = undefined;
+		this._animations = value;
+		this.initWidget();
+	}
+	public _animations?: AnimationsInfo
+
+	/**
+	 * Optional: The default mix set to the {@link AnimationStateData.defaultMix}.
+	 * Connected to `default-mix` attribute.
+	 */
+	public get defaultMix (): number {
+		return this._defaultMix;
+	}
+	public set defaultMix (value: number | undefined) {
+		if (value === undefined) value = 0;
+		this._defaultMix = value;
+	}
+	public _defaultMix = 0;
 
 	/**
 	 * Optional: The name of the skin to be set
@@ -378,6 +469,12 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 	}
 
 	/**
+	 * Optional: an array of animation names that are used to calculate the bounds of the skeleton.
+	 * Connected to `animations-bound` attribute.
+	 */
+	public animationsBound?: string[];
+
+	/**
 	 * Whether or not the bounds are recalculated when an animation or a skin is changed. `false` by default.
 	 * Connected to `auto-recalculate-bounds` attribute.
 	 */
@@ -457,7 +554,7 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 	public cursorBoundsEventCallback = (event: CursorEventTypes) => {}
 
 	/**
-	 * This methods allows to associate to a Slot a callback. For these slots, ff the widget is interactive,
+	 * This methods allows to associate to a Slot a callback. For these slots, if the widget is interactive,
 	 * when the cursor performs actions within the slot's attachment the associated callback is invoked with
 	 * a {@link CursorEventTypes} (for example, it enter or leaves the slot's attachment bounds).
 	 * This is an experimental property and might be removed in the future.
@@ -662,6 +759,9 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 		"json-skeleton-key": { propertyName: "jsonSkeletonKey", type: "string" },
 		scale: { propertyName: "scale", type: "number" },
 		animation: { propertyName: "animation", type: "string", defaultValue: undefined },
+		animations: { propertyName: "animations", type: "animationsInfo", defaultValue: undefined },
+		"animation-bounds": { propertyName: "animationsBound", type: "array-string", defaultValue: undefined },
+		"default-mix": { propertyName: "defaultMix", type: "number", defaultValue: 0 },
 		skin: { propertyName: "skin", type: "string" },
 		width: { propertyName: "width", type: "number", defaultValue: -1 },
 		height: { propertyName: "height", type: "number", defaultValue: -1 },
@@ -686,7 +786,7 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 		"on-screen-manual-start": { propertyName: "onScreenManualStart", type: "boolean" },
 		spinner: { propertyName: "loadingSpinner", type: "boolean" },
 		clip: { propertyName: "clip", type: "boolean" },
-		pages: { propertyName: "pages", type: "string-number" },
+		pages: { propertyName: "pages", type: "array-number" },
 		fit: { propertyName: "fit", type: "fitType", defaultValue: "contain" },
 		mode: { propertyName: "mode", type: "modeType", defaultValue: "inside" },
 		offscreen: { propertyName: "offScreenUpdateBehaviour", type: "offScreenUpdateBehaviourType", defaultValue: "pause" },
@@ -825,12 +925,35 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 	 * Useful when animations or skins are set programmatically.
 	 * @returns void
 	 */
-	public recalculateBounds (): void {
+	public recalculateBounds (forcedRecalculate = false): void {
 		const { skeleton, state } = this;
 		if (!skeleton || !state) return;
-		const track = state.getCurrent(0);
-		const animation = track?.animation as (Animation | undefined);
-		const bounds = this.calculateAnimationViewport(animation);
+
+		let bounds: Rectangle;
+
+		if (this.animationsBound && forcedRecalculate) {
+			let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+
+			this.animationsBound.forEach((animationName) => {
+				const animation = this.skeleton?.data.animations.find(({ name }) => animationName === name)
+				const { x, y, width, height } = this.calculateAnimationViewport(animation);
+
+				minX = Math.min(minX, x);
+				minY = Math.min(minY, y);
+				maxX = Math.max(maxX, x + width);
+				maxY = Math.max(maxY, y + height);
+			});
+
+			bounds = {
+				x: minX,
+				y: minY,
+				width: maxX - minX,
+				height: maxY - minY
+			};
+		} else {
+			bounds = this.calculateAnimationViewport(state.getCurrent(0)?.animation as (Animation | undefined));
+		}
+
 		bounds.x /= skeleton.scaleX;
 		bounds.y /= skeleton.scaleY;
 		bounds.width /= skeleton.scaleX;
@@ -892,19 +1015,56 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 	}
 
 	private initWidget (forceRecalculate = false) {
-		const { skeleton, state, animation, skin } = this;
+		const { skeleton, state, animation, animations: animationsInfo, skin, defaultMix } = this;
 
 		if (skin) {
 			skeleton?.setSkinByName(skin);
 			skeleton?.setSlotsToSetupPose();
 		}
-		if (animation) {
-			state?.setAnimation(0, animation, true);
-		} else {
-			state?.setEmptyAnimation(0);
+
+		if (state) {
+			state.data.defaultMix = defaultMix;
+
+			if (animationsInfo) {
+				Object.entries(animationsInfo).forEach(([trackIndexString, { cycle, animations }]) => {
+
+					const cycleFn = () => {
+						const trackIndex = Number(trackIndexString);
+						animations.forEach(({ animationName, delay, loop, mixDuration }, index) => {
+							let track;
+							if (index === 0) {
+								if (animationName === "#EMPTY#")  {
+									track = state.setEmptyAnimation(trackIndex, mixDuration);
+								} else {
+									track = state.setAnimation(trackIndex, animationName, loop);
+								}
+							} else {
+								if (animationName === "#EMPTY#")  {
+									track = state.addEmptyAnimation(trackIndex, mixDuration, delay);
+								} else {
+									track = state.addAnimation(trackIndex, animationName, loop, delay);
+								}
+							}
+
+							if (mixDuration) track.mixDuration = mixDuration;
+
+							if (cycle && index === animations.length - 1) {
+								track.listener = { complete: () => cycleFn() };
+							};
+
+						});
+					}
+
+					cycleFn();
+				});
+			} else if (animation) {
+				state.setAnimation(0, animation, true);
+			} else {
+				state.setEmptyAnimation(0);
+			}
 		}
 
-		if (forceRecalculate || this.autoRecalculateBounds) this.recalculateBounds();
+		if (forceRecalculate || this.autoRecalculateBounds) this.recalculateBounds(forceRecalculate);
 	}
 
 	private render (): void {
@@ -1144,6 +1304,8 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 				return { x: 0, y: 0, width: -1, height: -1 };
 			}
 		}
+
+		skeleton.setToSetupPose();
 
 		return {
 			x: minX,
@@ -2081,6 +2243,11 @@ function castArrayNumber (value: string | null, defaultValue = undefined) {
 	}, [] as Array<number>);
 }
 
+function castArrayString (value: string | null, defaultValue = undefined) {
+	if (value === null) return defaultValue;
+	return value.split(",");
+}
+
 function castValue (type: AttributeTypes, value: string | null, defaultValue?: any) {
 	switch (type) {
 		case "string":
@@ -2089,14 +2256,18 @@ function castValue (type: AttributeTypes, value: string | null, defaultValue?: a
 			return castNumber(value, defaultValue);
 		case "boolean":
 			return castBoolean(value, defaultValue);
-		case "string-number":
+		case "array-number":
 			return castArrayNumber(value, defaultValue);
+		case "array-string":
+			return castArrayString(value, defaultValue);
 		case "fitType":
 			return isFitType(value) ? value : defaultValue;
 		case "modeType":
 			return isModeType(value) ? value : defaultValue;
 		case "offScreenUpdateBehaviourType":
 			return isOffScreenUpdateBehaviourType(value) ? value : defaultValue;
+		case "animationsInfo":
+			return castToAnimationsInfo(value) || defaultValue;
 		default:
 			break;
 	}
