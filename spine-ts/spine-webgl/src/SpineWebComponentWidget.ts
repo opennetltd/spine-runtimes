@@ -1527,15 +1527,15 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 		// we cannot use window.resize event since it does not fire when body resizes, but not the window
 		// Alternatively, we can store the body size, check the current body size in the loop (like the translateCanvas), and
 		// if they differs call the resizeCallback. I already tested it, and it works. ResizeObserver should be more efficient.
-		this.resizeObserver = new ResizeObserver(this.resizeCallback);
 		if (this.scrollable) {
-			const style = getComputedStyle(this.parentElement!);
-			if (style.transform === "none" && !this.scrollableTweakOff) {
+			// if the element is scrollable, the user does not disable translate tweak, and the parent did not have already a transform, add the tweak
+			if (this.scrollable && !this.scrollableTweakOff && getComputedStyle(this.parentElement!).transform === "none") {
 				this.parentElement!.style.transform = `translateZ(0)`;
 			}
+			this.resizeObserver = new ResizeObserver(this.resizeCallback);
 			this.resizeObserver.observe(this.parentElement!);
 		} else {
-			this.resizeObserver.observe(document.body);
+			window.addEventListener("resize", this.resizeCallback)
 		}
 
 		this.skeletonList.forEach((widget) => {
@@ -1546,12 +1546,17 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 		this.startRenderingLoop();
 	}
 
+	private hasCssTweakOff() {
+		return this.scrollableTweakOff && getComputedStyle(this.parentElement!).transform === "none";
+	}
+
 	private running = false;
 	disconnectedCallback (): void {
 		const id = this.getAttribute('id');
 		if (id) SpineWebComponentOverlay.OVERLAY_LIST.delete(id);
 		// window.removeEventListener("scroll", this.scrollHandler);
 		window.removeEventListener("load", this.onLoadCallback);
+		window.removeEventListener("resize", this.resizeCallback);
 		window.screen.orientation.removeEventListener('change', this.orientationChangeCallback);
 		this.intersectionObserver?.disconnect();
 		this.resizeObserver?.disconnect();
@@ -1582,7 +1587,6 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 
 	private resizeCallback = () => {
 		this.updateCanvasSize();
-		this.zoomHandler();
 	}
 
 	private orientationChangeCallback = () => {
@@ -1599,7 +1603,6 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 
 	private onLoadCallback = () => {
 		this.updateCanvasSize();
-		this.zoomHandler();
 		this.scrollHandler();
 		if (!this.loaded) {
 			this.parentElement!.appendChild(this);
@@ -1657,13 +1660,13 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 			// fps top-left span
 			if (SpineWebComponentWidget.SHOW_FPS) {
 				if (!this.fpsAppended) {
-					this.root.appendChild(this.fps);
+					this.div.appendChild(this.fps);
 					this.fpsAppended = true;
 				}
 				this.fps.innerText = this.time.framesPerSecond.toFixed(2) + " fps";
 			} else {
 				if (this.fpsAppended) {
-					this.root.removeChild(this.fps);
+					this.div.removeChild(this.fps);
 					this.fpsAppended = false;
 				}
 			}
@@ -1950,6 +1953,7 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 		this.cursorWorldY = tempVector.y;
 	}
 
+	// return true if updated
 	private cursorWidgetUpdate (widget: SpineWebComponentWidget): boolean {
 		if (widget.worldX === Infinity) return false;
 
@@ -1987,8 +1991,11 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 			},
 			down: (x, y, ev) => {
 				const input = getInput(ev);
+
+				this.cursorUpdate(input);
+
 				this.skeletonList.forEach(widget => {
-					if (!widget.onScreen && widget.dragX === 0 && widget.dragY === 0) return;
+					if (!this.cursorWidgetUpdate(widget) || !widget.onScreen && widget.dragX === 0 && widget.dragY === 0) return;
 
 					widget.cursorEventUpdate("down", ev);
 
@@ -2064,9 +2071,18 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 			this.root.appendChild(this.div!);
 		} else {
 			this.div?.remove();
-			this.div!.style.width = this.parentElement!.scrollWidth + "px";
-			this.div!.style.height = this.parentElement!.scrollHeight + "px";
-			// this.canvas.style.transform = `translate(${-this.overflowLeftSize}px,${-this.overflowTopSize}px)`;
+
+			if (this.hasCssTweakOff()) {
+				// this case lags if scrolls or position fixed
+				// users should never use tweak off, unless the parent container has already a transform
+				this.div!.style.width = this.parentElement!.clientWidth + "px";
+				this.div!.style.height = this.parentElement!.clientHeight + "px";
+				this.canvas.style.transform = `translate(${-this.overflowLeftSize}px,${-this.overflowTopSize}px)`;
+			} else {
+				this.div!.style.width = this.parentElement!.scrollWidth + "px";
+				this.div!.style.height = this.parentElement!.scrollHeight + "px";
+			}
+
 			this.root.appendChild(this.div!);
 		}
 
@@ -2084,15 +2100,6 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 			height = this.parentElement!.clientHeight;
 		}
 
-		// this is needed because screen size is wrong when zoom levels occurs
-		// zooming out will make the canvas smaller and its known that zoom level
-		// on browsers is not reliable
-		// ideally, window.innerWidth/innerHeight would be preferrable. However
-		// on mobile browsers the dynamic search bar makes the innerHeight smaller
-		// at the beginning (changing the canvas size at each scroll is not ideal)
-		// width = Math.max(width, window.innerWidth);
-		// height = Math.max(height, window.innerHeight);
-
 		if (this.currentCanvasBaseWidth !== width || this.currentCanvasBaseHeight !== height) {
 			this.currentCanvasBaseWidth = width;
 			this.currentCanvasBaseHeight = height;
@@ -2106,6 +2113,24 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 			this.canvas.style.height = totalHeight + "px";
 			this.resize(totalWidth, totalHeight);
 		}
+
+		this.skeletonList.forEach((widget) => {
+			// inside mode scale automatically to fit the skeleton within its parent
+			if (widget.mode !== "origin" && widget.fit !== "none") return;
+
+			const skeleton = widget.skeleton;
+			if (!skeleton) return;
+
+			// I'm not sure about this. With mode origin and fit none:
+			// case 1) If I comment this scale code, the skeleton is never scaled and will be always at the same size and won't change size while zooming
+			// case 2) Otherwise, the skeleton is loaded always at the same size, but changes size while zooming
+			const scale = window.devicePixelRatio;
+			skeleton.scaleX = skeleton.scaleX / widget.currentScaleDpi * scale;
+			skeleton.scaleY = skeleton.scaleY / widget.currentScaleDpi * scale;
+			widget.currentScaleDpi = scale;
+
+		});
+
 	}
 
 	private translateCanvas () {
@@ -2116,27 +2141,38 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 			scrollPositionX += window.scrollX;
 			scrollPositionY += window.scrollY;
 		} else {
-			scrollPositionX += this.parentElement!.scrollLeft;
-			scrollPositionY += this.parentElement!.scrollTop;
+
+			// Ideally this should be the only scrollable case (scrollable-tweak-off not enabled or at least an ancestor has transform)
+			// I'd like to get rid of the code below
+			if (!this.hasCssTweakOff()) {
+				scrollPositionX += this.parentElement!.scrollLeft;
+				scrollPositionY += this.parentElement!.scrollTop;
+			} else {
+				const { left, top } = this.parentElement!.getBoundingClientRect();
+				scrollPositionX += left + window.scrollX;
+				scrollPositionY += top + window.scrollY;
+
+				let offsetParent = this.offsetParent;
+				do {
+					if (offsetParent === document.body) break;
+
+					const htmlOffsetParentElement = offsetParent as HTMLElement;
+					if (htmlOffsetParentElement.style.position === "fixed" || htmlOffsetParentElement.style.position === "sticky" || htmlOffsetParentElement.style.position === "absolute") {
+						const parentRect = htmlOffsetParentElement.getBoundingClientRect();
+						this.div.style.transform = `translate(${left - parentRect.left}px,${top - parentRect.top}px)`;
+						return;
+					}
+
+					offsetParent = htmlOffsetParentElement.offsetParent;
+				} while (offsetParent);
+
+				this.div.style.transform = `translate(${scrollPositionX + this.overflowLeftSize}px,${scrollPositionY + this.overflowTopSize}px)`;
+				return;
+			}
+
 		}
 
 		this.canvas.style.transform = `translate(${scrollPositionX}px,${scrollPositionY}px)`;
-	}
-
-	private zoomHandler = () => {
-		this.skeletonList.forEach((widget) => {
-			// inside mode scale automatically to fit the skeleton within its parent
-			if (widget.mode !== "origin" && widget.fit !== "none") return;
-
-			const skeleton = widget.skeleton;
-			if (!skeleton) return;
-			const scale = window.devicePixelRatio;
-			skeleton.scaleX = skeleton.scaleX / widget.currentScaleDpi * scale;
-			skeleton.scaleY = skeleton.scaleY / widget.currentScaleDpi * scale;
-			widget.currentScaleDpi = scale;
-		});
-
-		this.resize(parseFloat(this.canvas.style.width), parseFloat(this.canvas.style.height));
 	}
 
 	private resize (width: number, height: number) {
@@ -2155,16 +2191,29 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 		return document.body.getBoundingClientRect();
 	}
 
-	// screen size remain the same when it is rotated
-	// we need to swap them based and the orientation angle
+	private previousWidth = 0;
+	private previousHeight = 0;
+	private previousDPR = 0;
+	private static readonly WIDTH_INCREMENT = 1.15;
+	private static readonly HEIGHT_INCREMENT = 1.2;
 	private getScreenSize () {
-		const { screen } = window;
-		const { width, height } = window.screen;
-		const angle = screen.orientation.angle;
-		const rotated = angle === 90 || angle === 270;
-		return rotated
-			? { width: height, height: width }
-			: { width, height };
+		let width = window.innerWidth;
+		let height = window.innerHeight;
+
+		const dpr = window.devicePixelRatio;
+		if (dpr !== this.previousDPR) {
+			this.previousDPR = dpr;
+			this.previousWidth = this.previousWidth === 0 ? width : width * SpineWebComponentOverlay.WIDTH_INCREMENT;
+			this.previousHeight = height * SpineWebComponentOverlay.HEIGHT_INCREMENT;
+		} else {
+			if (width > this.previousWidth) this.previousWidth = width * SpineWebComponentOverlay.WIDTH_INCREMENT;
+			if (height > this.previousHeight) this.previousHeight = height * SpineWebComponentOverlay.HEIGHT_INCREMENT;
+		}
+
+		return {
+			width: this.previousWidth,
+			height: this.previousHeight,
+		}
 	}
 
 	/*
