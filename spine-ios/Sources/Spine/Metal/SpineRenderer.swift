@@ -293,6 +293,16 @@ public class SpineRenderer: NSObject, MTKViewDelegate {
 
         drawable.update(delta: delta)
     }
+    
+    public func drawToEncoder(_ encoder: MTLRenderCommandEncoder, size: CGSize) {
+        guard let renderCommands = dataSource?.renderCommands(self) else { return }
+
+        self.sizeInPoints = size
+        self.viewPortSize = vector_uint2(UInt32(size.width), UInt32(size.height))
+
+        let dummyView = DummyMTKView(size: size)
+        draw(renderCommands: renderCommands, renderEncoder: encoder, in: dummyView)
+    }
 }
 
 fileprivate extension BlendMode {
@@ -366,4 +376,15 @@ fileprivate extension MTLRenderPipelineColorAttachmentDescriptor {
 		destinationRGBBlendFactor = blendMode.destinationRGBBlendFactor
 		destinationAlphaBlendFactor = blendMode.destinationAlphaBlendFactor
 	}
+}
+
+class DummyMTKView: MTKView {
+    init(size: CGSize) {
+        super.init(frame: .zero, device: MTLCreateSystemDefaultDevice())
+        self.drawableSize = size
+    }
+
+    required init(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
 }
