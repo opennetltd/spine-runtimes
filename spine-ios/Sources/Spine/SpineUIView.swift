@@ -10,7 +10,7 @@ import MetalKit
 ///
 /// This is a direct subclass of ``MTKView`` and is using `Metal` to render the skeleton.
 @objc
-public final class SpineUIView: MTKView {
+public class SpineUIView: MTKView {
     
     let controller: SpineController
     let mode: Spine.ContentMode
@@ -18,7 +18,7 @@ public final class SpineUIView: MTKView {
     let boundsProvider: BoundsProvider
     
     internal var computedBounds: CGRect = .zero
-    internal var renderer: SpineRenderer?
+    public var renderer: SpineRenderer?
     
     @objc internal init(
         controller: SpineController = SpineController(),
