@@ -20,7 +20,7 @@ protocol SpineRendererDataSource: AnyObject {
     func renderCommands(_ spineRenderer: SpineRenderer) -> [RenderCommand]
 }
 
-internal final class SpineRenderer: NSObject, MTKViewDelegate {
+final class SpineRenderer: NSObject, MTKViewDelegate {
     
     private let device: MTLDevice
     private let textures: [MTLTexture]
