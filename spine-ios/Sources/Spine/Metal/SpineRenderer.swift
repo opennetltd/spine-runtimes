@@ -21,7 +21,7 @@ protocol SpineRendererDataSource: AnyObject {
     func renderCommands(_ spineRenderer: SpineRenderer) -> [RenderCommand]
 }
 
-internal class SpineRenderer: NSObject, MTKViewDelegate {
+public class SpineRenderer: NSObject, MTKViewDelegate {
     
     private let device: MTLDevice
     private let textures: [MTLTexture]
@@ -48,7 +48,7 @@ internal class SpineRenderer: NSObject, MTKViewDelegate {
     weak var dataSource: SpineRendererDataSource?
     weak var delegate: SpineRendererDelegate?
     
-    internal init(
+    init(
         device: MTLDevice,
         commandQueue: MTLCommandQueue,
         pixelFormat: MTLPixelFormat,
@@ -103,7 +103,7 @@ internal class SpineRenderer: NSObject, MTKViewDelegate {
         increaseBuffersSize(to: SpineRenderer.defaultBufferSize)
     }
     
-    func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
+    public func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
         guard let spineView = view as? SpineUIView else { return }
         
         sizeInPoints = CGSize(width: size.width / UIScreen.main.scale, height: size.height / UIScreen.main.scale)
@@ -115,7 +115,7 @@ internal class SpineRenderer: NSObject, MTKViewDelegate {
         )
     }
     
-    func draw(in view: MTKView) {
+    public func draw(in view: MTKView) {
         guard dataSource?.isPlaying(self) ?? false else {
             lastDraw = CACurrentMediaTime()
             return
