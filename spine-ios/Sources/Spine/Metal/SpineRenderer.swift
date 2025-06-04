@@ -16,11 +16,12 @@ protocol SpineRendererDelegate: AnyObject {
 }
 
 protocol SpineRendererDataSource: AnyObject {
+    var skeletonDrawable: SkeletonDrawableWrapper { get }
     func isPlaying(_ spineRenderer: SpineRenderer) -> Bool
     func renderCommands(_ spineRenderer: SpineRenderer) -> [RenderCommand]
 }
 
-class SpineRenderer: NSObject, MTKViewDelegate {
+internal class SpineRenderer: NSObject, MTKViewDelegate {
     
     private let device: MTLDevice
     private let textures: [MTLTexture]
@@ -281,6 +282,16 @@ class SpineRenderer: NSObject, MTKViewDelegate {
         buffers = (0 ..< SpineRenderer.numberOfBuffers).map { _ in
             device.makeBuffer(length: size, options: .storageModeShared)!
         }
+    }
+    
+    public func draw(to encoder: MTLRenderCommandEncoder, size: CGSize) {
+        guard let drawable = dataSource?.skeletonDrawable else { return }
+
+        let time = CACurrentMediaTime()
+        let delta = Float(time - (lastDraw == 0 ? time : lastDraw))
+        lastDraw = time
+
+        drawable.update(delta: delta)
     }
 }
 

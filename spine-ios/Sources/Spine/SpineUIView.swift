@@ -18,7 +18,7 @@ public class SpineUIView: MTKView {
     let boundsProvider: BoundsProvider
     
     internal var computedBounds: CGRect = .zero
-    public var renderer: SpineRenderer?
+    internal var renderer: SpineRenderer?
     
     @objc internal init(
         controller: SpineController = SpineController(),
