@@ -188,7 +188,10 @@ extension SpineController: SpineRendererDelegate {
 }
 
 extension SpineController: SpineRendererDataSource {
-    
+    public var skeletonDrawable: SkeletonDrawableWrapper {
+        return self.drawable
+    }
+
     func spineRendererWillUpdate(_ spineRenderer: SpineRenderer) {
         onBeforeUpdateWorldTransforms?(self)
     }
