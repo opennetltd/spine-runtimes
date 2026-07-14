@@ -5,6 +5,26 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
+			"name": "headless test (ts)",
+			"type": "node",
+			"request": "launch",
+			"runtimeExecutable": "npx",
+			"runtimeArgs": [
+				"tsx"
+			],
+			"program": "${workspaceFolder}/spine-core/tests/HeadlessTest.ts",
+			"args": [
+				"${workspaceFolder}/../examples/spineboy/export/spineboy-pro.json",
+				"${workspaceFolder}/../examples/spineboy/export/spineboy-pma.atlas",
+				"walk"
+			],
+			"cwd": "${workspaceFolder}/spine-core",
+			"console": "integratedTerminal",
+			"skipFiles": [
+				"<node_internals>/**"
+			]
+		},
+		{
 			"type": "pwa-chrome",
 			"request": "launch",
 			"name": "Examples",
@@ -38,7 +58,6 @@
 			"name": "phaser-example",
 			"url": "http://localhost:8080/spine-phaser/example/index.html",
 			"webRoot": "${workspaceFolder}"
-		}
-
+		},
 	]
 }

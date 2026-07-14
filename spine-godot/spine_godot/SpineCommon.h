@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,8 +23,8 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 #ifndef SPINE_COMMON_H
@@ -32,6 +32,16 @@
 
 #ifdef SPINE_GODOT_EXTENSION
 #include <godot_cpp/core/version.hpp>
+
+// When running scons with deprecated=no, these are not defined in version.h in Godot 4.5.1
+// but our code for older versions of Godot relies on them.
+#ifndef VERSION_MAJOR
+#define VERSION_MAJOR GODOT_VERSION_MAJOR
+#define VERSION_MINOR GODOT_VERSION_MINOR
+#define VERSION_PATCH GODOT_VERSION_PATCH
+#endif
+
+#include <godot_cpp/classes/ref.hpp>
 #include <godot_cpp/classes/ref_counted.hpp>
 #include <godot_cpp/variant/string_name.hpp>
 using namespace godot;
@@ -46,20 +56,29 @@ using namespace godot;
 #define RES Ref<Resource>
 #define REF Ref<RefCounted>
 #define GEOMETRY2D Geometry2D
-#ifndef VERSION_MAJOR
-#define VERSION_MAJOR GODOT_VERSION_MAJOR
-#endif
-#ifndef VERSION_MINOR
-#define VERSION_MINOR GODOT_VERSION_MINOR
-#endif
+
 // FIXME this doesn't do the same as the engine SNAME in terms of caching
 #define SNAME(name) StringName(name)
 #define RS RenderingServer
 #else
 #include "core/version.h"
+
+// When running scons with deprecated=no, these are not defined in version.h in Godot 4.5.1
+// but our code for older versions of Godot relies on them.
+#ifndef VERSION_MAJOR
+#define VERSION_MAJOR GODOT_VERSION_MAJOR
+#define VERSION_MINOR GODOT_VERSION_MINOR
+#define VERSION_PATCH GODOT_VERSION_PATCH
+#endif
+
 #if VERSION_MAJOR > 3
 #include "core/core_bind.h"
 #include "core/error/error_macros.h"
+#if VERSION_MAJOR > 4 || (VERSION_MAJOR == 4 && VERSION_MINOR >= 7)
+#include "core/object/callable_mp.h"
+#else
+#include "core/object/callable_method_pointer.h"
+#endif
 #define REFCOUNTED RefCounted
 #define EMPTY(x) ((x).is_empty())
 #define EMPTY_PTR(x) ((x)->is_empty())
@@ -85,19 +104,23 @@ using namespace godot;
 #define GDREGISTER_CLASS(x) ClassDB::register_class<x>()
 #define GEOMETRY2D Geometry
 #ifndef SNAME
-#define SNAME(m_arg) ([]() -> const StringName & { static StringName sname = _scs_create(m_arg); return sname; })()
+#define SNAME(m_arg)                                                                                                                                 \
+	([]() -> const StringName & {                                                                                                                    \
+		static StringName sname = _scs_create(m_arg);                                                                                                \
+		return sname;                                                                                                                                \
+	})()
 #endif
 #endif
 #endif
 
-#define SPINE_CHECK(obj, ret)                      \
-	if (!(obj)) {                                  \
-		ERR_PRINT("Native Spine object not set."); \
-		return ret;                                \
+#define SPINE_CHECK(obj, ret)                                                                                                                        \
+	if (!(obj)) {                                                                                                                                    \
+		ERR_PRINT("Native Spine object not set.");                                                                                                   \
+		return ret;                                                                                                                                  \
 	}
 
-#define SPINE_STRING(x) spine::String((x).utf8())
-#define SPINE_STRING_TMP(x) spine::String((x).utf8(), true, false)
+#define SPINE_STRING(x) spine::String((x).utf8().ptr())
+#define SPINE_STRING_TMP(x) spine::String((x).utf8().ptr(), true, false)
 
 // Can't do template classes with Godot's object model :(
 class SpineObjectWrapper : public REFCOUNTED {
@@ -105,6 +128,9 @@ class SpineObjectWrapper : public REFCOUNTED {
 
 	Object *spine_owner;
 	void *spine_object;
+#if VERSION_MAJOR <= 3
+	ObjectID spine_owner_id;
+#endif
 
 protected:
 	static void _bind_methods() {
@@ -118,10 +144,27 @@ protected:
 #else
 		spine_owner->disconnect(SNAME("_internal_spine_objects_invalidated"), this, SNAME("_internal_spine_objects_invalidated"));
 #endif
+		spine_owner = nullptr;
 	}
 
-	SpineObjectWrapper() : spine_owner(nullptr), spine_object(nullptr) {
+	SpineObjectWrapper() {
+		spine_owner = nullptr;
+		spine_object = nullptr;
+#if VERSION_MAJOR <= 3
+		spine_owner_id = 0;
+#endif
 	}
+
+#if VERSION_MAJOR <= 3
+	~SpineObjectWrapper() {
+		if (!spine_object) return;
+		auto owner = ObjectDB::get_instance(spine_owner_id);
+		if (!owner) return;
+		if (owner->is_connected(SNAME("_internal_spine_objects_invalidated"), this, SNAME("_internal_spine_objects_invalidated"))) {
+			owner->disconnect(SNAME("_internal_spine_objects_invalidated"), this, SNAME("_internal_spine_objects_invalidated"));
+		}
+	}
+#endif
 
 	template<typename OWNER, typename OBJECT>
 	void _set_spine_object_internal(const OWNER *_owner, OBJECT *_object) {
@@ -139,6 +182,9 @@ protected:
 		}
 
 		spine_owner = (Object *) _owner;
+#if VERSION_MAJOR <= 3
+		spine_owner_id = spine_owner->get_instance_id();
+#endif
 		spine_object = _object;
 #if VERSION_MAJOR > 3
 		spine_owner->connect(SNAME("_internal_spine_objects_invalidated"), callable_mp(this, &SpineObjectWrapper::spine_objects_invalidated));
@@ -147,8 +193,12 @@ protected:
 #endif
 	}
 
-	void *_get_spine_object_internal() { return spine_object; }
-	void *_get_spine_owner_internal() { return spine_owner; }
+	void *_get_spine_object_internal() {
+		return spine_object;
+	}
+	void *_get_spine_owner_internal() {
+		return spine_owner;
+	}
 };
 
 class SpineSprite;

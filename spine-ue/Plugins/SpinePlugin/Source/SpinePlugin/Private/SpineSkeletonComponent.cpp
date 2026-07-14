@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,8 +23,8 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 #include "SpineSkeletonComponent.h"
@@ -48,12 +48,12 @@ bool USpineSkeletonComponent::SetSkins(UPARAM(ref) TArray<FString> &SkinNames) {
 	if (skeleton) {
 		spine::Skin *newSkin = new spine::Skin("__spine-ue3_custom_skin");
 		for (auto &skinName : SkinNames) {
-			spine::Skin *skin = skeleton->getData()->findSkin(TCHAR_TO_UTF8(*skinName));
+			spine::Skin *skin = skeleton->getData().findSkin(TCHAR_TO_UTF8(*skinName));
 			if (!skin) {
 				delete newSkin;
 				return false;
 			}
-			newSkin->addSkin(skin);
+			newSkin->addSkin(*skin);
 		}
 		skeleton->setSkin(newSkin);
 		if (customSkin != nullptr) {
@@ -68,7 +68,7 @@ bool USpineSkeletonComponent::SetSkins(UPARAM(ref) TArray<FString> &SkinNames) {
 bool USpineSkeletonComponent::SetSkin(const FString skinName) {
 	CheckState();
 	if (skeleton) {
-		Skin *skin = skeleton->getData()->findSkin(TCHAR_TO_UTF8(*skinName));
+		Skin *skin = skeleton->getData().findSkin(TCHAR_TO_UTF8(*skinName));
 		if (!skin) return false;
 		skeleton->setSkin(skin);
 		return true;
@@ -79,8 +79,8 @@ bool USpineSkeletonComponent::SetSkin(const FString skinName) {
 void USpineSkeletonComponent::GetSkins(TArray<FString> &Skins) {
 	CheckState();
 	if (skeleton) {
-		for (size_t i = 0, n = skeleton->getData()->getSkins().size(); i < n; i++) {
-			Skins.Add(skeleton->getData()->getSkins()[i]->getName().buffer());
+		for (size_t i = 0, n = skeleton->getData().getSkins().size(); i < n; i++) {
+			Skins.Add(skeleton->getData().getSkins()[i]->getName().buffer());
 		}
 	}
 }
@@ -88,7 +88,7 @@ void USpineSkeletonComponent::GetSkins(TArray<FString> &Skins) {
 bool USpineSkeletonComponent::HasSkin(const FString skinName) {
 	CheckState();
 	if (skeleton) {
-		return skeleton->getData()->findSkin(TCHAR_TO_UTF8(*skinName)) != nullptr;
+		return skeleton->getData().findSkin(TCHAR_TO_UTF8(*skinName)) != nullptr;
 	}
 	return false;
 }
@@ -119,18 +119,20 @@ FTransform USpineSkeletonComponent::GetBoneWorldTransform(const FString &BoneNam
 		FTransform baseTransform;
 		AActor *owner = GetOwner();
 		if (owner) {
-			USpineSkeletonRendererComponent *rendererComponent = static_cast<USpineSkeletonRendererComponent *>(owner->GetComponentByClass(USpineSkeletonRendererComponent::StaticClass()));
-			if (rendererComponent) baseTransform = rendererComponent->GetComponentTransform();
+			USpineSkeletonRendererComponent *rendererComponent = static_cast<USpineSkeletonRendererComponent *>(
+				owner->GetComponentByClass(USpineSkeletonRendererComponent::StaticClass()));
+			if (rendererComponent)
+				baseTransform = rendererComponent->GetComponentTransform();
 			else
 				baseTransform = owner->GetActorTransform();
 		}
 
-		FVector position(bone->getWorldX(), 0, bone->getWorldY());
+		FVector position(bone->getAppliedPose().getWorldX(), 0, bone->getAppliedPose().getWorldY());
 		FMatrix localTransform;
 		localTransform.SetIdentity();
-		localTransform.SetAxis(2, FVector(bone->getA(), 0, bone->getC()));
-		localTransform.SetAxis(0, FVector(bone->getB(), 0, bone->getD()));
-		localTransform.SetOrigin(FVector(bone->getWorldX(), 0, bone->getWorldY()));
+		localTransform.SetAxis(2, FVector(bone->getAppliedPose().getA(), 0, bone->getAppliedPose().getC()));
+		localTransform.SetAxis(0, FVector(bone->getAppliedPose().getB(), 0, bone->getAppliedPose().getD()));
+		localTransform.SetOrigin(FVector(bone->getAppliedPose().getWorldX(), 0, bone->getAppliedPose().getWorldY()));
 		localTransform = localTransform * baseTransform.ToMatrixWithScale();
 
 		FTransform result;
@@ -152,8 +154,10 @@ void USpineSkeletonComponent::SetBoneWorldPosition(const FString &BoneName, cons
 		FTransform baseTransform;
 		AActor *owner = GetOwner();
 		if (owner) {
-			USpineSkeletonRendererComponent *rendererComponent = static_cast<USpineSkeletonRendererComponent *>(owner->GetComponentByClass(USpineSkeletonRendererComponent::StaticClass()));
-			if (rendererComponent) baseTransform = rendererComponent->GetComponentTransform();
+			USpineSkeletonRendererComponent *rendererComponent = static_cast<USpineSkeletonRendererComponent *>(
+				owner->GetComponentByClass(USpineSkeletonRendererComponent::StaticClass()));
+			if (rendererComponent)
+				baseTransform = rendererComponent->GetComponentTransform();
 			else
 				baseTransform = owner->GetActorTransform();
 		}
@@ -162,12 +166,12 @@ void USpineSkeletonComponent::SetBoneWorldPosition(const FString &BoneName, cons
 		FVector localPosition = baseTransform.TransformPosition(position);
 		float localX = 0, localY = 0;
 		if (bone->getParent()) {
-			bone->getParent()->worldToLocal(localPosition.X, localPosition.Z, localX, localY);
+			bone->getParent()->getAppliedPose().worldToLocal(localPosition.X, localPosition.Z, localX, localY);
 		} else {
-			bone->worldToLocal(localPosition.X, localPosition.Z, localX, localY);
+			bone->getAppliedPose().worldToLocal(localPosition.X, localPosition.Z, localX, localY);
 		}
-		bone->setX(localX);
-		bone->setY(localY);
+		bone->getAppliedPose().setX(localX);
+		bone->getAppliedPose().setY(localY);
 	}
 }
 
@@ -178,19 +182,19 @@ void USpineSkeletonComponent::UpdateWorldTransform() {
 	}
 }
 
-void USpineSkeletonComponent::SetToSetupPose() {
+void USpineSkeletonComponent::SetupPose() {
 	CheckState();
-	if (skeleton) skeleton->setToSetupPose();
+	if (skeleton) skeleton->setupPose();
 }
 
-void USpineSkeletonComponent::SetBonesToSetupPose() {
+void USpineSkeletonComponent::SetupPoseBones() {
 	CheckState();
-	if (skeleton) skeleton->setBonesToSetupPose();
+	if (skeleton) skeleton->setupPoseBones();
 }
 
-void USpineSkeletonComponent::SetSlotsToSetupPose() {
+void USpineSkeletonComponent::SetupPoseSlots() {
 	CheckState();
-	if (skeleton) skeleton->setSlotsToSetupPose();
+	if (skeleton) skeleton->setupPoseSlots();
 }
 
 void USpineSkeletonComponent::SetScaleX(float scaleX) {
@@ -227,7 +231,7 @@ void USpineSkeletonComponent::GetBones(TArray<FString> &Bones) {
 bool USpineSkeletonComponent::HasBone(const FString BoneName) {
 	CheckState();
 	if (skeleton) {
-		return skeleton->getData()->findBone(TCHAR_TO_UTF8(*BoneName)) != nullptr;
+		return skeleton->getData().findBone(TCHAR_TO_UTF8(*BoneName)) != nullptr;
 	}
 	return false;
 }
@@ -244,7 +248,7 @@ void USpineSkeletonComponent::GetSlots(TArray<FString> &Slots) {
 bool USpineSkeletonComponent::HasSlot(const FString SlotName) {
 	CheckState();
 	if (skeleton) {
-		return skeleton->getData()->findSlot(TCHAR_TO_UTF8(*SlotName)) != nullptr;
+		return skeleton->getData().findSlot(TCHAR_TO_UTF8(*SlotName)) != nullptr;
 	}
 	return false;
 }
@@ -254,7 +258,7 @@ void USpineSkeletonComponent::SetSlotColor(const FString SlotName, const FColor 
 	if (skeleton) {
 		Slot *slot = skeleton->findSlot(TCHAR_TO_UTF8(*SlotName));
 		if (slot) {
-			slot->getColor().set(color.R / 255.f, color.G / 255.f, color.B / 255.f, color.A / 255.f);
+			slot->getPose().getColor().set(color.R / 255.f, color.G / 255.f, color.B / 255.f, color.A / 255.f);
 		}
 	}
 }
@@ -262,8 +266,8 @@ void USpineSkeletonComponent::SetSlotColor(const FString SlotName, const FColor 
 void USpineSkeletonComponent::GetAnimations(TArray<FString> &Animations) {
 	CheckState();
 	if (skeleton) {
-		for (size_t i = 0, n = skeleton->getData()->getAnimations().size(); i < n; i++) {
-			Animations.Add(skeleton->getData()->getAnimations()[i]->getName().buffer());
+		for (size_t i = 0, n = skeleton->getData().getAnimations().size(); i < n; i++) {
+			Animations.Add(skeleton->getData().getAnimations()[i]->getName().buffer());
 		}
 	}
 }
@@ -271,7 +275,7 @@ void USpineSkeletonComponent::GetAnimations(TArray<FString> &Animations) {
 bool USpineSkeletonComponent::HasAnimation(FString AnimationName) {
 	CheckState();
 	if (skeleton) {
-		return skeleton->getData()->findAnimation(TCHAR_TO_UTF8(*AnimationName)) != nullptr;
+		return skeleton->getData().findAnimation(TCHAR_TO_UTF8(*AnimationName)) != nullptr;
 	}
 	return false;
 }
@@ -279,8 +283,9 @@ bool USpineSkeletonComponent::HasAnimation(FString AnimationName) {
 float USpineSkeletonComponent::GetAnimationDuration(FString AnimationName) {
 	CheckState();
 	if (skeleton) {
-		Animation *animation = skeleton->getData()->findAnimation(TCHAR_TO_UTF8(*AnimationName));
-		if (animation == nullptr) return 0;
+		Animation *animation = skeleton->getData().findAnimation(TCHAR_TO_UTF8(*AnimationName));
+		if (animation == nullptr)
+			return 0;
 		else
 			return animation->getDuration();
 	}
@@ -304,9 +309,9 @@ void USpineSkeletonComponent::PhysicsRotate(float x, float y, float degrees) {
 void USpineSkeletonComponent::ResetPhysicsConstraints() {
 	CheckState();
 	if (skeleton) {
-		Vector<PhysicsConstraint *> &constraints = skeleton->getPhysicsConstraints();
+		Array<PhysicsConstraint *> &constraints = skeleton->getPhysicsConstraints();
 		for (int i = 0, n = (int) constraints.size(); i < n; i++) {
-			constraints[i]->reset();
+			constraints[i]->reset(*skeleton);
 		}
 	}
 }
@@ -341,7 +346,7 @@ void USpineSkeletonComponent::CheckState() {
 			if (lastSpineAtlas != atlas) {
 				needsUpdate = true;
 			}
-			if (skeleton && skeleton->getData() != SkeletonData->GetSkeletonData(atlas)) {
+			if (skeleton && &skeleton->getData() != SkeletonData->GetSkeletonData(atlas)) {
 				needsUpdate = true;
 			}
 		}
@@ -352,7 +357,7 @@ void USpineSkeletonComponent::CheckState() {
 
 		if (Atlas && SkeletonData) {
 			spine::SkeletonData *data = SkeletonData->GetSkeletonData(Atlas->GetAtlas());
-			skeleton = new (__FILE__, __LINE__) Skeleton(data);
+			skeleton = new (__FILE__, __LINE__) Skeleton(*data);
 		}
 
 		lastAtlas = Atlas;

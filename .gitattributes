@@ -4,6 +4,16 @@
 * text=auto
 
 *.sh         text eol=lf
+*.java       text eol=lf
+*.cs         text eol=lf
+*.ts         text eol=lf
+*.js         text eol=lf
+*.cpp        text eol=lf
+*.h          text eol=lf
+*.c          text eol=lf
+*.dart       text eol=lf
+*.hx         text eol=lf
+*.swift      text eol=lf
 
 # Unity specific
 *.mat               merge=unityyamlmerge text eol=lf

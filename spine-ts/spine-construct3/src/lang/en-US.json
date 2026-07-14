@@ -1,0 +1,1243 @@
+﻿{
+  "$schema": "../../plugin.lang.schema.json",
+  "languageTag": "en-US",
+  "fileDescription": "Strings for SpineC3Plugin.",
+  "text": {
+    "plugins": {
+      "esotericsoftware_spineconstruct3": {
+        "name": "Spine",
+        "description": "Spine runtime for Construct3.",
+        "help-url": "https://www.construct.net",
+        "properties": {
+          "spine-skeleton-file": {
+            "name": "Skeleton",
+            "desc": "Skeleton file"
+          },
+          "spine-atlas-file": {
+            "name": "Atlas",
+            "desc": "Atlas file"
+          },
+          "spine-loader-scale": {
+            "name": "Loader scale",
+            "desc": "Loader scale"
+          },
+          "select-skin": {
+            "name": "Select skin",
+            "desc": "Open a dialog to select skins from the skeleton",
+            "link-text": "Select"
+          },
+          "select-animation": {
+            "name": "Select animation",
+            "desc": "Open a dialog to select an animation from the skeleton",
+            "link-text": "Select"
+          },
+          "spine-animation": {
+            "name": "animation",
+            "desc": "animation"
+          },
+          "spine-skin": {
+            "name": "skin",
+            "desc": "skin"
+          },
+          "spine-bounds-provider-group": {
+            "name": "Bounds provider",
+            "desc": "Select the desired bound provider and fill the respective properties."
+          },
+          "spine-bounds-provider": {
+            "name": "Bounds provider",
+            "desc": "The bounds provider to use.",
+            "items": {
+              "setup": "Setup pose bounds",
+              "animation-skin": "Animation/Skin bounds"
+            }
+          },
+          "spine-bounds-provider-move": {
+            "name": "Position bounds",
+            "desc": "Keep the skeleton in a fixed position while adjusting the size and position of the bounds."
+          },
+          "spine-offset-scale-x": {
+            "name": "Offset Scale X",
+            "desc": "Offset Scale X"
+          },
+          "spine-offset-scale-y": {
+            "name": "Offset Scale Y",
+            "desc": "Offset Scale Y"
+          },
+          "spine-debug-skeleton": {
+            "name": "Debug skeleton",
+            "desc": "Draw debug visualization of the skeleton bones"
+          },
+          "spine-enable-collision": {
+            "name": "Enable collision",
+            "desc": "Enable collision detection by creating a Sprite collision body"
+          },
+          "spine-bounds-offset-x": {
+            "name": "Offset X",
+            "desc": "Offset X"
+          },
+          "spine-bounds-offset-y": {
+            "name": "Offset Y",
+            "desc": "Offset Y"
+          },
+          "spine-bounds-offset-angle": {
+            "name": "Offset Angle",
+            "desc": "Offset Angle"
+          },
+          "set-bounds": {
+            "name": "Reset bounds",
+            "desc": "Click to reset the bounds using the current configuration, but keeping the current scale.",
+            "link-text": "Reset"
+          }
+        },
+        "aceCategories": {
+          "custom": "Custom"
+        },
+        "conditions": {
+          "on-skeleton-loaded": {
+            "list-name": "On skeleton loaded",
+            "display-text": "On skeleton loaded",
+            "description": "Do something when skeleton is loaded"
+          },
+          "on-animation-event": {
+            "list-name": "On animation event",
+            "display-text": "On {0} event triggered by animation {2} on track {1}",
+            "description": "Triggered when animation event occurs. Use empty string for event/animation or -1 for track to match any value.",
+            "params": {
+              "event": {
+                "name": "Event name",
+                "desc": "Event name (start, dispose, event, interrupt, end, complete). Empty string matches any event."
+              },
+              "animation": {
+                "name": "Animation",
+                "desc": "Animation name. Empty string matches any animation."
+              },
+              "track": {
+                "name": "Track number",
+                "desc": "Track index. Use -1 to match any track."
+              }
+            }
+          },
+          "is-mirrored": {
+            "list-name": "Is mirrored",
+            "display-text": "Is mirrored",
+            "description": "Check if the skeleton is mirrored horizontally"
+          },
+          "is-flipped": {
+            "list-name": "Is flipped",
+            "display-text": "Is flipped",
+            "description": "Check if the skeleton is flipped vertically"
+          },
+          "is-skeleton-loaded": {
+            "list-name": "Is skeleton loaded",
+            "display-text": "Is skeleton loaded",
+            "description": "Check if the skeleton has finished loading"
+          },
+          "is-playing": {
+            "list-name": "Is playing",
+            "display-text": "Is playing",
+            "description": "Check if the animation is currently playing"
+          },
+          "has-collision-body": {
+            "list-name": "Has collision body",
+            "display-text": "Has collision body",
+            "description": "Check if this Spine instance currently has a generated collision body."
+          },
+          "is-inside-slot": {
+            "list-name": "Is point inside slot",
+            "display-text": "Is point ({0}, {1}) inside slot {2}",
+            "description": "Check if a point in world coordinates is inside a slot's attachment polygon",
+            "params": {
+              "x": {
+                "name": "X",
+                "desc": "X world coordinate"
+              },
+              "y": {
+                "name": "Y",
+                "desc": "Y world coordinate"
+              },
+              "slot-name": {
+                "name": "Slot name",
+                "desc": "Name of the slot to check"
+              }
+            }
+          },
+          "is-inside-bone-radius": {
+            "list-name": "Is point inside bone radius",
+            "display-text": "Is point ({0}, {1}) within {3} pixels of bone {2}",
+            "description": "Check if a point in world coordinates is within a specified radius of a bone's position",
+            "params": {
+              "x": {
+                "name": "X",
+                "desc": "X world coordinate"
+              },
+              "y": {
+                "name": "Y",
+                "desc": "Y world coordinate"
+              },
+              "bone-name": {
+                "name": "Bone name",
+                "desc": "Name of the bone to check"
+              },
+              "radius": {
+                "name": "Radius",
+                "desc": "Radius in pixels around the bone position"
+              }
+            }
+          },
+          "is-animation-playing": {
+            "list-name": "Is animation playing",
+            "display-text": "Is animation {0} playing on track {1}",
+            "description": "Check if animation is playing. Use empty string for animation or -1 for track to match any value.",
+            "params": {
+              "animation-name": {
+                "name": "Animation name",
+                "desc": "Animation name. Empty string matches any animation."
+              },
+              "track-index": {
+                "name": "Track index",
+                "desc": "Track index. Use -1 to check all tracks."
+              }
+            }
+          }
+        },
+        "actions": {
+          "set-skin": {
+            "list-name": "Set skin",
+            "display-text": "Set skin {0}",
+            "description": "Set skin",
+            "params": {
+              "skin-name": {
+                "name": "Skins list",
+                "desc": "A comma separated list of skins to set. Empty string to unset skins."
+              }
+            }
+          },
+          "mirror": {
+            "list-name": "Mirror",
+            "display-text": "Set mirrored to {0}",
+            "description": "Mirror the skeleton horizontally",
+            "params": {
+              "is-mirrored": {
+                "name": "Is mirrored",
+                "desc": "True to mirror the skeleton horizontally, false to show normally."
+              }
+            }
+          },
+          "flip": {
+            "list-name": "Flip",
+            "display-text": "Set flipped to {0}",
+            "description": "Flip the skeleton vertically",
+            "params": {
+              "is-flipped": {
+                "name": "Is flipped",
+                "desc": "True to flip the skeleton vertically, false to show normally."
+              }
+            }
+          },
+          "set-animation": {
+            "list-name": "Set animation",
+            "display-text": "Set animation {1} on track {0} with loop {2} additive {3}",
+            "description": "Set animation",
+            "params": {
+              "track-index": {
+                "name": "track",
+                "desc": "track"
+              },
+              "animation": {
+                "name": "animations name",
+                "desc": "animations name"
+              },
+              "loop": {
+                "name": "loop",
+                "desc": "loop"
+              },
+              "additive": {
+                "name": "Additive",
+                "desc": "Whether to use additive blending (values added to pose instead of replacing)",
+                "items": {
+                  "disabled": "Disabled",
+                  "enabled": "Enabled"
+                }
+              }
+            }
+          },
+          "add-animation": {
+            "list-name": "Add animation",
+            "display-text": "Add animation {1} on track {0} with loop {2} delay {3} additive {4}",
+            "description": "Add animation",
+            "params": {
+              "track-index": {
+                "name": "track",
+                "desc": "track"
+              },
+              "animation": {
+                "name": "animations name",
+                "desc": "animations name"
+              },
+              "loop": {
+                "name": "loop",
+                "desc": "loop"
+              },
+              "delay": {
+                "name": "delay",
+                "desc": "delay"
+              },
+              "additive": {
+                "name": "Additive",
+                "desc": "Whether to use additive blending (values added to pose instead of replacing)",
+                "items": {
+                  "disabled": "Disabled",
+                  "enabled": "Enabled"
+                }
+              }
+            }
+          },
+          "play": {
+            "list-name": "Play",
+            "display-text": "Play animation",
+            "description": "Resume or play the animation"
+          },
+          "stop": {
+            "list-name": "Stop",
+            "display-text": "Stop animation",
+            "description": "Pause or stop the animation"
+          },
+          "set-empty-animation": {
+            "list-name": "Set empty animation",
+            "display-text": "Set empty animation on track {0} with mix duration {1}",
+            "description": "Set an empty animation on a specific track",
+            "params": {
+              "track-index": {
+                "name": "Track",
+                "desc": "Track index"
+              },
+              "mix-duration": {
+                "name": "Mix duration",
+                "desc": "Duration in seconds to mix from the current animation to empty"
+              }
+            }
+          },
+          "add-empty-animation": {
+            "list-name": "Add empty animation",
+            "display-text": "Add empty animation on track {0} with mix duration {1} and delay {2}",
+            "description": "Add an empty animation to the animation queue on a specific track",
+            "params": {
+              "track-index": {
+                "name": "Track",
+                "desc": "Track index"
+              },
+              "mix-duration": {
+                "name": "Mix duration",
+                "desc": "Duration in seconds to mix from the current animation to empty"
+              },
+              "delay": {
+                "name": "Delay",
+                "desc": "Delay in seconds before the animation starts"
+              }
+            }
+          },
+          "set-attachment": {
+            "list-name": "Set attachment",
+            "display-text": "Set slot {0} attachment to {1}",
+            "description": "Change the attachment on a specific slot",
+            "params": {
+              "slot-name": {
+                "name": "Slot name",
+                "desc": "Name of the slot"
+              },
+              "attachment-name": {
+                "name": "Attachment name",
+                "desc": "Name of the attachment to set"
+              }
+            }
+          },
+          "create-custom-skin": {
+            "list-name": "Create custom skin",
+            "display-text": "Create custom skin {0}",
+            "description": "Create a new custom skin that can combine multiple skins",
+            "params": {
+              "skin-name": {
+                "name": "Skin name",
+                "desc": "Name for the custom skin"
+              }
+            }
+          },
+          "add-custom-skin": {
+            "list-name": "Add to custom skin",
+            "display-text": "Add skin {1} to custom skin {0}",
+            "description": "Add an existing skin to a custom skin",
+            "params": {
+              "custom-skin-name": {
+                "name": "Custom skin name",
+                "desc": "Name of the custom skin to add to"
+              },
+              "skin-to-add-name": {
+                "name": "Skin to add",
+                "desc": "Name of the existing skin to add"
+              }
+            }
+          },
+          "set-custom-skin": {
+            "list-name": "Set custom skin",
+            "display-text": "Set custom skin {0}",
+            "description": "Apply a custom skin to the skeleton",
+            "params": {
+              "skin-name": {
+                "name": "Skin name",
+                "desc": "Name of the custom skin to apply"
+              }
+            }
+          },
+          "set-time-scale": {
+            "list-name": "Set time scale",
+            "display-text": "Set track {0} time scale to {1}",
+            "description": "Set the time scale for a specific track or the entire animation state. When targeting a track, the time scale affects only the current animation on that track. Use -1 for the track to set the global animation state time scale. Set to 0 to pause.",
+            "params": {
+              "track-index": {
+                "name": "Track",
+                "desc": "Track index to set the time scale for, or -1 to set the global animation state time scale."
+              },
+              "time-scale": {
+                "name": "Time scale",
+                "desc": "Time scale multiplier (1.0 is normal speed, 0 to pause)"
+              }
+            }
+          },
+          "set-animation-time": {
+            "list-name": "Set animation time",
+            "display-text": "Set track {0} animation time to {1} ({2})",
+            "description": "Set the current time of an animation on a track",
+            "params": {
+              "track-index": {
+                "name": "Track",
+                "desc": "Track index"
+              },
+              "time": {
+                "name": "Time",
+                "desc": "Time value (in seconds or as a ratio 0.0-1.0)"
+              },
+              "units": {
+                "name": "Units",
+                "desc": "Time units",
+                "items": {
+                  "seconds": "Seconds (absolute time)",
+                  "ratio": "Ratio (0.0 to 1.0)"
+                }
+              }
+            }
+          },
+          "set-animation-mix": {
+            "list-name": "Set animation mix",
+            "display-text": "Set animation mix from {0} to {1} duration {2}",
+            "description": "Set the blend/crossfade duration when transitioning from one animation to another",
+            "params": {
+              "from-name": {
+                "name": "From animation",
+                "desc": "Name of the animation to transition from"
+              },
+              "to-name": {
+                "name": "To animation",
+                "desc": "Name of the animation to transition to"
+              },
+              "duration": {
+                "name": "Duration",
+                "desc": "Blend duration in seconds"
+              }
+            }
+          },
+          "set-default-mix": {
+            "list-name": "Set default mix",
+            "display-text": "Set default mix duration to {0}",
+            "description": "Set the default crossfade duration used when transitioning between animations that don't have a specific mix defined",
+            "params": {
+              "duration": {
+                "name": "Duration",
+                "desc": "Default blend duration in seconds"
+              }
+            }
+          },
+          "set-physics-mode": {
+            "list-name": "Set physics mode",
+            "display-text": "Set physics mode to {0}",
+            "description": "Set the physics mode to control how physics constraints are updated and applied",
+            "params": {
+              "physics-mode": {
+                "name": "Physics mode",
+                "desc": "Physics mode",
+                "items": {
+                  "none": "None (physics not updated or applied)",
+                  "reset": "Reset (physics reset to current pose)",
+                  "update": "Update (physics updated and applied)",
+                  "pose": "Pose (physics pose applied without update)"
+                }
+              }
+            }
+          },
+          "set-skeleton-color": {
+            "list-name": "Set skeleton color",
+            "display-text": "Set skeleton color to {0}",
+            "description": "Set the color of the entire skeleton. Accepts hex colors (#RRGGBB or #RRGGBBAA) or color names.",
+            "params": {
+              "color": {
+                "name": "Color",
+                "desc": "Color value (hex like #FF0000 or color name)"
+              }
+            }
+          },
+          "set-track-alpha": {
+            "list-name": "Set track alpha",
+            "display-text": "Set alpha {0} on track {1}",
+            "description": "Set the alpha/opacity of an animation track. Used for blending animations on different tracks.",
+            "params": {
+              "alpha": {
+                "name": "Alpha",
+                "desc": "Alpha value (0.0 to 1.0, where 0 is transparent and 1 is opaque)"
+              },
+              "track-index": {
+                "name": "Track index",
+                "desc": "Track index to set alpha for"
+              }
+            }
+          },
+          "clear-track": {
+            "list-name": "Clear track(s)",
+            "display-text": "Clear track {0}",
+            "description": "Clear te given track, or all tracks if -1",
+            "params": {
+              "track-index": {
+                "name": "Track index",
+                "desc": "Track index to clear. -1 to clear all tracks."
+              }
+            }
+          },
+          "set-slot-color": {
+            "list-name": "Set slot color",
+            "display-text": "Set slot {0} color to {1}",
+            "description": "Set the color of a slot. Accepts hex colors (#RRGGBB or #RRGGBBAA) or color names.",
+            "params": {
+              "slot-name": {
+                "name": "Slot name",
+                "desc": "Name of the slot to modify"
+              },
+              "color": {
+                "name": "Color",
+                "desc": "Color value (hex like #FF0000 or color name)"
+              }
+            }
+          },
+          "reset-slot-colors": {
+            "list-name": "Reset slot colors",
+            "display-text": "Reset slot colors for {0}",
+            "description": "Reset slot colors to their setup pose values. Leave slot name empty to reset all slots.",
+            "params": {
+              "slot-name": {
+                "name": "Slot name",
+                "desc": "Name of the slot to reset. Leave empty to reset all slots."
+              }
+            }
+          },
+          "set-bone-pose": {
+            "list-name": "Set bone pose",
+            "display-text": "Set bone {0} position ({3}, {4}), rotation {5}, scale ({6}, {7}) in {1} mode, {2}",
+            "description": "Set a bone's pose. Once: applied for the current frame only. Hold: re-applied every frame, merging with previously held values. Use Release bone hold to stop holding. Position and rotation use the selected coordinate space (game or local). Scale is always local.",
+            "params": {
+              "bone-name": {
+                "name": "Bone name",
+                "desc": "Name of the bone to update"
+              },
+              "mode": {
+                "name": "Mode",
+                "desc": "Coordinate space for position and rotation. Local: values are applied directly as the bone's local pose. Game: values are converted from game space.",
+                "items": {
+                  "local": "Local",
+                  "game": "Game"
+                }
+              },
+              "apply-mode": {
+                "name": "Apply",
+                "desc": "Once: the pose is applied for the current frame only. Hold: the pose is re-applied every frame until released. Use an empty string to leave a component unchanged.",
+                "items": {
+                  "once": "Once",
+                  "hold": "Hold"
+                }
+              },
+              "x": {
+                "name": "X",
+                "desc": "X position. Game space in game mode, bone-local in local mode. Leave as empty string to keep current value."
+              },
+              "y": {
+                "name": "Y",
+                "desc": "Y position. Game space in game mode, bone-local in local mode. Leave as empty string to keep current value."
+              },
+              "rotation": {
+                "name": "Rotation",
+                "desc": "Rotation in degrees. Game space in game mode, bone-local in local mode. Leave as empty string to keep current value."
+              },
+              "scaleX": {
+                "name": "Scale X",
+                "desc": "Bone's local scale X. Always applied as local scale regardless of mode. Leave as empty string to keep current value."
+              },
+              "scaleY": {
+                "name": "Scale Y",
+                "desc": "Bone's local scale Y. Always applied as local scale regardless of mode. Leave as empty string to keep current value."
+              }
+            }
+          },
+          "release-bone-hold": {
+            "list-name": "Release bone hold",
+            "display-text": "Release hold on bone {0}, reset to setup pose: {1}",
+            "description": "Release a held bone pose, allowing the animation to control the bone again. Optionally resets the bone to its setup pose.",
+            "params": {
+              "bone-name": {
+                "name": "Bone name",
+                "desc": "Name of the bone to release"
+              },
+              "reset-to-setup": {
+                "name": "Reset to setup pose",
+                "desc": "If checked, resets the bone to its setup pose after releasing the hold."
+              }
+            }
+          },
+          "setup-pose": {
+            "list-name": "Setup pose",
+            "display-text": "Reset {0} to setup pose",
+            "description": "Reset bones and/or slots to their setup pose values.",
+            "params": {
+              "target": {
+                "name": "Target",
+                "desc": "What to reset to setup pose.",
+                "items": {
+                  "all": "All (bones and slots)",
+                  "bones": "Bones",
+                  "slots": "Slots"
+                }
+              }
+            }
+          },
+          "setup-bone-slot-pose": {
+            "list-name": "Setup bone/slot pose",
+            "display-text": "Reset {0} {1} to setup pose",
+            "description": "Reset a specific bone or slot to its setup pose values.",
+            "params": {
+              "type": {
+                "name": "Type",
+                "desc": "Type of target to reset.",
+                "items": {
+                  "bone": "Bone",
+                  "slot": "Slot"
+                }
+              },
+              "name": {
+                "name": "Name",
+                "desc": "Name of the bone or slot to reset."
+              }
+            }
+          },
+          "attach-instance-to-bone": {
+            "list-name": "Attach instance to bone",
+            "display-text": "Attach instance UID {0} to bone {1} with offset ({2}, {3}, {4}°) and scale ({5}, {6})",
+            "description": "Make an object instance follow a skeleton bone's position, rotation, and scale. Offset X/Y move the follower origin from the bone origin along the follower axes after Offset angle. Offset angle rotates the instance and those offset axes relative to the bone. Offset Scale X/Y multiply the final size after inherited bone scale and do not affect the offset position.",
+            "params": {
+              "uid": {
+                "name": "UID",
+                "desc": "The UID of the object instance to attach (use expression like Sprite.UID)"
+              },
+              "bone-name": {
+                "name": "Bone name",
+                "desc": "Name of the bone to follow"
+              },
+              "offset-x": {
+                "name": "Offset X",
+                "desc": "Move the follower origin along its X axis after Offset angle. This is not multiplied by bone scale or Offset Scale."
+              },
+              "offset-y": {
+                "name": "Offset Y",
+                "desc": "Move the follower origin along its Y axis after Offset angle. This is not multiplied by bone scale or Offset Scale."
+              },
+              "offset-angle": {
+                "name": "Offset angle",
+                "desc": "Angle in degrees relative to bone rotation. Rotates the instance and the Offset X/Y axes; non-uniform scale does not change this angle."
+              },
+              "offset-scale-x": {
+                "name": "Offset Scale X",
+                "desc": "Additional multiplier for the final width after inherited bone scale. Does not affect Offset X/Y."
+              },
+              "offset-scale-y": {
+                "name": "Offset Scale Y",
+                "desc": "Additional multiplier for the final height after inherited bone scale. Does not affect Offset X/Y."
+              }
+            }
+          },
+          "attach-object-to-bone": {
+            "list-name": "Attach object to bone",
+            "display-text": "Attach {0} to bone {1} with offset ({2}, {3}, {4}°) and scale ({5}, {6})",
+            "description": "Make picked object instances follow a skeleton bone's position, rotation, and scale. Offset X/Y move each follower origin from the bone origin along the follower axes after Offset angle. Offset angle rotates each instance and those offset axes relative to the bone. Offset Scale X/Y multiply the final size after inherited bone scale and do not affect the offset position.",
+            "params": {
+              "object": {
+                "name": "Object",
+                "desc": "The object type to attach (picked instances will be attached)"
+              },
+              "bone-name": {
+                "name": "Bone name",
+                "desc": "Name of the bone to follow"
+              },
+              "offset-x": {
+                "name": "Offset X",
+                "desc": "Move each follower origin along its X axis after Offset angle. This is not multiplied by bone scale or Offset Scale."
+              },
+              "offset-y": {
+                "name": "Offset Y",
+                "desc": "Move each follower origin along its Y axis after Offset angle. This is not multiplied by bone scale or Offset Scale."
+              },
+              "offset-angle": {
+                "name": "Offset angle",
+                "desc": "Angle in degrees relative to bone rotation. Rotates each instance and the Offset X/Y axes; non-uniform scale does not change this angle."
+              },
+              "offset-scale-x": {
+                "name": "Offset Scale X",
+                "desc": "Additional multiplier for the final width after inherited bone scale. Does not affect Offset X/Y."
+              },
+              "offset-scale-y": {
+                "name": "Offset Scale Y",
+                "desc": "Additional multiplier for the final height after inherited bone scale. Does not affect Offset X/Y."
+              }
+            }
+          },
+          "detach-object-from-bone": {
+            "list-name": "Detach object from bone",
+            "display-text": "Detach {0} from bone {1}",
+            "description": "Stop picked object instances from following a bone. The instances will remain at their current positions.",
+            "params": {
+              "object": {
+                "name": "Object",
+                "desc": "The object type to detach (picked instances will be detached)"
+              },
+              "bone-name": {
+                "name": "Bone name",
+                "desc": "Name of the bone to detach from"
+              }
+            }
+          },
+          "detach-all-from-bone": {
+            "list-name": "Detach all from bone",
+            "display-text": "Detach all instances from bone {0}",
+            "description": "Stop all object instances from following a bone. The instances will remain at their current positions.",
+            "params": {
+              "bone-name": {
+                "name": "Bone name",
+                "desc": "Name of the bone to detach from"
+              }
+            }
+          },
+          "add-handle": {
+            "list-name": "Add handle",
+            "display-text": "Add interactive handle for {0} {1} with radius {2} (debug: {3})",
+            "description": "Add an interactive handle to a bone or slot that can be dragged with the mouse. The radius determines the clickable area.",
+            "params": {
+              "type": {
+                "name": "Type",
+                "desc": "Type of handle to add",
+                "items": {
+                  "bone": "Bone (drags bone position)",
+                  "slot": "Slot (drags slot attachment position)"
+                }
+              },
+              "name": {
+                "name": "Name",
+                "desc": "Name of the bone or slot to add handle to"
+              },
+              "radius": {
+                "name": "Radius",
+                "desc": "Radius of the clickable area in pixels"
+              },
+              "debug": {
+                "name": "Debug",
+                "desc": "Whether to show debug visualization for the handle"
+              }
+            }
+          },
+          "remove-handle": {
+            "list-name": "Remove handle",
+            "display-text": "Remove handle from {0} {1}",
+            "description": "Remove an interactive handle from a bone or slot.",
+            "params": {
+              "type": {
+                "name": "Type",
+                "desc": "Type of handle to remove",
+                "items": {
+                  "bone": "Bone",
+                  "slot": "Slot"
+                }
+              },
+              "name": {
+                "name": "Name",
+                "desc": "Name of the bone or slot to remove handle from"
+              }
+            }
+          },
+          "set-collision-bounding-box": {
+            "list-name": "Set collision bounding box",
+            "display-text": "Set collision body to bounding box {1} on slot {0}",
+            "description": "Use a Spine bounding box attachment to update the internal Sprite collision body mesh each tick. The attachment is applied once when this action is called.",
+            "params": {
+              "slot-name": {
+                "name": "Slot name",
+                "desc": "Name of the slot containing the bounding box attachment"
+              },
+              "attachment-name": {
+                "name": "Attachment name",
+                "desc": "Name of the bounding box attachment to use for the collision body"
+              }
+            }
+          },
+          "clear-collision-bounding-box": {
+            "list-name": "Clear collision bounding box",
+            "display-text": "Clear collision bounding box",
+            "description": "Stop using a Spine bounding box attachment for the collision body and return to the object's rectangular collision body."
+          },
+          "set-collision-bounding-box-debug": {
+            "list-name": "Set collision bounding box debug",
+            "display-text": "Set collision bounding box debug to {0}",
+            "description": "Draw the active collision bounding box mesh outline for debugging.",
+            "params": {
+              "enabled": {
+                "name": "Enabled",
+                "desc": "Whether to draw the collision bounding box mesh outline"
+              }
+            }
+          },
+          "set-collision-body-drives-object": {
+            "list-name": "Set collision body drives object",
+            "display-text": "Set collision body drives object to {0}",
+            "description": "When enabled, movement of the generated Sprite collision body moves the Spine object. Useful for putting movement behaviors on the collision body.",
+            "params": {
+              "enabled": {
+                "name": "Enabled",
+                "desc": "Whether the generated collision body should drive the Spine object's position"
+              }
+            }
+          },
+          "set-runtime-asset-cache-retained-when-unused": {
+            "list-name": "Set runtime asset cache retained when unused",
+            "display-text": "Set runtime asset cache retained when unused to {0} for {1}",
+            "description": "Control whether cached Spine runtime assets are kept when no live instances are using them. This can avoid reload flicker when switching layouts.",
+            "params": {
+              "enabled": {
+                "name": "Enabled",
+                "desc": "Whether unused cached Spine runtime assets should be retained"
+              },
+              "scope": {
+                "name": "Scope",
+                "desc": "Whether this applies to this Spine object type's assets or all Spine objects",
+                "items": {
+                  "this-object-type": "This object type",
+                  "all-spine-objects": "All Spine objects"
+                }
+              }
+            }
+          },
+          "release-cached-spine-assets": {
+            "list-name": "Release cached Spine assets",
+            "display-text": "Release cached Spine assets for this object type",
+            "description": "Stop retaining this object type's cached Spine runtime assets and release them if no live instances are using them."
+          },
+          "release-all-cached-spine-assets": {
+            "list-name": "Release all cached Spine assets",
+            "display-text": "Release all cached Spine assets",
+            "description": "Release all cached Spine runtime assets that are not currently used by live instances."
+          },
+          "set-bounds": {
+            "list-name": "Set bounds",
+            "display-text": "Set bounds to ({0}, {1}, {2}, {3})",
+            "description": "Set the bounds of the game object in Spine world coordinates. The skeleton's visual size stays the same (only the bounding area changes). The skeleton remains rendered at the same position.",
+            "params": {
+              "x": {
+                "name": "X",
+                "desc": "X offset of the bounds in Spine world coordinates"
+              },
+              "y": {
+                "name": "Y",
+                "desc": "Y offset of the bounds in Spine world coordinates"
+              },
+              "width": {
+                "name": "Width",
+                "desc": "Width of the bounds in Spine world coordinates"
+              },
+              "height": {
+                "name": "Height",
+                "desc": "Height of the bounds in Spine world coordinates"
+              }
+            }
+          },
+          "set-bounds-for-skin-animation": {
+            "list-name": "Set bounds for skin/animation",
+            "display-text": "Set bounds for skins {0} and animation {1}",
+            "description": "Calculate and set bounds based on the specified skins and animation. Uses a separate skeleton to compute the bounding box by stepping through the animation frames. The skeleton's visual size stays the same.",
+            "params": {
+              "skins": {
+                "name": "Skins",
+                "desc": "Comma-separated list of skin names. Leave empty to use the default skin."
+              },
+              "animation": {
+                "name": "Animation",
+                "desc": "Animation name to calculate bounds for. Leave empty to use setup pose."
+              }
+            }
+          },
+          "set-bounds-for-setup-pose": {
+            "list-name": "Set bounds for setup pose",
+            "display-text": "Set bounds for setup pose",
+            "description": "Calculate and set bounds based on the skeleton's setup pose. The skeleton's visual size stays the same."
+          }
+        },
+        "expressions": {
+          "slot-attachment": {
+            "description": "Get the name of the attachment on a slot. Returns empty string if no attachment.",
+            "translated-name": "SlotAttachment",
+            "params": {
+              "slot-name": {
+                "name": "Slot name",
+                "desc": "Name of the slot"
+              }
+            }
+          },
+          "slot-attachment-placeholder": {
+            "description": "Get the skin placeholder name of the attachment on a slot, or the attachment name if using the default skin. Returns empty string if no attachment.",
+            "translated-name": "SlotAttachmentPlaceholder",
+            "params": {
+              "slot-name": {
+                "name": "Slot name",
+                "desc": "Name of the slot"
+              }
+            }
+          },
+          "bone-x": {
+            "description": "Get the world X position of a bone.",
+            "translated-name": "BoneX",
+            "params": {
+              "bone-name": {
+                "name": "Bone name",
+                "desc": "Name of the bone"
+              }
+            }
+          },
+          "bone-y": {
+            "description": "Get the world Y position of a bone.",
+            "translated-name": "BoneY",
+            "params": {
+              "bone-name": {
+                "name": "Bone name",
+                "desc": "Name of the bone"
+              }
+            }
+          },
+          "bone-rotation": {
+            "description": "Get the world rotation of a bone.",
+            "translated-name": "BoneRotation",
+            "params": {
+              "bone-name": {
+                "name": "Bone name",
+                "desc": "Name of the bone"
+              }
+            }
+          },
+          "bone-length": {
+            "description": "Get the length of a bone.",
+            "translated-name": "BoneLength",
+            "params": {
+              "bone-name": {
+                "name": "Bone name",
+                "desc": "Name of the bone"
+              }
+            }
+          },
+          "bone-world-x": {
+            "description": "Get the C3 world X position of a bone.",
+            "translated-name": "BoneWorldX",
+            "params": {
+              "bone-name": {
+                "name": "Bone name",
+                "desc": "Name of the bone"
+              }
+            }
+          },
+          "bone-world-y": {
+            "description": "Get the C3 world Y position of a bone.",
+            "translated-name": "BoneWorldY",
+            "params": {
+              "bone-name": {
+                "name": "Bone name",
+                "desc": "Name of the bone"
+              }
+            }
+          },
+          "bone-local-x": {
+            "description": "Get the local X translation of a bone relative to its parent, in Spine units.",
+            "translated-name": "BoneLocalX",
+            "params": { "bone-name": { "name": "Bone name", "desc": "Name of the bone" } }
+          },
+          "bone-local-y": {
+            "description": "Get the local Y translation of a bone relative to its parent, in Spine units.",
+            "translated-name": "BoneLocalY",
+            "params": { "bone-name": { "name": "Bone name", "desc": "Name of the bone" } }
+          },
+          "bone-local-rotation": {
+            "description": "Get the local rotation of a bone in degrees.",
+            "translated-name": "BoneLocalRotation",
+            "params": { "bone-name": { "name": "Bone name", "desc": "Name of the bone" } }
+          },
+          "bone-local-scale-x": {
+            "description": "Get the local X scale of a bone.",
+            "translated-name": "BoneLocalScaleX",
+            "params": { "bone-name": { "name": "Bone name", "desc": "Name of the bone" } }
+          },
+          "bone-local-scale-y": {
+            "description": "Get the local Y scale of a bone.",
+            "translated-name": "BoneLocalScaleY",
+            "params": { "bone-name": { "name": "Bone name", "desc": "Name of the bone" } }
+          },
+          "bone-local-shear-x": {
+            "description": "Get the local X shear of a bone in degrees.",
+            "translated-name": "BoneLocalShearX",
+            "params": { "bone-name": { "name": "Bone name", "desc": "Name of the bone" } }
+          },
+          "bone-local-shear-y": {
+            "description": "Get the local Y shear of a bone in degrees.",
+            "translated-name": "BoneLocalShearY",
+            "params": { "bone-name": { "name": "Bone name", "desc": "Name of the bone" } }
+          },
+          "current-skin": {
+            "description": "Get the current skin name. Returns comma-separated names if multiple skins are active.",
+            "translated-name": "CurrentSkin"
+          },
+          "animations": {
+            "description": "Get all animation names, separated by newlines.",
+            "translated-name": "Animations"
+          },
+          "animations-count": {
+            "description": "Get the number of animations.",
+            "translated-name": "AnimationsCount"
+          },
+          "animation-name": {
+            "description": "Get the animation name at an index. Returns empty string if the index is invalid.",
+            "translated-name": "AnimationName",
+            "params": {
+              "index": {
+                "name": "Index",
+                "desc": "Zero-based animation index"
+              }
+            }
+          },
+          "current-animation": {
+            "description": "Get the name of the currently playing animation on a specific track.",
+            "translated-name": "CurrentAnimation",
+            "params": {
+              "track-index": {
+                "name": "Track index",
+                "desc": "Index of the track"
+              }
+            }
+          },
+          "get-event-data": {
+            "description": "Get data from the last triggered animation event. Typically used within an 'On animation event' trigger. Valid fields: \"float\", \"int\", \"string\", \"balance\", \"volume\", \"audiopath\", \"event\", \"track\", \"animation\".",
+            "translated-name": "GetEventData",
+            "params": {
+              "field": {
+                "name": "\"float\"|\"int\"|\"string\"|\"balance\"|\"volume\"|\"audiopath\"|\"event\"|\"track\"|\"animation\"",
+                "desc": "The event data field to retrieve"
+              }
+            }
+          },
+          "time-scale": {
+            "description": "Get the time scale for a specific track or the global animation state. Use -1 for the global animation state time scale.",
+            "translated-name": "TimeScale",
+            "params": {
+              "track-index": {
+                "name": "Track",
+                "desc": "Track index, or -1 for the global animation state time scale."
+              }
+            }
+          },
+          "loop": {
+            "description": "Get whether the current animation on a track is set to loop (1 = looping, 0 = not looping).",
+            "translated-name": "Loop",
+            "params": {
+              "track-index": {
+                "name": "Track",
+                "desc": "Track index."
+              }
+            }
+          },
+          "current-animation-start": {
+            "description": "Get the start time of the current animation on the specified track.",
+            "translated-name": "CurrentAnimationStart",
+            "params": {
+              "track-index": {
+                "name": "Track index",
+                "desc": "The track index"
+              }
+            }
+          },
+          "current-animation-end": {
+            "description": "Get the end time of the current animation on the specified track.",
+            "translated-name": "CurrentAnimationEnd",
+            "params": {
+              "track-index": {
+                "name": "Track index",
+                "desc": "The track index"
+              }
+            }
+          },
+          "current-animation-last": {
+            "description": "Get the last applied time of the current animation on the specified track.",
+            "translated-name": "CurrentAnimationLast",
+            "params": {
+              "track-index": {
+                "name": "Track index",
+                "desc": "The track index"
+              }
+            }
+          },
+          "bounds-x": {
+            "description": "Get the X offset of the current bounds.",
+            "translated-name": "BoundsX"
+          },
+          "bounds-y": {
+            "description": "Get the Y offset of the current bounds.",
+            "translated-name": "BoundsY"
+          },
+          "bounds-width": {
+            "description": "Get the width of the current bounds.",
+            "translated-name": "BoundsWidth"
+          },
+          "bounds-height": {
+            "description": "Get the height of the current bounds.",
+            "translated-name": "BoundsHeight"
+          },
+          "collision-body-uid": {
+            "description": "Get the UID of this Spine instance's generated collision body, or -1 if it does not have one. Use with the collision body object's Pick by comparison condition to configure behaviors on the body.",
+            "translated-name": "CollisionBodyUID"
+          },
+          "bounding-box-point-count": {
+            "description": "Get the number of points in a Spine bounding box attachment polygon.",
+            "translated-name": "BoundingBoxPointCount",
+            "params": {
+              "slot-name": { "name": "Slot name", "desc": "Name of the slot" },
+              "attachment-name": { "name": "Attachment name", "desc": "Name of the bounding box attachment" }
+            }
+          },
+          "bounding-box-point-x": {
+            "description": "Get the game X coordinate of a bounding box polygon point.",
+            "translated-name": "BoundingBoxPointX",
+            "params": {
+              "slot-name": { "name": "Slot name", "desc": "Name of the slot" },
+              "attachment-name": { "name": "Attachment name", "desc": "Name of the bounding box attachment" },
+              "index": { "name": "Index", "desc": "Zero-based point index" }
+            }
+          },
+          "bounding-box-point-y": {
+            "description": "Get the game Y coordinate of a bounding box polygon point.",
+            "translated-name": "BoundingBoxPointY",
+            "params": {
+              "slot-name": { "name": "Slot name", "desc": "Name of the slot" },
+              "attachment-name": { "name": "Attachment name", "desc": "Name of the bounding box attachment" },
+              "index": { "name": "Index", "desc": "Zero-based point index" }
+            }
+          },
+          "bounding-box-center-x": {
+            "description": "Get the game X coordinate of the bounding box AABB center.",
+            "translated-name": "BoundingBoxCenterX",
+            "params": {
+              "slot-name": { "name": "Slot name", "desc": "Name of the slot" },
+              "attachment-name": { "name": "Attachment name", "desc": "Name of the bounding box attachment" }
+            }
+          },
+          "bounding-box-center-y": {
+            "description": "Get the game Y coordinate of the bounding box AABB center.",
+            "translated-name": "BoundingBoxCenterY",
+            "params": {
+              "slot-name": { "name": "Slot name", "desc": "Name of the slot" },
+              "attachment-name": { "name": "Attachment name", "desc": "Name of the bounding box attachment" }
+            }
+          },
+          "bounding-box-left": {
+            "description": "Get the left/minimum game X coordinate of the bounding box polygon.",
+            "translated-name": "BoundingBoxLeft",
+            "params": {
+              "slot-name": { "name": "Slot name", "desc": "Name of the slot" },
+              "attachment-name": { "name": "Attachment name", "desc": "Name of the bounding box attachment" }
+            }
+          },
+          "bounding-box-top": {
+            "description": "Get the top/minimum game Y coordinate of the bounding box polygon.",
+            "translated-name": "BoundingBoxTop",
+            "params": {
+              "slot-name": { "name": "Slot name", "desc": "Name of the slot" },
+              "attachment-name": { "name": "Attachment name", "desc": "Name of the bounding box attachment" }
+            }
+          },
+          "bounding-box-right": {
+            "description": "Get the right/maximum game X coordinate of the bounding box polygon.",
+            "translated-name": "BoundingBoxRight",
+            "params": {
+              "slot-name": { "name": "Slot name", "desc": "Name of the slot" },
+              "attachment-name": { "name": "Attachment name", "desc": "Name of the bounding box attachment" }
+            }
+          },
+          "bounding-box-bottom": {
+            "description": "Get the bottom/maximum game Y coordinate of the bounding box polygon.",
+            "translated-name": "BoundingBoxBottom",
+            "params": {
+              "slot-name": { "name": "Slot name", "desc": "Name of the slot" },
+              "attachment-name": { "name": "Attachment name", "desc": "Name of the bounding box attachment" }
+            }
+          },
+          "bounding-box-polygon-json": {
+            "description": "Get the bounding box polygon as a flat JSON array in game coordinates: [x0,y0,x1,y1,...].",
+            "translated-name": "BoundingBoxPolygonJson",
+            "params": {
+              "slot-name": { "name": "Slot name", "desc": "Name of the slot" },
+              "attachment-name": { "name": "Attachment name", "desc": "Name of the bounding box attachment" }
+            }
+          }
+        },
+        "custom_ui": {
+          "spine-enable-collision": {
+            "title": "Delete Sprite Object Type",
+            "message": "This is the last instance of {0}. You can delete the {0} or just disable the Sprite collision body. Deleting the Sprite collision body will remove all related ACEs in the event sheet, if there's any. How do you want to proceed?",
+            "buttons": {
+              "0": "Just disable",
+              "1": "Disable and delete {0}"
+            }
+          },
+          "skeleton-not-loaded": {
+            "title": "Error",
+            "message": "Skeleton not loaded. Please ensure atlas and skeleton files are set."
+          },
+          "no-animations": {
+            "title": "No Animations",
+            "message": "No animations found in the skeleton."
+          },
+          "no-skins": {
+            "title": "No Skins",
+            "message": "No skins found in the skeleton."
+          },
+          "select-animation": {
+            "title": "Select Animation"
+          },
+          "select-skins": {
+            "title": "Select Skins"
+          },
+          "invalid-skins": {
+            "title": "Invalid Skins",
+            "message": "The following skins do not exist in the skeleton: {0}.\n\nThey have been removed. Please use the \"Select skin\" button to choose from existing skins."
+          },
+          "invalid-animation": {
+            "title": "Invalid Animation",
+            "message": "The animation \"{0}\" does not exist in the skeleton.\n\nIt has been removed. Please use the \"Select animation\" button to choose from existing animations."
+          }
+        }
+      }
+    }
+  }
+}

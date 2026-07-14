@@ -1,0 +1,67 @@
+name: Check Dart Formatting
+
+on:
+  push:
+    branches:
+      - '**'
+    paths:
+      - 'spine-flutter/**/*.dart'
+      - 'formatters/format-dart.sh'
+      - '.github/workflows/format-check-dart.yml'
+  workflow_dispatch:
+
+jobs:
+  check-dart:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup Flutter SDK
+      uses: flutter-actions/setup-flutter@v4
+      with:
+        channel: stable
+        version: 3.32.6
+
+    - name: Check Flutter and Dart versions
+      run: |
+        flutter --version
+        dart --version
+        dart format --version
+        
+    - name: Resolve Flutter packages
+      run: |
+        echo "=== Resolving packages to avoid format warnings ==="
+        cd spine-flutter
+        flutter pub get
+        cd example && flutter pub get
+        cd ../test && flutter pub get
+        
+    - name: Format Dart
+      run: ./formatters/format-dart.sh
+
+    - name: Check for changes
+      run: |
+        # Ignore generated files that might change during flutter pub get
+        git ls-files -m | grep -v "GeneratedPluginRegistrant" > /tmp/modified_files || true
+        if [ -s /tmp/modified_files ]; then
+          cat /tmp/modified_files
+          echo "Detected Dart formatting errors!"
+          echo "Creating diff files..."
+          mkdir -p dart-format-diff
+          git diff > dart-format-diff/full-diff.txt
+          git ls-files -m > dart-format-diff/modified-files.txt
+          for file in $(git ls-files -m | head -10); do
+            echo "=== Diff for $file ===" >> dart-format-diff/file-diffs.txt
+            git diff "$file" >> dart-format-diff/file-diffs.txt
+            echo -e "\n\n" >> dart-format-diff/file-diffs.txt
+          done
+          exit 1
+        fi
+
+    - name: Upload diff artifact
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: dart-format-diff
+        path: dart-format-diff/
+        retention-days: 1

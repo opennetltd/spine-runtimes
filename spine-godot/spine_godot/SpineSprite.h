@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,8 +23,8 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 #pragma once
@@ -37,8 +37,13 @@
 #include <godot_cpp/templates/vector.hpp>
 #include <godot_cpp/classes/rendering_server.hpp>
 #include <godot_cpp/classes/canvas_item_material.hpp>
+#include <godot_cpp/classes/font.hpp>
 #else
 #include "scene/2d/node_2d.h"
+#include "scene/resources/font.h"
+#if VERSION_MAJOR > 3
+#include "servers/rendering/rendering_server.h"
+#endif
 #endif
 
 class SpineSlotNode;
@@ -75,7 +80,11 @@ protected:
 
 #if VERSION_MAJOR > 3
 	RID mesh;
+#if !defined(SPINE_GODOT_EXTENSION) && VERSION_MAJOR >= 4 && VERSION_MINOR >= 7
+	uint32_t surface_offsets[RenderingServerEnums::ARRAY_MAX];
+#else
 	uint32_t surface_offsets[RS::ARRAY_MAX];
+#endif
 	int num_vertices;
 	int num_indices;
 	PackedByteArray vertex_buffer;
@@ -96,7 +105,9 @@ protected:
 
 public:
 #if VERSION_MAJOR > 3
-	SpineMesh2D() : renderer_object(nullptr), indices_changed(true), num_vertices(0), num_indices(0), vertex_stride(0), normal_tangent_stride(0), attribute_stride(0){};
+	SpineMesh2D()
+		: renderer_object(nullptr), indices_changed(true), num_vertices(0), num_indices(0), vertex_stride(0), normal_tangent_stride(0),
+		  attribute_stride(0) {};
 	~SpineMesh2D() {
 		if (mesh.is_valid()) {
 #ifdef SPINE_GODOT_EXTENSION
@@ -107,7 +118,7 @@ public:
 		}
 	}
 #else
-	SpineMesh2D() : renderer_object(nullptr), indices_changed(true), num_vertices(0), num_indices(0){};
+	SpineMesh2D() : renderer_object(nullptr), indices_changed(true), num_vertices(0), num_indices(0) {};
 	~SpineMesh2D() {
 		if (mesh.is_valid()) {
 			VS::get_singleton()->free(mesh);
@@ -116,22 +127,15 @@ public:
 #endif
 
 #ifdef SPINE_GODOT_EXTENSION
-	void update_mesh(const PackedVector2Array &vertices,
-					 const PackedVector2Array &uvs,
-					 const PackedColorArray &colors,
-					 const PackedInt32Array &indices,
-					 SpineRendererObject *renderer_object);
+	void update_mesh(const PackedVector2Array &vertices, const PackedVector2Array &uvs, const PackedColorArray &colors,
+					 const PackedInt32Array &indices, SpineRendererObject *renderer_object);
 #else
-	void update_mesh(const Vector<Point2> &vertices,
-					 const Vector<Point2> &uvs,
-					 const Vector<Color> &colors,
-					 const Vector<int> &indices,
+	void update_mesh(const Vector<Point2> &vertices, const Vector<Point2> &uvs, const Vector<Color> &colors, const Vector<int> &indices,
 					 SpineRendererObject *renderer_object);
 #endif
 };
 
-class SpineSprite : public Node2D,
-					public spine::AnimationStateListenerObject {
+class SpineSprite : public Node2D, public spine::AnimationStateListenerObject {
 	GDCLASS(SpineSprite, Node2D)
 
 	friend class SpineBone;
@@ -141,6 +145,7 @@ protected:
 	Ref<SpineSkeleton> skeleton;
 	Ref<SpineAnimationState> animation_state;
 	SpineConstant::UpdateMode update_mode;
+	float time_scale;
 
 	String preview_skin;
 	String preview_animation;
@@ -163,8 +168,9 @@ protected:
 	bool debug_clipping;
 	Color debug_clipping_color;
 
-	spine::Vector<spine::Vector<SpineSlotNode *>> slot_nodes;
+	spine::Array<spine::Array<SpineSlotNode *>> slot_nodes;
 	Vector<SpineMesh2D *> mesh_instances;
+	Ref<Font> debug_font;
 	Ref<Material> normal_material;
 	Ref<Material> additive_material;
 	Ref<Material> multiply_material;
@@ -182,7 +188,9 @@ protected:
 	void remove_meshes();
 	void sort_slot_nodes();
 	void update_meshes(Ref<SpineSkeleton> skeleton_ref);
-	void set_modified_bones() { modified_bones = true; }
+	void set_modified_bones() {
+		modified_bones = true;
+	}
 	void draw();
 	void draw_bone(spine::Bone *bone, const Color &color);
 
@@ -230,65 +238,129 @@ public:
 
 	void set_screen_material(Ref<Material> material);
 
-	bool get_debug_root() { return debug_root; }
+	void set_time_scale(float time_scale);
 
-	void set_debug_root(bool root) { debug_root = root; }
+	float get_time_scale();
 
-	Color get_debug_root_color() { return debug_root_color; }
+	bool get_debug_root() {
+		return debug_root;
+	}
 
-	void set_debug_root_color(const Color &color) { debug_root_color = color; }
+	void set_debug_root(bool root) {
+		debug_root = root;
+	}
 
-	bool get_debug_bones() { return debug_bones; }
+	Color get_debug_root_color() {
+		return debug_root_color;
+	}
 
-	void set_debug_bones(bool bones) { debug_bones = bones; }
+	void set_debug_root_color(const Color &color) {
+		debug_root_color = color;
+	}
 
-	Color get_debug_bones_color() { return debug_bones_color; }
+	bool get_debug_bones() {
+		return debug_bones;
+	}
 
-	void set_debug_bones_color(const Color &color) { debug_bones_color = color; }
+	void set_debug_bones(bool bones) {
+		debug_bones = bones;
+	}
 
-	float get_debug_bones_thickness() { return debug_bones_thickness; }
+	Color get_debug_bones_color() {
+		return debug_bones_color;
+	}
 
-	void set_debug_bones_thickness(float thickness) { debug_bones_thickness = thickness; }
+	void set_debug_bones_color(const Color &color) {
+		debug_bones_color = color;
+	}
 
-	bool get_debug_regions() { return debug_regions; }
+	float get_debug_bones_thickness() {
+		return debug_bones_thickness;
+	}
 
-	void set_debug_regions(bool regions) { debug_regions = regions; }
+	void set_debug_bones_thickness(float thickness) {
+		debug_bones_thickness = thickness;
+	}
 
-	Color get_debug_regions_color() { return debug_regions_color; }
+	bool get_debug_regions() {
+		return debug_regions;
+	}
 
-	void set_debug_regions_color(const Color &color) { debug_regions_color = color; }
+	void set_debug_regions(bool regions) {
+		debug_regions = regions;
+	}
 
-	bool get_debug_meshes() { return debug_meshes; }
+	Color get_debug_regions_color() {
+		return debug_regions_color;
+	}
 
-	void set_debug_meshes(bool meshes) { debug_meshes = meshes; }
+	void set_debug_regions_color(const Color &color) {
+		debug_regions_color = color;
+	}
 
-	Color get_debug_meshes_color() { return debug_meshes_color; }
+	bool get_debug_meshes() {
+		return debug_meshes;
+	}
 
-	void set_debug_meshes_color(const Color &color) { debug_meshes_color = color; }
+	void set_debug_meshes(bool meshes) {
+		debug_meshes = meshes;
+	}
 
-	bool get_debug_paths() { return debug_paths; }
+	Color get_debug_meshes_color() {
+		return debug_meshes_color;
+	}
 
-	void set_debug_paths(bool paths) { debug_paths = paths; }
+	void set_debug_meshes_color(const Color &color) {
+		debug_meshes_color = color;
+	}
 
-	Color get_debug_paths_color() { return debug_paths_color; }
+	bool get_debug_paths() {
+		return debug_paths;
+	}
 
-	void set_debug_paths_color(const Color &color) { debug_paths_color = color; }
+	void set_debug_paths(bool paths) {
+		debug_paths = paths;
+	}
 
-	bool get_debug_bounding_boxes() { return debug_bounding_boxes; }
+	Color get_debug_paths_color() {
+		return debug_paths_color;
+	}
 
-	void set_debug_bounding_boxes(bool paths) { debug_bounding_boxes = paths; }
+	void set_debug_paths_color(const Color &color) {
+		debug_paths_color = color;
+	}
 
-	Color get_debug_bounding_boxes_color() { return debug_bounding_boxes_color; }
+	bool get_debug_bounding_boxes() {
+		return debug_bounding_boxes;
+	}
 
-	void set_debug_bounding_boxes_color(const Color &color) { debug_bounding_boxes_color = color; }
+	void set_debug_bounding_boxes(bool paths) {
+		debug_bounding_boxes = paths;
+	}
 
-	bool get_debug_clipping() { return debug_clipping; }
+	Color get_debug_bounding_boxes_color() {
+		return debug_bounding_boxes_color;
+	}
 
-	void set_debug_clipping(bool clipping) { debug_clipping = clipping; }
+	void set_debug_bounding_boxes_color(const Color &color) {
+		debug_bounding_boxes_color = color;
+	}
 
-	Color get_debug_clipping_color() { return debug_clipping_color; }
+	bool get_debug_clipping() {
+		return debug_clipping;
+	}
 
-	void set_debug_clipping_color(const Color &color) { debug_clipping_color = color; }
+	void set_debug_clipping(bool clipping) {
+		debug_clipping = clipping;
+	}
+
+	Color get_debug_clipping_color() {
+		return debug_clipping_color;
+	}
+
+	void set_debug_clipping_color(const Color &color) {
+		debug_clipping_color = color;
+	}
 
 #ifndef SPINE_GODOT_EXTENSION
 // FIXME

@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated February 20, 2024. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2024, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
- * https://esotericsoftware.com/spine-editor-license
+ * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,14 +23,16 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 package com.esotericsoftware.spine;
 
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.lang.reflect.Field;
+
+import org.lwjgl.system.Configuration;
 
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
@@ -46,15 +48,11 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Null;
-import com.badlogic.gdx.utils.StringBuilder;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 
-import com.esotericsoftware.spine.Animation.MixBlend;
 import com.esotericsoftware.spine.AnimationState.AnimationStateAdapter;
 import com.esotericsoftware.spine.AnimationState.TrackEntry;
-import com.esotericsoftware.spine.Skeleton.Physics;
 import com.esotericsoftware.spine.utils.TwoColorPolygonBatch;
-import org.lwjgl.system.Configuration;
 
 import java.awt.Toolkit;
 
@@ -196,20 +194,27 @@ public class SkeletonViewer extends ApplicationAdapter {
 		return true;
 	}
 
+	void clearSkeleton () {
+		skeleton = null;
+		state = null;
+		ui.skinList.clearItems();
+		ui.animationList.clearItems();
+		ui.statusLabel.setText("");
+	}
+
 	void setAnimation (boolean first) {
 		if (!ui.prefsLoaded) return;
 		if (ui.animationList.getSelected() == null) return;
 		int track = ui.trackButtons.getCheckedIndex();
 		TrackEntry entry;
-		if (!first && state.getCurrent(track) == null) {
+		if (!first && state.getTrack(track) == null) {
 			state.setEmptyAnimation(track, 0);
 			entry = state.addAnimation(track, ui.animationList.getSelected(), ui.loopCheckbox.isChecked(), 0);
 			entry.setMixDuration(ui.mixSlider.getValue());
-		} else {
+		} else
 			entry = state.setAnimation(track, ui.animationList.getSelected(), ui.loopCheckbox.isChecked());
-			entry.setHoldPrevious(track > 0 && ui.holdPrevCheckbox.isChecked());
-		}
-		entry.setMixBlend(track > 0 && ui.addCheckbox.isChecked() ? MixBlend.add : MixBlend.replace);
+		entry.setMixInterpolation(ui.mixInterpolation.getSelected().interpolation);
+		entry.setAdditive(track > 0 && ui.addCheckbox.isChecked());
 		entry.setReverse(ui.reverseCheckbox.isChecked());
 		entry.setAlpha(ui.alphaSlider.getValue());
 	}
@@ -260,22 +265,30 @@ public class SkeletonViewer extends ApplicationAdapter {
 			skeleton.setScale(scaleX, scaleY);
 
 			if (ui.setupPoseButton.isChecked())
-				skeleton.setToSetupPose();
+				skeleton.setupPose();
 			else if (ui.bonesSetupPoseButton.isChecked())
-				skeleton.setBonesToSetupPose();
+				skeleton.setupPoseBones();
 			else if (ui.slotsSetupPoseButton.isChecked()) //
-				skeleton.setSlotsToSetupPose();
+				skeleton.setupPoseSlots();
 
 			delta = Math.min(delta, 0.032f) * ui.speedSlider.getValue();
-			state.update(delta);
-			state.apply(skeleton);
-			skeleton.update(delta);
-			skeleton.updateWorldTransform(Physics.update);
+			try {
+				state.update(delta);
+				state.apply(skeleton);
+				skeleton.update(delta);
+				skeleton.updateWorldTransform(Physics.update);
+			} catch (Throwable ex) {
+				ex.printStackTrace();
+				ui.toast("Error updating skeleton.");
+				clearSkeleton();
+				return;
+			}
 
 			batch.begin();
 			renderer.draw(batch, skeleton);
 			batch.end();
 
+			debugRenderer.setScale(camera.zoom);
 			debugRenderer.setBones(ui.debugBonesCheckbox.isChecked());
 			debugRenderer.setRegionAttachments(ui.debugRegionsCheckbox.isChecked());
 			debugRenderer.setBoundingBoxes(ui.debugBoundingBoxesCheckbox.isChecked());
@@ -308,7 +321,7 @@ public class SkeletonViewer extends ApplicationAdapter {
 
 		// Draw indicator lines for animation and mix times.
 		if (state != null) {
-			TrackEntry entry = state.getCurrent(0);
+			TrackEntry entry = state.getTrack(0);
 			if (entry != null) {
 				shapes.getProjectionMatrix().setToOrtho2D(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 				shapes.updateMatrices();

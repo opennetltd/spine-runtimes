@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,8 +23,8 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 #include "SpineSkeletonFileResource.h"
@@ -95,7 +95,6 @@ static char *readString(BinaryInput *input) {
 
 void SpineSkeletonFileResource::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("load_from_file", "path"), &SpineSkeletonFileResource::load_from_file);
-	ADD_SIGNAL(MethodInfo("skeleton_file_changed"));
 }
 
 static bool checkVersion(const char *version) {
@@ -136,7 +135,7 @@ Error SpineSkeletonFileResource::load_from_file(const String &path) {
 		json = FileAccess::get_file_as_string(path, &error);
 		if (error != OK) return error;
 #endif
-		if (!checkJson(json.utf8())) return ERR_INVALID_DATA;
+		if (!checkJson(json.utf8().ptr())) return ERR_INVALID_DATA;
 	} else {
 #ifdef SPINE_GODOT_EXTENSION
 		binary = FileAccess::get_file_as_bytes(path);
@@ -201,7 +200,8 @@ Error SpineSkeletonFileResource::copy_from(const Ref<Resource> &p_resource) {
 Variant SpineSkeletonFileResourceFormatLoader::_load(const String &path, const String &original_path, bool use_sub_threads, int32_t cache_mode) {
 #else
 #if VERSION_MAJOR > 3
-RES SpineSkeletonFileResourceFormatLoader::load(const String &path, const String &original_path, Error *error, bool use_sub_threads, float *progress, CacheMode cache_mode) {
+RES SpineSkeletonFileResourceFormatLoader::load(const String &path, const String &original_path, Error *error, bool use_sub_threads, float *progress,
+												CacheMode cache_mode) {
 #else
 #if VERSION_MINOR > 5
 RES SpineSkeletonFileResourceFormatLoader::load(const String &path, const String &original_path, Error *error, bool no_subresource_cache) {
@@ -223,12 +223,16 @@ PackedStringArray SpineSkeletonFileResourceFormatLoader::_get_recognized_extensi
 	PackedStringArray extensions;
 	extensions.push_back("spjson");
 	extensions.push_back("spskel");
+	extensions.push_back("spine-json");
+	extensions.push_back("skel");
 	return extensions;
 }
 #else
 void SpineSkeletonFileResourceFormatLoader::get_recognized_extensions(List<String> *extensions) const {
 	extensions->push_back("spjson");
 	extensions->push_back("spskel");
+	extensions->push_back("spine-json");
+	extensions->push_back("skel");
 }
 #endif
 
@@ -237,7 +241,9 @@ String SpineSkeletonFileResourceFormatLoader::_get_resource_type(const String &p
 #else
 String SpineSkeletonFileResourceFormatLoader::get_resource_type(const String &path) const {
 #endif
-	return path.ends_with(".spjson") || path.ends_with(".spskel") || path.ends_with(".spine-json") || path.ends_with(".skel") ? "SpineSkeletonFileResource" : "";
+	return path.ends_with(".spjson") || path.ends_with(".spskel") || path.ends_with(".spine-json") || path.ends_with(".skel")
+		? "SpineSkeletonFileResource"
+		: "";
 }
 
 #ifdef SPINE_GODOT_EXTENSION

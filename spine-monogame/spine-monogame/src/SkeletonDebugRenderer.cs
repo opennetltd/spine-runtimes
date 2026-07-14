@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,8 +23,8 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 using Microsoft.Xna.Framework;
@@ -107,9 +107,10 @@ namespace Spine {
 				for (int i = 0, n = bones.Count; i < n; i++) {
 					var bone = bones.Items[i];
 					if (bone.Parent == null) continue;
-					var x = bone.Data.Length * bone.A + bone.WorldX;
-					var y = bone.Data.Length * bone.C + bone.WorldY;
-					renderer.Line(bone.WorldX, bone.WorldY, x, y, z);
+					BonePose bonePose = bone.AppliedPose;
+					var x = bone.Data.Length * bonePose.A + bonePose.WorldX;
+					var y = bone.Data.Length * bonePose.C + bonePose.WorldY;
+					renderer.Line(bonePose.WorldX, bonePose.WorldY, x, y, z);
 				}
 				if (DrawSkeletonXY) renderer.X(skeletonX, skeletonY, 4, z);
 			}
@@ -119,11 +120,14 @@ namespace Spine {
 				var slots = skeleton.Slots;
 				for (int i = 0, n = slots.Count; i < n; i++) {
 					var slot = slots.Items[i];
-					var attachment = slot.Attachment;
+					var slotPose = slot.AppliedPose;
+					var attachment = slotPose.Attachment;
 					if (attachment is RegionAttachment) {
 						var regionAttachment = (RegionAttachment)attachment;
 						var vertices = this.vertices;
-						regionAttachment.ComputeWorldVertices(slot, vertices, 0, 2);
+						Sequence sequence = regionAttachment.Sequence;
+						int sequenceIndex = sequence.ResolveIndex(slotPose);
+						regionAttachment.ComputeWorldVertices(slot, sequence.GetOffsets(sequenceIndex), vertices, 0, 2);
 						renderer.Line(vertices[0], vertices[1], vertices[2], vertices[3], z);
 						renderer.Line(vertices[2], vertices[3], vertices[4], vertices[5], z);
 						renderer.Line(vertices[4], vertices[5], vertices[6], vertices[7], z);
@@ -136,11 +140,11 @@ namespace Spine {
 				var slots = skeleton.Slots;
 				for (int i = 0, n = slots.Count; i < n; i++) {
 					var slot = slots.Items[i];
-					var attachment = slot.Attachment;
+					var attachment = slot.AppliedPose.Attachment;
 					if (!(attachment is MeshAttachment)) continue;
 					var mesh = (MeshAttachment)attachment;
 					var world = vertices = vertices.Length < mesh.WorldVerticesLength ? new float[mesh.WorldVerticesLength] : vertices;
-					mesh.ComputeWorldVertices(slot, 0, mesh.WorldVerticesLength, world, 0, 2);
+					mesh.ComputeWorldVertices(skeleton, slot, 0, mesh.WorldVerticesLength, world, 0, 2);
 					int[] triangles = mesh.Triangles;
 					var hullLength = mesh.HullLength;
 					if (DrawMeshTriangles) {
@@ -184,8 +188,9 @@ namespace Spine {
 			if (DrawBones) {
 				renderer.SetColor(boneOriginColor);
 				for (int i = 0, n = bones.Count; i < n; i++) {
-					var bone = bones.Items[i];
-					renderer.Circle(bone.WorldX, bone.WorldY, 3, z);
+					Bone bone = bones.Items[i];
+					BonePose bonePose = bone.AppliedPose;
+					renderer.Circle(bonePose.WorldX, bonePose.WorldY, 3, z);
 				}
 			}
 
@@ -194,12 +199,12 @@ namespace Spine {
 				renderer.SetColor(clipColor);
 				for (int i = 0, n = slots.Count; i < n; i++) {
 					var slot = slots.Items[i];
-					var attachment = slot.Attachment;
+					var attachment = slot.AppliedPose.Attachment;
 					if (!(attachment is ClippingAttachment)) continue;
 					var clip = (ClippingAttachment)attachment;
 					var nn = clip.WorldVerticesLength;
 					var world = vertices = vertices.Length < nn ? new float[nn] : vertices;
-					clip.ComputeWorldVertices(slot, 0, nn, world, 0, 2);
+					clip.ComputeWorldVertices(skeleton, slot, 0, nn, world, 0, 2);
 					ExposedList<float> clippingPolygon = new ExposedList<float>();
 					for (int ii = 0; ii < nn; ii += 2) {
 						var x = world[ii];

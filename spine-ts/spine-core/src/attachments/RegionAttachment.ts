@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,22 +23,24 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
-import { Bone } from "../Bone.js";
-import { TextureRegion } from "../Texture.js";
-import { Color, MathUtils, NumberArrayLike, Utils } from "../Utils.js";
+import type { SlotPose } from "../SlotPose.js";
+import type { Slot } from "../Slot.js";
+import type { TextureRegion } from "../Texture.js";
+import { Color, MathUtils, type NumberArrayLike } from "../Utils.js";
 import { Attachment } from "./Attachment.js";
-import { HasTextureRegion } from "./HasTextureRegion.js";
-import { Sequence } from "./Sequence.js";
-import { Slot } from "../Slot.js";
+import type { HasSequence } from "./HasSequence.js";
+import type { Sequence } from "./Sequence.js";
 
 /** An attachment that displays a textured quadrilateral.
  *
  * See [Region attachments](http://esotericsoftware.com/spine-regions) in the Spine User Guide. */
-export class RegionAttachment extends Attachment implements HasTextureRegion {
+export class RegionAttachment extends Attachment implements HasSequence {
+	readonly sequence: Sequence;
+
 	/** The local x translation. */
 	x = 0;
 
@@ -51,7 +53,7 @@ export class RegionAttachment extends Attachment implements HasTextureRegion {
 	/** The local scaleY. */
 	scaleY = 1;
 
-	/** The local rotation. */
+	/** The local rotation in degrees, counter clockwise. */
 	rotation = 0;
 
 	/** The width of the region attachment in Spine. */
@@ -60,34 +62,111 @@ export class RegionAttachment extends Attachment implements HasTextureRegion {
 	/** The height of the region attachment in Spine. */
 	height = 0;
 
+	/** The name of the texture region for this attachment. */
+	path?: string;
+
 	/** The color to tint the region attachment. */
 	color = new Color(1, 1, 1, 1);
 
-	/** The name of the texture region for this attachment. */
-	path: string;
-
-	region: TextureRegion | null = null;
-	sequence: Sequence | null = null;
-
-	/** For each of the 4 vertices, a pair of <code>x,y</code> values that is the local position of the vertex.
-	 *
-	 * See {@link #updateOffset()}. */
-	offset = Utils.newFloatArray(8);
-
-	uvs = Utils.newFloatArray(8);
-
 	tempColor = new Color(1, 1, 1, 1);
 
-	constructor (name: string, path: string) {
+	constructor (name: string, sequence: Sequence) {
 		super(name);
-		this.path = path;
+		this.sequence = sequence;
 	}
 
-	/** Calculates the {@link #offset} using the region settings. Must be called after changing region settings. */
-	updateRegion (): void {
-		if (!this.region) throw new Error("Region not set.");
-		let region = this.region;
-		let uvs = this.uvs;
+	copy (): Attachment {
+		const copy = new RegionAttachment(this.name, this.sequence.copy());
+		copy.path = this.path;
+		copy.x = this.x;
+		copy.y = this.y;
+		copy.scaleX = this.scaleX;
+		copy.scaleY = this.scaleY;
+		copy.rotation = this.rotation;
+		copy.width = this.width;
+		copy.height = this.height;
+		copy.color.setFromColor(this.color);
+		return copy;
+	}
+
+	/** Transforms the attachment's four vertices to world coordinates.
+	 *
+	 * See <a href="http://esotericsoftware.com/spine-runtime-skeletons#World-transforms">World transforms</a> in the Spine
+	 * Runtimes Guide.
+	 * @param worldVertices The output world vertices. Must have a length >= `offset` + 8.
+	 * @param offset The `worldVertices` index to begin writing values.
+	 * @param stride The number of `worldVertices` entries between the value pairs written. */
+	computeWorldVertices (slot: Slot, vertexOffsets: NumberArrayLike, worldVertices: NumberArrayLike, offset: number, stride: number) {
+
+		const bone = slot.bone.appliedPose;
+		const x = bone.worldX, y = bone.worldY;
+		const a = bone.a, b = bone.b, c = bone.c, d = bone.d;
+
+		let offsetX = vertexOffsets[0];
+		let offsetY = vertexOffsets[1];
+		worldVertices[offset] = offsetX * a + offsetY * b + x; // br
+		worldVertices[offset + 1] = offsetX * c + offsetY * d + y;
+		offset += stride;
+
+		offsetX = vertexOffsets[2];
+		offsetY = vertexOffsets[3];
+		worldVertices[offset] = offsetX * a + offsetY * b + x; // bl
+		worldVertices[offset + 1] = offsetX * c + offsetY * d + y;
+		offset += stride;
+
+		offsetX = vertexOffsets[4];
+		offsetY = vertexOffsets[5];
+		worldVertices[offset] = offsetX * a + offsetY * b + x; // ul
+		worldVertices[offset + 1] = offsetX * c + offsetY * d + y;
+		offset += stride;
+
+		offsetX = vertexOffsets[6];
+		offsetY = vertexOffsets[7];
+		worldVertices[offset] = offsetX * a + offsetY * b + x; // ur
+		worldVertices[offset + 1] = offsetX * c + offsetY * d + y;
+	}
+
+	getOffsets (pose: SlotPose): number[] {
+		// biome-ignore lint/style/noNonNullAssertion: offsets are always defined after updateSequence
+		return this.sequence.offsets![this.sequence.resolveIndex(pose)];
+	}
+
+	updateSequence () {
+		this.sequence.update(this);
+	}
+
+	/** Computes {@link Sequence.getUVs | UVs} and {@link Sequence.getOffsets | offsets} for a region attachment.
+	 * @param uvs Output array for the computed UVs, length of 8.
+	 * @param offset Output array for the computed vertex offsets, length of 8. */
+	static computeUVs (region: TextureRegion | null, x: number, y: number, scaleX: number, scaleY: number, rotation: number, width: number,
+		height: number, offset: number[], uvs: NumberArrayLike): void {
+
+		if (!region) throw new Error("Region not set.");
+		const regionScaleX = width / region.originalWidth * scaleX;
+		const regionScaleY = height / region.originalHeight * scaleY;
+		const localX = -width / 2 * scaleX + region.offsetX * regionScaleX;
+		const localY = -height / 2 * scaleY + region.offsetY * regionScaleY;
+		const localX2 = localX + region.width * regionScaleX;
+		const localY2 = localY + region.height * regionScaleY;
+		const radians = rotation * MathUtils.degRad;
+		const cos = Math.cos(radians);
+		const sin = Math.sin(radians);
+		const localXCos = localX * cos + x;
+		const localXSin = localX * sin;
+		const localYCos = localY * cos + y;
+		const localYSin = localY * sin;
+		const localX2Cos = localX2 * cos + x;
+		const localX2Sin = localX2 * sin;
+		const localY2Cos = localY2 * cos + y;
+		const localY2Sin = localY2 * sin;
+		offset[0] = localXCos - localYSin;
+		offset[1] = localYCos + localXSin;
+		offset[2] = localXCos - localY2Sin;
+		offset[3] = localY2Cos + localXSin;
+		offset[4] = localX2Cos - localY2Sin;
+		offset[5] = localY2Cos + localX2Sin;
+		offset[6] = localX2Cos - localYSin;
+		offset[7] = localYCos + localX2Sin;
 
 		if (region == null) {
 			uvs[0] = 0;
@@ -98,115 +177,23 @@ export class RegionAttachment extends Attachment implements HasTextureRegion {
 			uvs[5] = 1;
 			uvs[6] = 1;
 			uvs[7] = 0;
-			return;
-		}
-
-		let regionScaleX = this.width / this.region.originalWidth * this.scaleX;
-		let regionScaleY = this.height / this.region.originalHeight * this.scaleY;
-		let localX = -this.width / 2 * this.scaleX + this.region.offsetX * regionScaleX;
-		let localY = -this.height / 2 * this.scaleY + this.region.offsetY * regionScaleY;
-		let localX2 = localX + this.region.width * regionScaleX;
-		let localY2 = localY + this.region.height * regionScaleY;
-		let radians = this.rotation * MathUtils.degRad;
-		let cos = Math.cos(radians);
-		let sin = Math.sin(radians);
-		let x = this.x, y = this.y;
-		let localXCos = localX * cos + x;
-		let localXSin = localX * sin;
-		let localYCos = localY * cos + y;
-		let localYSin = localY * sin;
-		let localX2Cos = localX2 * cos + x;
-		let localX2Sin = localX2 * sin;
-		let localY2Cos = localY2 * cos + y;
-		let localY2Sin = localY2 * sin;
-		let offset = this.offset;
-		offset[0] = localXCos - localYSin;
-		offset[1] = localYCos + localXSin;
-		offset[2] = localXCos - localY2Sin;
-		offset[3] = localY2Cos + localXSin;
-		offset[4] = localX2Cos - localY2Sin;
-		offset[5] = localY2Cos + localX2Sin;
-		offset[6] = localX2Cos - localYSin;
-		offset[7] = localYCos + localX2Sin;
-
-		if (region.degrees == 90) {
-			uvs[0] = region.u2;
-			uvs[1] = region.v2;
-			uvs[2] = region.u;
-			uvs[3] = region.v2;
-			uvs[4] = region.u;
-			uvs[5] = region.v;
-			uvs[6] = region.u2;
-			uvs[7] = region.v;
 		} else {
-			uvs[0] = region.u;
 			uvs[1] = region.v2;
 			uvs[2] = region.u;
-			uvs[3] = region.v;
-			uvs[4] = region.u2;
 			uvs[5] = region.v;
 			uvs[6] = region.u2;
-			uvs[7] = region.v2;
+			if (region.degrees === 90) {
+				uvs[0] = region.u2;
+				uvs[3] = region.v2;
+				uvs[4] = region.u;
+				uvs[7] = region.v;
+			} else {
+				uvs[0] = region.u;
+				uvs[3] = region.v;
+				uvs[4] = region.u2;
+				uvs[7] = region.v2;
+			}
 		}
-	}
-
-	/** Transforms the attachment's four vertices to world coordinates. If the attachment has a {@link #sequence}, the region may
-	 * be changed.
-	 * <p>
-	 * See <a href="http://esotericsoftware.com/spine-runtime-skeletons#World-transforms">World transforms</a> in the Spine
-	 * Runtimes Guide.
-	 * @param worldVertices The output world vertices. Must have a length >= <code>offset</code> + 8.
-	 * @param offset The <code>worldVertices</code> index to begin writing values.
-	 * @param stride The number of <code>worldVertices</code> entries between the value pairs written. */
-	computeWorldVertices (slot: Slot, worldVertices: NumberArrayLike, offset: number, stride: number) {
-		if (this.sequence != null)
-			this.sequence.apply(slot, this);
-
-		let bone = slot.bone;
-		let vertexOffset = this.offset;
-		let x = bone.worldX, y = bone.worldY;
-		let a = bone.a, b = bone.b, c = bone.c, d = bone.d;
-		let offsetX = 0, offsetY = 0;
-
-		offsetX = vertexOffset[0];
-		offsetY = vertexOffset[1];
-		worldVertices[offset] = offsetX * a + offsetY * b + x; // br
-		worldVertices[offset + 1] = offsetX * c + offsetY * d + y;
-		offset += stride;
-
-		offsetX = vertexOffset[2];
-		offsetY = vertexOffset[3];
-		worldVertices[offset] = offsetX * a + offsetY * b + x; // bl
-		worldVertices[offset + 1] = offsetX * c + offsetY * d + y;
-		offset += stride;
-
-		offsetX = vertexOffset[4];
-		offsetY = vertexOffset[5];
-		worldVertices[offset] = offsetX * a + offsetY * b + x; // ul
-		worldVertices[offset + 1] = offsetX * c + offsetY * d + y;
-		offset += stride;
-
-		offsetX = vertexOffset[6];
-		offsetY = vertexOffset[7];
-		worldVertices[offset] = offsetX * a + offsetY * b + x; // ur
-		worldVertices[offset + 1] = offsetX * c + offsetY * d + y;
-	}
-
-	copy (): Attachment {
-		let copy = new RegionAttachment(this.name, this.path);
-		copy.region = this.region;
-		copy.x = this.x;
-		copy.y = this.y;
-		copy.scaleX = this.scaleX;
-		copy.scaleY = this.scaleY;
-		copy.rotation = this.rotation;
-		copy.width = this.width;
-		copy.height = this.height;
-		Utils.arrayCopy(this.uvs, 0, copy.uvs, 0, 8);
-		Utils.arrayCopy(this.offset, 0, copy.offset, 0, 8);
-		copy.color.setFromColor(this.color);
-		copy.sequence = this.sequence != null ? this.sequence.copy() : null;
-		return copy;
 	}
 
 	static X1 = 0;

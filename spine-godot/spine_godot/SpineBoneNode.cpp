@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,8 +23,8 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 #include "SpineBoneNode.h"
@@ -35,6 +35,7 @@
 #else
 #if VERSION_MAJOR > 3
 #include "core/config/engine.h"
+#include "scene/main/scene_tree.h"
 #else
 #include "core/engine.h"
 #endif
@@ -49,6 +50,7 @@ void SpineBoneNode::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_debug_thickness"), &SpineBoneNode::get_debug_thickness);
 	ClassDB::bind_method(D_METHOD("set_debug_color"), &SpineBoneNode::set_debug_color);
 	ClassDB::bind_method(D_METHOD("get_debug_color"), &SpineBoneNode::get_debug_color);
+	ClassDB::bind_method(D_METHOD("_on_before_world_transforms_change", "spine_sprite"), &SpineBoneNode::on_before_world_transforms_change);
 	ClassDB::bind_method(D_METHOD("_on_world_transforms_changed", "spine_sprite"), &SpineBoneNode::on_world_transforms_changed);
 	ClassDB::bind_method(D_METHOD("find_bone"), &SpineBoneNode::find_bone);
 	ClassDB::bind_method(D_METHOD("find_sprite"), &SpineBoneNode::find_parent_sprite);
@@ -66,8 +68,10 @@ void SpineBoneNode::_notification(int what) {
 			SpineSprite *sprite = find_parent_sprite();
 			if (sprite) {
 #if VERSION_MAJOR > 3
+				sprite->connect(SNAME("before_world_transforms_change"), callable_mp(this, &SpineBoneNode::on_before_world_transforms_change));
 				sprite->connect(SNAME("world_transforms_changed"), callable_mp(this, &SpineBoneNode::on_world_transforms_changed));
 #else
+				sprite->connect(SNAME("before_world_transforms_change"), this, SNAME("_on_before_world_transforms_change"));
 				sprite->connect(SNAME("world_transforms_changed"), this, SNAME("_on_world_transforms_changed"));
 #endif
 				update_transform(sprite);
@@ -90,8 +94,10 @@ void SpineBoneNode::_notification(int what) {
 			SpineSprite *sprite = find_parent_sprite();
 			if (sprite) {
 #if VERSION_MAJOR > 3
+				sprite->disconnect(SNAME("before_world_transforms_change"), callable_mp(this, &SpineBoneNode::on_before_world_transforms_change));
 				sprite->disconnect(SNAME("world_transforms_changed"), callable_mp(this, &SpineBoneNode::on_world_transforms_changed));
 #else
+				sprite->disconnect(SNAME("before_world_transforms_change"), this, SNAME("_on_before_world_transforms_change"));
 				sprite->disconnect(SNAME("world_transforms_changed"), this, SNAME("_on_world_transforms_changed"));
 #endif
 			}
@@ -113,7 +119,8 @@ void SpineBoneNode::_get_property_list(List<PropertyInfo> *list) const {
 	Vector<String> bone_names;
 #endif
 	SpineSprite *sprite = find_parent_sprite();
-	if (sprite) sprite->get_skeleton_data_res()->get_bone_names(bone_names);
+	if (sprite)
+		sprite->get_skeleton_data_res()->get_bone_names(bone_names);
 	else
 		bone_names.push_back(bone_name);
 	auto element = list->front();
@@ -149,7 +156,14 @@ bool SpineBoneNode::_set(const StringName &property, const Variant &value) {
 	return false;
 }
 
+void SpineBoneNode::on_before_world_transforms_change(const Variant &_sprite) {
+	if (bone_mode != SpineConstant::BoneMode_Drive) return;
+	SpineSprite *sprite = cast_to<SpineSprite>(_sprite.operator Object *());
+	update_transform(sprite);
+}
+
 void SpineBoneNode::on_world_transforms_changed(const Variant &_sprite) {
+	if (bone_mode != SpineConstant::BoneMode_Follow) return;
 	SpineSprite *sprite = cast_to<SpineSprite>(_sprite.operator Object *());
 	update_transform(sprite);
 #if VERSION_MAJOR > 3

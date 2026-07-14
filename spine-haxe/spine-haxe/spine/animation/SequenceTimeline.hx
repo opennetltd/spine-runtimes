@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,29 +23,32 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *****************************************************************************/
 
 package spine.animation;
 
-import spine.attachments.VertexAttachment;
 import spine.attachments.Attachment;
 
+/** Changes a slot's Slot#getSequenceIndex() for an attachment's Sequence. */
 class SequenceTimeline extends Timeline implements SlotTimeline {
 	static var ENTRIES = 3;
 	static var MODE = 1;
 	static var DELAY = 2;
 
 	var slotIndex:Int;
-	var attachment:HasTextureRegion;
+	var attachment:Attachment;
 
-	public function new(frameCount:Int, slotIndex:Int, attachment:HasTextureRegion) {
-		super(frameCount, [
-			Std.string(Property.sequence) + "|" + Std.string(slotIndex) + "|" + Std.string(attachment.sequence.id)
-		]);
+	public function new(frameCount:Int, slotIndex:Int, attachment:Attachment) {
+		super(frameCount, Std.string(Property.sequence)
+			+ "|"
+			+ Std.string(slotIndex)
+			+ "|"
+			+ Std.string(cast(attachment, HasSequence).sequence.id));
 		this.slotIndex = slotIndex;
 		this.attachment = attachment;
+		this.instant = true;
 	}
 
 	public override function getFrameEntries():Int {
@@ -56,12 +59,14 @@ class SequenceTimeline extends Timeline implements SlotTimeline {
 		return this.slotIndex;
 	}
 
+	/** The attachment for which the sequenceIndex will be set.
+	 * See VertexAttachment.timelineAttachment. */
 	public function getAttachment():Attachment {
-		return cast(attachment, Attachment);
+		return attachment;
 	}
 
 	/** Sets the time, mode, index, and frame time for the specified frame.
-	 * @param frame Between 0 and <code>frameCount</code>, inclusive.
+	 * @param frame Between 0 and frameCount, inclusive.
 	 * @param time Seconds between frames. */
 	public function setFrame(frame:Int, time:Float, mode:SequenceMode, index:Int, delay:Float) {
 		frame *= SequenceTimeline.ENTRIES;
@@ -70,26 +75,18 @@ class SequenceTimeline extends Timeline implements SlotTimeline {
 		frames[frame + SequenceTimeline.DELAY] = delay;
 	}
 
-	public override function apply(skeleton:Skeleton, lastTime:Float, time:Float, events:Array<Event>, alpha:Float, blend:MixBlend,
-			direction:MixDirection):Void {
-		var slot = skeleton.slots[this.slotIndex];
-		if (!slot.bone.active)
+	public function apply(skeleton:Skeleton, lastTime:Float, time:Float, events:Array<Event>, alpha:Float, from:MixFrom, add:Bool, out:Bool, appliedPose:Bool) {
+		var slots = skeleton.slots;
+		if (!attachment.isTimelineActive(slots, slotIndex, appliedPose))
 			return;
-		var slotAttachment = slot.attachment;
-		var attachment = cast(this.attachment, Attachment);
-		if (slotAttachment != attachment) {
-			if (!Std.isOfType(slotAttachment, VertexAttachment) || cast(slotAttachment, VertexAttachment).timelineAttachment != attachment)
-				return;
-		}
+		var timelineSlots = attachment.timelineSlots;
 
-		if (direction == MixDirection.mixOut) {
-			if (blend == MixBlend.setup) slot.sequenceIndex = -1;
-			return;
-		}
-
-		if (time < frames[0]) {
-			if (blend == MixBlend.setup || blend == MixBlend.first)
-				slot.sequenceIndex = -1;
+		if (out || time < frames[0]) {
+			if (from != MixFrom.current) {
+				setupPose(slots[slotIndex], appliedPose);
+				for (i in 0...timelineSlots.length)
+					setupPose(slots[timelineSlots[i]], appliedPose);
+			}
 			return;
 		}
 
@@ -98,10 +95,29 @@ class SequenceTimeline extends Timeline implements SlotTimeline {
 		var modeAndIndex = Std.int(frames[i + SequenceTimeline.MODE]);
 		var delay = frames[i + SequenceTimeline.DELAY];
 
-		if (this.attachment.sequence == null)
+		applyToSlot(slots[slotIndex], appliedPose, time, before, modeAndIndex, delay);
+		for (j in 0...timelineSlots.length)
+			applyToSlot(slots[timelineSlots[j]], appliedPose, time, before, modeAndIndex, delay);
+	}
+
+	private function setupPose(slot:Slot, appliedPose:Bool):Void {
+		if (!slot.bone.active)
 			return;
+		var pose = appliedPose ? slot.appliedPose : slot.pose;
+		if (pose.attachment == null || pose.attachment.timelineAttachment != attachment)
+			return;
+		pose.sequenceIndex = -1;
+	}
+
+	private function applyToSlot(slot:Slot, appliedPose:Bool, time:Float, before:Float, modeAndIndex:Int, delay:Float):Void {
+		if (!slot.bone.active)
+			return;
+		var pose = appliedPose ? slot.appliedPose : slot.pose;
+		if (pose.attachment == null || pose.attachment.timelineAttachment != attachment)
+			return;
+
 		var index = modeAndIndex >> 4,
-			count = this.attachment.sequence.regions.length;
+			count = cast(pose.attachment, HasSequence).sequence.regions.length;
 		var mode = SequenceMode.values[modeAndIndex & 0xf];
 		if (mode != SequenceMode.hold) {
 			index += Std.int(((time - before) / delay + 0.00001));
@@ -126,6 +142,6 @@ class SequenceTimeline extends Timeline implements SlotTimeline {
 						index = n - index;
 			}
 		}
-		slot.sequenceIndex = index;
+		pose.sequenceIndex = index;
 	}
 }

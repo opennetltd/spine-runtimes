@@ -1,6 +1,6 @@
-## Spine UI Toolkit Extension [Experimental]
+## Spine UI Toolkit Extension
 
-This experimental plugin provides integration of UI Toolkit for the spine-unity runtime. Please be sure to test this package first and create backups of your project before using.
+This plugin provides integration of UI Toolkit for the spine-unity runtime. Please be sure to test this package first and create backups of your project before using.
 The plugin adds a `SpineVisualElement` control element to be used with UI Toolkit, providing functionality similar to `SkeletonGraphic` to add your Spine skeletons to a Visual Tree Asset via UI Toolkit's UI Builder.
 
 ### Usage

@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "rootDir": "./src",
+    "outDir": "./dist",
+
+    /* Construct3 specific requirements */
+    "target": "ES2021",
+    "module": "ES2022",
+    "forceConsistentCasingInFileNames": true,
+
+    /* Standard settings from your base but customized for Construct3 */
+    "noImplicitAny": true,
+    "preserveConstEnums": true,
+    "inlineSources": false,
+    "inlineSourceMap": false,
+    "lib": ["DOM", "ES2017", "ScriptHost"],
+    "declaration": false,
+    "moduleResolution": "bundler",
+    "skipLibCheck": true,
+    "strict": true
+  },
+  "include": ["src/**/*.ts", "ts-defs/**/*.d.ts", "spine.d.ts"],
+  "exclude": ["dist/**/*.d.ts", "spine-construct3-lib/**/*"],
+  "references": [
+    {
+      "path": "../spine-core"
+    },
+    {
+      "path": "./spine-construct3-lib"
+    }
+  ]
+}

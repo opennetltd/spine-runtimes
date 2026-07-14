@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,19 +23,18 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
-import { Animation } from "./Animation"
-import { BoneData } from "./BoneData.js";
-import { EventData } from "./EventData.js";
-import { IkConstraintData } from "./IkConstraintData.js";
-import { PathConstraintData } from "./PathConstraintData.js";
-import { PhysicsConstraintData } from "./PhysicsConstraintData.js";
-import { Skin } from "./Skin.js";
-import { SlotData } from "./SlotData.js";
-import { TransformConstraintData } from "./TransformConstraintData.js";
+import type { Animation } from "./Animation.js";
+import type { Skeleton } from "./Skeleton.js";
+import type { BoneData } from "./BoneData.js";
+import type { ConstraintData } from "./ConstraintData.js";
+import type { EventData } from "./EventData.js";
+import type { Skin } from "./Skin.js";
+import { SliderData } from "./SliderData.js";
+import type { SlotData } from "./SlotData.js";
 
 /** Stores the setup pose and all of the stateless data for a skeleton.
  *
@@ -47,36 +46,28 @@ export class SkeletonData {
 	name: string | null = null;
 
 	/** The skeleton's bones, sorted parent first. The root bone is always the first bone. */
-	bones = new Array<BoneData>(); // Ordered parents first.
+	bones = [] as BoneData[]; // Ordered parents first.
 
 	/** The skeleton's slots in the setup pose draw order. */
-	slots = new Array<SlotData>(); // Setup pose draw order.
+	slots = [] as SlotData[]; // Setup pose draw order.
 
-	skins = new Array<Skin>();
+	skins = [] as Skin[];
 
 	/** The skeleton's default skin. By default this skin contains all attachments that were not in a skin in Spine.
 	 *
-	 * See {@link Skeleton#getAttachmentByName()}.
+	 * See {@link Skeleton.getAttachmentByName}.
 	 * May be null. */
 	defaultSkin: Skin | null = null;
 
 	/** The skeleton's events. */
-	events = new Array<EventData>();
+	events = [] as EventData[];
 
 	/** The skeleton's animations. */
-	animations = new Array<Animation>();
+	animations = [] as Animation[];
 
 	/** The skeleton's IK constraints. */
-	ikConstraints = new Array<IkConstraintData>();
-
-	/** The skeleton's transform constraints. */
-	transformConstraints = new Array<TransformConstraintData>();
-
-	/** The skeleton's path constraints. */
-	pathConstraints = new Array<PathConstraintData>();
-
-	/** The skeleton's physics constraints. */
-	physicsConstraints = new Array<PhysicsConstraintData>();
+	// biome-ignore lint/suspicious/noExplicitAny: reference runtime does not restrict to specific types
+	constraints = [] as ConstraintData<any, any>[];
 
 	/** The X coordinate of the skeleton's axis aligned bounding box in the setup pose. */
 	x: number = 0;
@@ -102,12 +93,12 @@ export class SkeletonData {
 
 	// Nonessential
 	/** The dopesheet FPS in Spine. Available only when nonessential data was exported. */
-	fps = 0;
+	fps = 30;
 
-	/** The path to the images directory as defined in Spine. Available only when nonessential data was exported. May be null. */
+	/** The path to the images folder as defined in Spine. Available only when nonessential data was exported. May be null. */
 	imagesPath: string | null = null;
 
-	/** The path to the audio directory as defined in Spine. Available only when nonessential data was exported. May be null. */
+	/** The path to the audio folder as defined in Spine. Available only when nonessential data was exported. May be null. */
 	audioPath: string | null = null;
 
 	/** Finds a bone by comparing each bone's name. It is more efficient to cache the results of this method than to call it
@@ -115,11 +106,9 @@ export class SkeletonData {
 	 * @returns May be null. */
 	findBone (boneName: string) {
 		if (!boneName) throw new Error("boneName cannot be null.");
-		let bones = this.bones;
-		for (let i = 0, n = bones.length; i < n; i++) {
-			let bone = bones[i];
-			if (bone.name == boneName) return bone;
-		}
+		const bones = this.bones;
+		for (let i = 0, n = bones.length; i < n; i++)
+			if (bones[i].name === boneName) return bones[i];
 		return null;
 	}
 
@@ -128,11 +117,9 @@ export class SkeletonData {
 	 * @returns May be null. */
 	findSlot (slotName: string) {
 		if (!slotName) throw new Error("slotName cannot be null.");
-		let slots = this.slots;
-		for (let i = 0, n = slots.length; i < n; i++) {
-			let slot = slots[i];
-			if (slot.name == slotName) return slot;
-		}
+		const slots = this.slots;
+		for (let i = 0, n = slots.length; i < n; i++)
+			if (slots[i].name === slotName) return slots[i];
 		return null;
 	}
 
@@ -141,11 +128,9 @@ export class SkeletonData {
 	 * @returns May be null. */
 	findSkin (skinName: string) {
 		if (!skinName) throw new Error("skinName cannot be null.");
-		let skins = this.skins;
-		for (let i = 0, n = skins.length; i < n; i++) {
-			let skin = skins[i];
-			if (skin.name == skinName) return skin;
-		}
+		const skins = this.skins;
+		for (let i = 0, n = skins.length; i < n; i++)
+			if (skins[i].name === skinName) return skins[i];
 		return null;
 	}
 
@@ -154,12 +139,23 @@ export class SkeletonData {
 	 * @returns May be null. */
 	findEvent (eventDataName: string) {
 		if (!eventDataName) throw new Error("eventDataName cannot be null.");
-		let events = this.events;
-		for (let i = 0, n = events.length; i < n; i++) {
-			let event = events[i];
-			if (event.name == eventDataName) return event;
-		}
+		const events = this.events;
+		for (let i = 0, n = events.length; i < n; i++)
+			if (events[i].name === eventDataName) return events[i];
 		return null;
+	}
+
+	/** Collects animations used by {@link SliderData slider constraints}.
+	 *
+	 * Slider animations are designed to be applied by slider constraints rather than on their own. Applications that have a user
+	 * choose an animation may want to exclude them. */
+	findSliderAnimations (animations: Animation[]): Animation[] {
+		const constraints = this.constraints;
+		for (let i = 0, n = this.constraints.length; i < n; i++) {
+			const data = constraints[i];
+			if (data instanceof SliderData && data.animation != null) animations.push(data.animation);
+		}
+		return animations;
 	}
 
 	/** Finds an animation by comparing each animation's name. It is more efficient to cache the results of this method than to
@@ -167,63 +163,26 @@ export class SkeletonData {
 	 * @returns May be null. */
 	findAnimation (animationName: string) {
 		if (!animationName) throw new Error("animationName cannot be null.");
-		let animations = this.animations;
-		for (let i = 0, n = animations.length; i < n; i++) {
-			let animation = animations[i];
-			if (animation.name == animationName) return animation;
+		const animations = this.animations;
+		for (let i = 0, n = animations.length; i < n; i++)
+			if (animations[i].name === animationName) return animations[i];
+		return null;
+	}
+
+	// --- Constraints.
+
+	/** Finds a constraint of the specified type by comparing each constraints's name. It is more efficient to cache the results of
+	  * this method than to call it multiple times. */
+	// biome-ignore lint/suspicious/noExplicitAny: reference runtime does not restrict to specific types
+	findConstraint<T extends ConstraintData<any, any>> (constraintName: string, type: abstract new (...args: any[]) => T): T | null {
+		if (!constraintName) throw new Error("constraintName cannot be null.");
+		if (type == null) throw new Error("type cannot be null.");
+		const constraints = this.constraints;
+		for (let i = 0, n = this.constraints.length; i < n; i++) {
+			const constraint = constraints[i];
+			if (constraint instanceof type && constraint.name === constraintName) return constraint as T;
 		}
 		return null;
 	}
 
-	/** Finds an IK constraint by comparing each IK constraint's name. It is more efficient to cache the results of this method
-	 * than to call it multiple times.
-	 * @return May be null. */
-	findIkConstraint (constraintName: string) {
-		if (!constraintName) throw new Error("constraintName cannot be null.");
-		const ikConstraints = this.ikConstraints;
-		for (let i = 0, n = ikConstraints.length; i < n; i++) {
-			const constraint = ikConstraints[i];
-			if (constraint.name == constraintName) return constraint;
-		}
-		return null;
-	}
-
-	/** Finds a transform constraint by comparing each transform constraint's name. It is more efficient to cache the results of
-	 * this method than to call it multiple times.
-	 * @return May be null. */
-	findTransformConstraint (constraintName: string) {
-		if (!constraintName) throw new Error("constraintName cannot be null.");
-		const transformConstraints = this.transformConstraints;
-		for (let i = 0, n = transformConstraints.length; i < n; i++) {
-			const constraint = transformConstraints[i];
-			if (constraint.name == constraintName) return constraint;
-		}
-		return null;
-	}
-
-	/** Finds a path constraint by comparing each path constraint's name. It is more efficient to cache the results of this method
-	 * than to call it multiple times.
-	 * @return May be null. */
-	findPathConstraint (constraintName: string) {
-		if (!constraintName) throw new Error("constraintName cannot be null.");
-		const pathConstraints = this.pathConstraints;
-		for (let i = 0, n = pathConstraints.length; i < n; i++) {
-			const constraint = pathConstraints[i];
-			if (constraint.name == constraintName) return constraint;
-		}
-		return null;
-	}
-
-	/** Finds a physics constraint by comparing each physics constraint's name. It is more efficient to cache the results of this method
-	 * than to call it multiple times.
-	 * @return May be null. */
-	findPhysicsConstraint (constraintName: string) {
-		if (!constraintName) throw new Error("constraintName cannot be null.");
-		const physicsConstraints = this.physicsConstraints;
-		for (let i = 0, n = physicsConstraints.length; i < n; i++) {
-			const constraint = physicsConstraints[i];
-			if (constraint.name == constraintName) return constraint;
-		}
-		return null;
-	}
 }

@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated February 20, 2024. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2024, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
- * https://esotericsoftware.com/spine-editor-license
+ * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,23 +23,29 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 package com.esotericsoftware.spine;
 
+import com.esotericsoftware.spine.ConstraintData.ScaleYMode;
+
 /** Stores the setup pose for a {@link PhysicsConstraint}.
  * <p>
  * See <a href="https://esotericsoftware.com/spine-physics-constraints">Physics constraints</a> in the Spine User Guide. */
-public class PhysicsConstraintData extends ConstraintData {
+public class PhysicsConstraintData extends ConstraintData<PhysicsConstraint, PhysicsConstraintPose> {
 	BoneData bone;
-	float x, y, rotate, scaleX, shearX, limit;
-	float step, inertia, strength, damping, massInverse, wind, gravity, mix;
+	float x, y, rotate, scaleX, shearX, limit, step;
 	boolean inertiaGlobal, strengthGlobal, dampingGlobal, massGlobal, windGlobal, gravityGlobal, mixGlobal;
+	ScaleYMode scaleYMode = ScaleYMode.none;
 
 	public PhysicsConstraintData (String name) {
-		super(name);
+		super(name, new PhysicsConstraintPose());
+	}
+
+	public PhysicsConstraint create (Skeleton skeleton) {
+		return new PhysicsConstraint(this, skeleton);
 	}
 
 	/** The bone constrained by this physics constraint. */
@@ -51,6 +57,7 @@ public class PhysicsConstraintData extends ConstraintData {
 		this.bone = bone;
 	}
 
+	/** The time in milliseconds required to advanced the physics simulation one step. */
 	public float getStep () {
 		return step;
 	}
@@ -59,6 +66,7 @@ public class PhysicsConstraintData extends ConstraintData {
 		this.step = step;
 	}
 
+	/** Physics influence on x translation, 0-1. */
 	public float getX () {
 		return x;
 	}
@@ -67,6 +75,7 @@ public class PhysicsConstraintData extends ConstraintData {
 		this.x = x;
 	}
 
+	/** Physics influence on y translation, 0-1. */
 	public float getY () {
 		return y;
 	}
@@ -75,6 +84,7 @@ public class PhysicsConstraintData extends ConstraintData {
 		this.y = y;
 	}
 
+	/** Physics influence on rotation, 0-1. */
 	public float getRotate () {
 		return rotate;
 	}
@@ -83,6 +93,7 @@ public class PhysicsConstraintData extends ConstraintData {
 		this.rotate = rotate;
 	}
 
+	/** Physics influence on scaleX, 0-1. */
 	public float getScaleX () {
 		return scaleX;
 	}
@@ -91,6 +102,7 @@ public class PhysicsConstraintData extends ConstraintData {
 		this.scaleX = scaleX;
 	}
 
+	/** Physics influence on shearX, 0-1. */
 	public float getShearX () {
 		return shearX;
 	}
@@ -99,6 +111,7 @@ public class PhysicsConstraintData extends ConstraintData {
 		this.shearX = shearX;
 	}
 
+	/** Movement greater than the limit will not have a greater affect on physics. */
 	public float getLimit () {
 		return limit;
 	}
@@ -107,63 +120,17 @@ public class PhysicsConstraintData extends ConstraintData {
 		this.limit = limit;
 	}
 
-	public float getInertia () {
-		return inertia;
+	/** Determines how the {@link BonePose#scaleY} changes when {@link #scaleX} sets {@link BonePose#scaleX}. */
+	public ScaleYMode getScaleYMode () {
+		return scaleYMode;
 	}
 
-	public void setInertia (float inertia) {
-		this.inertia = inertia;
+	public void setScaleYMode (ScaleYMode scaleYMode) {
+		if (scaleYMode == null) throw new IllegalArgumentException("scaleYMode cannot be null.");
+		this.scaleYMode = scaleYMode;
 	}
 
-	public float getStrength () {
-		return strength;
-	}
-
-	public void setStrength (float strength) {
-		this.strength = strength;
-	}
-
-	public float getDamping () {
-		return damping;
-	}
-
-	public void setDamping (float damping) {
-		this.damping = damping;
-	}
-
-	public float getMassInverse () {
-		return massInverse;
-	}
-
-	public void setMassInverse (float massInverse) {
-		this.massInverse = massInverse;
-	}
-
-	public float getWind () {
-		return wind;
-	}
-
-	public void setWind (float wind) {
-		this.wind = wind;
-	}
-
-	public float getGravity () {
-		return gravity;
-	}
-
-	public void setGravity (float gravity) {
-		this.gravity = gravity;
-	}
-
-	/** A percentage (0-1) that controls the mix between the constrained and unconstrained poses. */
-	public float getMix () {
-		return mix;
-	}
-
-	public void setMix (float mix) {
-		this.mix = mix;
-	}
-
+	/** True when this constraint's inertia is controlled by global slider timelines. */
 	public boolean getInertiaGlobal () {
 		return inertiaGlobal;
 	}
@@ -172,6 +139,7 @@ public class PhysicsConstraintData extends ConstraintData {
 		this.inertiaGlobal = inertiaGlobal;
 	}
 
+	/** True when this constraint's strength is controlled by global slider timelines. */
 	public boolean getStrengthGlobal () {
 		return strengthGlobal;
 	}
@@ -180,6 +148,7 @@ public class PhysicsConstraintData extends ConstraintData {
 		this.strengthGlobal = strengthGlobal;
 	}
 
+	/** True when this constraint's damping is controlled by global slider timelines. */
 	public boolean getDampingGlobal () {
 		return dampingGlobal;
 	}
@@ -188,6 +157,7 @@ public class PhysicsConstraintData extends ConstraintData {
 		this.dampingGlobal = dampingGlobal;
 	}
 
+	/** True when this constraint's mass is controlled by global slider timelines. */
 	public boolean getMassGlobal () {
 		return massGlobal;
 	}
@@ -196,6 +166,7 @@ public class PhysicsConstraintData extends ConstraintData {
 		this.massGlobal = massGlobal;
 	}
 
+	/** True when this constraint's wind is controlled by global slider timelines. */
 	public boolean getWindGlobal () {
 		return windGlobal;
 	}
@@ -204,6 +175,7 @@ public class PhysicsConstraintData extends ConstraintData {
 		this.windGlobal = windGlobal;
 	}
 
+	/** True when this constraint's gravity is controlled by global slider timelines. */
 	public boolean getGravityGlobal () {
 		return gravityGlobal;
 	}
@@ -212,6 +184,7 @@ public class PhysicsConstraintData extends ConstraintData {
 		this.gravityGlobal = gravityGlobal;
 	}
 
+	/** True when this constraint's mix is controlled by global slider timelines. */
 	public boolean getMixGlobal () {
 		return mixGlobal;
 	}

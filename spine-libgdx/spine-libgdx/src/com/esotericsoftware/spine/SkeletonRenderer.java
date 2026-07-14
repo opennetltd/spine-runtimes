@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated February 20, 2024. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2024, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
- * https://esotericsoftware.com/spine-editor-license
+ * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,8 +23,8 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 package com.esotericsoftware.spine;
@@ -33,6 +33,7 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.PolygonSpriteBatch;
+import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.FloatArray;
 import com.badlogic.gdx.utils.NumberUtils;
 import com.badlogic.gdx.utils.ShortArray;
@@ -41,6 +42,7 @@ import com.esotericsoftware.spine.attachments.Attachment;
 import com.esotericsoftware.spine.attachments.ClippingAttachment;
 import com.esotericsoftware.spine.attachments.MeshAttachment;
 import com.esotericsoftware.spine.attachments.RegionAttachment;
+import com.esotericsoftware.spine.attachments.Sequence;
 import com.esotericsoftware.spine.attachments.SkeletonAttachment;
 import com.esotericsoftware.spine.utils.SkeletonClipping;
 import com.esotericsoftware.spine.utils.TwoColorPolygonBatch;
@@ -54,18 +56,18 @@ public class SkeletonRenderer {
 
 	/** Renders the specified skeleton. If the batch is a PolygonSpriteBatch, {@link #draw(PolygonSpriteBatch, Skeleton)} is
 	 * called. If the batch is a TwoColorPolygonBatch, {@link #draw(TwoColorPolygonBatch, Skeleton)} is called. Otherwise the
-	 * skeleton is rendered without two color tinting and any mesh attachments will throw an exception.
+	 * skeleton is rendered without two color tinting and any mesh or clipping attachments will throw an exception.
 	 * <p>
 	 * This method may change the batch's {@link Batch#setBlendFunctionSeparate(int, int, int, int) blending function}. The
 	 * previous blend function is not restored, since that could result in unnecessary flushes, depending on what is rendered
 	 * next. */
 	public void draw (Batch batch, Skeleton skeleton) {
-		if (batch instanceof TwoColorPolygonBatch) {
-			draw((TwoColorPolygonBatch)batch, skeleton);
+		if (batch instanceof TwoColorPolygonBatch twoColorBatch) {
+			draw(twoColorBatch, skeleton);
 			return;
 		}
-		if (batch instanceof PolygonSpriteBatch) {
-			draw((PolygonSpriteBatch)batch, skeleton);
+		if (batch instanceof PolygonSpriteBatch polygonBatch) {
+			draw(polygonBatch, skeleton);
 			return;
 		}
 		if (batch == null) throw new IllegalArgumentException("batch cannot be null.");
@@ -76,15 +78,20 @@ public class SkeletonRenderer {
 		float[] vertices = this.vertices.items;
 		Color skeletonColor = skeleton.color;
 		float r = skeletonColor.r, g = skeletonColor.g, b = skeletonColor.b, a = skeletonColor.a;
-		Object[] drawOrder = skeleton.drawOrder.items;
-		for (int i = 0, n = skeleton.drawOrder.size; i < n; i++) {
-			Slot slot = (Slot)drawOrder[i];
+		Array<Slot> drawOrder = skeleton.drawOrder.appliedPose;
+		Slot[] slots = drawOrder.items;
+		for (int i = 0, n = drawOrder.size; i < n; i++) {
+			Slot slot = slots[i];
 			if (!slot.bone.active) continue;
-			Attachment attachment = slot.attachment;
-			if (attachment instanceof RegionAttachment) {
-				RegionAttachment region = (RegionAttachment)attachment;
-				region.computeWorldVertices(slot, vertices, 0, 5);
-				Color color = region.getColor(), slotColor = slot.getColor();
+			SlotPose pose = slot.appliedPose;
+			Attachment attachment = pose.attachment;
+			if (attachment instanceof RegionAttachment region) {
+				Sequence sequence = region.getSequence();
+				int sequenceIndex = sequence.resolveIndex(pose);
+				Texture texture = sequence.getRegion(sequenceIndex).getTexture();
+				float[] uvs = sequence.getUVs(sequenceIndex);
+				region.computeWorldVertices(slot, sequence.getOffsets(sequenceIndex), vertices, 0, 5);
+				Color color = region.getColor(), slotColor = pose.getColor();
 				float alpha = a * slotColor.a * color.a * 255;
 				float multiplier = pmaColors ? alpha : 255;
 
@@ -94,22 +101,23 @@ public class SkeletonRenderer {
 						slotBlendMode = BlendMode.normal;
 						alpha = 0;
 					}
-					blendMode = slotBlendMode;
-					blendMode.apply(batch, pmaBlendModes);
+					if (slotBlendMode != blendMode) {
+						blendMode = slotBlendMode;
+						blendMode.apply(batch, pmaBlendModes);
+					}
 				}
 
 				float c = NumberUtils.intToFloatColor((int)alpha << 24 //
 					| (int)(b * slotColor.b * color.b * multiplier) << 16 //
 					| (int)(g * slotColor.g * color.g * multiplier) << 8 //
 					| (int)(r * slotColor.r * color.r * multiplier));
-				float[] uvs = region.getUVs();
 				for (int u = 0, v = 2; u < 8; u += 2, v += 5) {
 					vertices[v] = c;
 					vertices[v + 1] = uvs[u];
 					vertices[v + 2] = uvs[u + 1];
 				}
 
-				batch.draw(region.getRegion().getTexture(), vertices, 0, 20);
+				batch.draw(texture, vertices, 0, 20);
 
 			} else if (attachment instanceof ClippingAttachment) {
 				throw new RuntimeException(batch.getClass().getSimpleName()
@@ -119,8 +127,8 @@ public class SkeletonRenderer {
 				throw new RuntimeException(batch.getClass().getSimpleName()
 					+ " cannot render meshes, PolygonSpriteBatch or TwoColorPolygonBatch is required.");
 
-			} else if (attachment instanceof SkeletonAttachment) {
-				Skeleton attachmentSkeleton = ((SkeletonAttachment)attachment).getSkeleton();
+			} else if (attachment instanceof SkeletonAttachment skeletonAttachment) {
+				Skeleton attachmentSkeleton = skeletonAttachment.getSkeleton();
 				if (attachmentSkeleton != null) draw(batch, attachmentSkeleton);
 			}
 		}
@@ -142,83 +150,86 @@ public class SkeletonRenderer {
 		short[] triangles = null;
 		Color color = null, skeletonColor = skeleton.color;
 		float r = skeletonColor.r, g = skeletonColor.g, b = skeletonColor.b, a = skeletonColor.a;
-		Object[] drawOrder = skeleton.drawOrder.items;
-		for (int i = 0, n = skeleton.drawOrder.size; i < n; i++) {
-			Slot slot = (Slot)drawOrder[i];
-			if (!slot.bone.active) {
-				clipper.clipEnd(slot);
-				continue;
-			}
-			Texture texture = null;
-			int vertexSize = clipper.isClipping() ? 2 : 5;
-			Attachment attachment = slot.attachment;
-			if (attachment instanceof RegionAttachment) {
-				RegionAttachment region = (RegionAttachment)attachment;
-				verticesLength = vertexSize << 2;
-				vertices = this.vertices.items;
-				region.computeWorldVertices(slot, vertices, 0, vertexSize);
-				triangles = quadTriangles;
-				texture = region.getRegion().getTexture();
-				uvs = region.getUVs();
-				color = region.getColor();
+		Array<Slot> drawOrder = skeleton.drawOrder.appliedPose;
+		Slot[] slots = drawOrder.items;
+		for (int i = 0, n = drawOrder.size; i < n; i++) {
+			Slot slot = slots[i];
+			if (slot.bone.active) {
+				SlotPose pose = slot.appliedPose;
+				Attachment attachment = pose.attachment;
+				if (attachment != null) {
+					Texture texture = null;
+					if (attachment instanceof RegionAttachment region) {
+						verticesLength = 20;
+						vertices = this.vertices.items;
+						Sequence sequence = region.getSequence();
+						int sequenceIndex = sequence.resolveIndex(pose);
+						region.computeWorldVertices(slot, sequence.getOffsets(sequenceIndex), vertices, 0, 5);
+						triangles = quadTriangles;
+						texture = sequence.getRegion(sequenceIndex).getTexture();
+						uvs = sequence.getUVs(sequenceIndex);
+						color = region.getColor();
 
-			} else if (attachment instanceof MeshAttachment) {
-				MeshAttachment mesh = (MeshAttachment)attachment;
-				int count = mesh.getWorldVerticesLength();
-				verticesLength = (count >> 1) * vertexSize;
-				vertices = this.vertices.setSize(verticesLength);
-				mesh.computeWorldVertices(slot, 0, count, vertices, 0, vertexSize);
-				triangles = mesh.getTriangles();
-				texture = mesh.getRegion().getTexture();
-				uvs = mesh.getUVs();
-				color = mesh.getColor();
+					} else if (attachment instanceof MeshAttachment mesh) {
+						int count = mesh.getWorldVerticesLength();
+						verticesLength = (count >> 1) * 5;
+						vertices = this.vertices.setSize(verticesLength);
+						mesh.computeWorldVertices(skeleton, slot, 0, count, vertices, 0, 5);
+						triangles = mesh.getTriangles();
+						Sequence sequence = mesh.getSequence();
+						int sequenceIndex = sequence.resolveIndex(pose);
+						texture = sequence.getRegion(sequenceIndex).getTexture();
+						uvs = sequence.getUVs(sequenceIndex);
+						color = mesh.getColor();
 
-			} else if (attachment instanceof ClippingAttachment) {
-				ClippingAttachment clip = (ClippingAttachment)attachment;
-				clipper.clipStart(slot, clip);
-				continue;
+					} else if (attachment instanceof ClippingAttachment clip) {
+						clipper.clipEnd(slot);
+						clipper.clipStart(skeleton, slot, clip);
+						continue;
 
-			} else if (attachment instanceof SkeletonAttachment) {
-				Skeleton attachmentSkeleton = ((SkeletonAttachment)attachment).getSkeleton();
-				if (attachmentSkeleton != null) draw(batch, attachmentSkeleton);
-			}
-
-			if (texture != null) {
-				Color slotColor = slot.getColor();
-				float alpha = a * slotColor.a * color.a * 255;
-				float multiplier = pmaColors ? alpha : 255;
-
-				BlendMode slotBlendMode = slot.data.getBlendMode();
-				if (slotBlendMode != blendMode) {
-					if (slotBlendMode == BlendMode.additive && pmaColors) {
-						slotBlendMode = BlendMode.normal;
-						alpha = 0;
+					} else if (attachment instanceof SkeletonAttachment skeletonAttachment) {
+						Skeleton attachmentSkeleton = skeletonAttachment.getSkeleton();
+						if (attachmentSkeleton != null) draw(batch, attachmentSkeleton);
 					}
-					blendMode = slotBlendMode;
-					blendMode.apply(batch, pmaBlendModes);
-				}
 
-				float c = NumberUtils.intToFloatColor((int)alpha << 24 //
-					| (int)(b * slotColor.b * color.b * multiplier) << 16 //
-					| (int)(g * slotColor.g * color.g * multiplier) << 8 //
-					| (int)(r * slotColor.r * color.r * multiplier));
+					if (texture != null) {
+						Color slotColor = pose.getColor();
+						float alpha = a * slotColor.a * color.a * 255;
+						float multiplier = pmaColors ? alpha : 255;
 
-				if (clipper.isClipping()) {
-					clipper.clipTriangles(vertices, triangles, triangles.length, uvs, c, 0, false);
-					FloatArray clippedVertices = clipper.getClippedVertices();
-					ShortArray clippedTriangles = clipper.getClippedTriangles();
-					batch.draw(texture, clippedVertices.items, 0, clippedVertices.size, clippedTriangles.items, 0,
-						clippedTriangles.size);
-				} else {
-					for (int v = 2, u = 0; v < verticesLength; v += 5, u += 2) {
-						vertices[v] = c;
-						vertices[v + 1] = uvs[u];
-						vertices[v + 2] = uvs[u + 1];
+						BlendMode slotBlendMode = slot.data.getBlendMode();
+						if (slotBlendMode != blendMode) {
+							if (slotBlendMode == BlendMode.additive && pmaColors) {
+								slotBlendMode = BlendMode.normal;
+								alpha = 0;
+							}
+							if (slotBlendMode != blendMode) {
+								blendMode = slotBlendMode;
+								blendMode.apply(batch, pmaBlendModes);
+							}
+						}
+
+						float c = NumberUtils.intToFloatColor((int)alpha << 24 //
+							| (int)(b * slotColor.b * color.b * multiplier) << 16 //
+							| (int)(g * slotColor.g * color.g * multiplier) << 8 //
+							| (int)(r * slotColor.r * color.r * multiplier));
+
+						if (clipper.isClipping() && clipper.clipTriangles(vertices, triangles, triangles.length, uvs, c, 0, false, 5)) {
+							FloatArray clippedVertices = clipper.getClippedVertices();
+							ShortArray clippedTriangles = clipper.getClippedTriangles();
+							batch.draw(texture, clippedVertices.items, 0, clippedVertices.size, clippedTriangles.items, 0,
+								clippedTriangles.size);
+						} else {
+							for (int v = 2, u = 0; v < verticesLength; v += 5, u += 2) {
+								vertices[v] = c;
+								vertices[v + 1] = uvs[u];
+								vertices[v + 2] = uvs[u + 1];
+							}
+							batch.draw(texture, vertices, 0, verticesLength, triangles, 0, triangles.length);
+						}
 					}
-					batch.draw(texture, vertices, 0, verticesLength, triangles, 0, triangles.length);
 				}
 			}
-
 			clipper.clipEnd(slot);
 		}
 		clipper.clipEnd();
@@ -241,92 +252,96 @@ public class SkeletonRenderer {
 		short[] triangles = null;
 		Color color = null, skeletonColor = skeleton.color;
 		float r = skeletonColor.r, g = skeletonColor.g, b = skeletonColor.b, a = skeletonColor.a;
-		Object[] drawOrder = skeleton.drawOrder.items;
-		for (int i = 0, n = skeleton.drawOrder.size; i < n; i++) {
-			Slot slot = (Slot)drawOrder[i];
-			if (!slot.bone.active) {
-				clipper.clipEnd(slot);
-				continue;
-			}
-			Texture texture = null;
-			int vertexSize = clipper.isClipping() ? 2 : 6;
-			Attachment attachment = slot.attachment;
-			if (attachment instanceof RegionAttachment) {
-				RegionAttachment region = (RegionAttachment)attachment;
-				verticesLength = vertexSize << 2;
-				vertices = this.vertices.items;
-				region.computeWorldVertices(slot, vertices, 0, vertexSize);
-				triangles = quadTriangles;
-				texture = region.getRegion().getTexture();
-				uvs = region.getUVs();
-				color = region.getColor();
+		Array<Slot> drawOrder = skeleton.drawOrder.appliedPose;
+		Slot[] slots = drawOrder.items;
+		for (int i = 0, n = drawOrder.size; i < n; i++) {
+			Slot slot = slots[i];
+			if (slot.bone.active) {
+				SlotPose pose = slot.appliedPose;
+				Attachment attachment = pose.attachment;
+				if (attachment != null) {
+					Texture texture = null;
+					if (attachment instanceof RegionAttachment region) {
+						verticesLength = 24;
+						vertices = this.vertices.items;
+						Sequence sequence = region.getSequence();
+						int sequenceIndex = sequence.resolveIndex(pose);
+						region.computeWorldVertices(slot, sequence.getOffsets(sequenceIndex), vertices, 0, 6);
+						triangles = quadTriangles;
+						texture = sequence.getRegion(sequenceIndex).getTexture();
+						uvs = sequence.getUVs(sequenceIndex);
+						color = region.getColor();
 
-			} else if (attachment instanceof MeshAttachment) {
-				MeshAttachment mesh = (MeshAttachment)attachment;
-				int count = mesh.getWorldVerticesLength();
-				verticesLength = (count >> 1) * vertexSize;
-				vertices = this.vertices.setSize(verticesLength);
-				mesh.computeWorldVertices(slot, 0, count, vertices, 0, vertexSize);
-				triangles = mesh.getTriangles();
-				texture = mesh.getRegion().getTexture();
-				uvs = mesh.getUVs();
-				color = mesh.getColor();
+					} else if (attachment instanceof MeshAttachment mesh) {
+						int count = mesh.getWorldVerticesLength();
+						verticesLength = count * 3;
+						vertices = this.vertices.setSize(verticesLength);
+						mesh.computeWorldVertices(skeleton, slot, 0, count, vertices, 0, 6);
+						triangles = mesh.getTriangles();
+						Sequence sequence = mesh.getSequence();
+						int sequenceIndex = sequence.resolveIndex(pose);
+						texture = sequence.getRegion(sequenceIndex).getTexture();
+						uvs = sequence.getUVs(sequenceIndex);
+						color = mesh.getColor();
 
-			} else if (attachment instanceof ClippingAttachment) {
-				ClippingAttachment clip = (ClippingAttachment)attachment;
-				clipper.clipStart(slot, clip);
-				continue;
+					} else if (attachment instanceof ClippingAttachment clip) {
+						clipper.clipEnd(slot);
+						clipper.clipStart(skeleton, slot, clip);
+						continue;
 
-			} else if (attachment instanceof SkeletonAttachment) {
-				Skeleton attachmentSkeleton = ((SkeletonAttachment)attachment).getSkeleton();
-				if (attachmentSkeleton != null) draw(batch, attachmentSkeleton);
-			}
-
-			if (texture != null) {
-				Color lightColor = slot.getColor();
-				float alpha = a * lightColor.a * color.a * 255;
-				float multiplier = pmaColors ? alpha : 255;
-
-				BlendMode slotBlendMode = slot.data.getBlendMode();
-				if (slotBlendMode != blendMode) {
-					if (slotBlendMode == BlendMode.additive && pmaColors) {
-						slotBlendMode = BlendMode.normal;
-						alpha = 0;
+					} else if (attachment instanceof SkeletonAttachment skeletonAttachment) {
+						Skeleton attachmentSkeleton = skeletonAttachment.getSkeleton();
+						if (attachmentSkeleton != null) draw(batch, attachmentSkeleton);
 					}
-					blendMode = slotBlendMode;
-					blendMode.apply(batch, pmaBlendModes);
-				}
 
-				float red = r * color.r * multiplier;
-				float green = g * color.g * multiplier;
-				float blue = b * color.b * multiplier;
-				float light = NumberUtils.intToFloatColor((int)alpha << 24 //
-					| (int)(blue * lightColor.b) << 16 //
-					| (int)(green * lightColor.g) << 8 //
-					| (int)(red * lightColor.r));
-				Color darkColor = slot.getDarkColor();
-				float dark = darkColor == null ? 0
-					: NumberUtils.intToFloatColor((int)(blue * darkColor.b) << 16 //
-						| (int)(green * darkColor.g) << 8 //
-						| (int)(red * darkColor.r));
+					if (texture != null) {
+						Color lightColor = pose.getColor();
+						float alpha = a * lightColor.a * color.a * 255;
+						float multiplier = pmaColors ? alpha : 255;
 
-				if (clipper.isClipping()) {
-					clipper.clipTriangles(vertices, triangles, triangles.length, uvs, light, dark, true);
-					FloatArray clippedVertices = clipper.getClippedVertices();
-					ShortArray clippedTriangles = clipper.getClippedTriangles();
-					batch.drawTwoColor(texture, clippedVertices.items, 0, clippedVertices.size, clippedTriangles.items, 0,
-						clippedTriangles.size);
-				} else {
-					for (int v = 2, u = 0; v < verticesLength; v += 6, u += 2) {
-						vertices[v] = light;
-						vertices[v + 1] = dark;
-						vertices[v + 2] = uvs[u];
-						vertices[v + 3] = uvs[u + 1];
+						BlendMode slotBlendMode = slot.data.getBlendMode();
+						if (slotBlendMode != blendMode) {
+							if (slotBlendMode == BlendMode.additive && pmaColors) {
+								slotBlendMode = BlendMode.normal;
+								alpha = 0;
+							}
+							if (slotBlendMode != blendMode) {
+								blendMode = slotBlendMode;
+								blendMode.apply(batch, pmaBlendModes);
+							}
+						}
+
+						float red = r * color.r * multiplier;
+						float green = g * color.g * multiplier;
+						float blue = b * color.b * multiplier;
+						float light = NumberUtils.intToFloatColor((int)alpha << 24 //
+							| (int)(blue * lightColor.b) << 16 //
+							| (int)(green * lightColor.g) << 8 //
+							| (int)(red * lightColor.r));
+						Color darkColor = pose.getDarkColor();
+						float dark = darkColor == null ? 0
+							: NumberUtils.intToFloatColor((int)(blue * darkColor.b) << 16 //
+								| (int)(green * darkColor.g) << 8 //
+								| (int)(red * darkColor.r));
+
+						if (clipper.isClipping()
+							&& clipper.clipTriangles(vertices, triangles, triangles.length, uvs, light, dark, true, 6)) {
+							FloatArray clippedVertices = clipper.getClippedVertices();
+							ShortArray clippedTriangles = clipper.getClippedTriangles();
+							batch.drawTwoColor(texture, clippedVertices.items, 0, clippedVertices.size, clippedTriangles.items, 0,
+								clippedTriangles.size);
+						} else {
+							for (int v = 2, u = 0; v < verticesLength; v += 6, u += 2) {
+								vertices[v] = light;
+								vertices[v + 1] = dark;
+								vertices[v + 2] = uvs[u];
+								vertices[v + 3] = uvs[u + 1];
+							}
+							batch.drawTwoColor(texture, vertices, 0, verticesLength, triangles, 0, triangles.length);
+						}
 					}
-					batch.drawTwoColor(texture, vertices, 0, verticesLength, triangles, 0, triangles.length);
 				}
 			}
-
 			clipper.clipEnd(slot);
 		}
 		clipper.clipEnd();

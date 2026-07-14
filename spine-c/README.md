@@ -1,6 +1,10 @@
 # spine-c
 
-The spine-c runtime provides basic functionality to load and manipulate [Spine](http://esotericsoftware.com) skeletal animation data using ANSI C89. It does not perform rendering but can be extended to enable Spine animations for other C-based projects, including C++ or Objective-C projects.
+The spine-c runtime provides basic functionality to load and manipulate [Spine](http://esotericsoftware.com) skeletal animation data using C. It contains a generic `SkeletonRenderer` that returns render commands that can be easily fed into any rendering API that supports textured triangle meshes with blend modes. See [spine-glfw](../spine-glfw), [spine-sdl](../spine-sdl), or [spine-sfml](../spine-sfml) for examples.
+
+**Note:** spine-c is a C wrapper around [spine-cpp](../spine-cpp) for use in environments that cannot easily interact with C++ code. The spine-c code is generated using a code generator. For details on the code generation process, please see the [codegen/README.md](codegen/README.md).
+
+# See the [spine-c documentation](http://esotericsoftware.com/spine-c) for in-depth information
 
 ## Licensing
 
@@ -14,38 +18,46 @@ For the official legal terms governing the Spine Runtimes, please read the [Spin
 
 ## Spine version
 
-spine-c works with data exported from Spine 4.2.xx.
+spine-c works with data exported from Spine 4.3.xx.
 
 spine-c supports all Spine features.
 
-## Setup
-
-1. Download the Spine Runtimes source using [git](https://help.github.com/articles/set-up-git) or by downloading it as a zip via the download button above.
-1. Copy the contents of the `spine-c/spine-c/src` and `spine-c/spine-c/include` directories into your project. Be sure your header search is configured to find the contents of the `spine-c/spine-c/include` directory. Note that the includes use `spine/Xxx.h`, so the `spine` directory cannot be omitted when copying the files.
-
-If `SPINE_SHORT_NAMES` is defined, the `sp` prefix for all structs and functions is optional. Only use this if the spine-c names won't cause a conflict.
-
 ## Usage
 
-### [Please see the spine-c guide for full documentation](http://esotericsoftware.com/spine-c)
+### Integration with CMake (Recommended)
 
-## Extension
+The easiest way to integrate spine-c into your project is via CMake FetchContent:
 
-Extending spine-c requires implementing three methods:
+```cmake
+include(FetchContent)
+FetchContent_Declare(
+    spine-c
+    GIT_REPOSITORY https://github.com/esotericsoftware/spine-runtimes.git
+    GIT_TAG 4.3
+    SOURCE_SUBDIR spine-c
+)
+FetchContent_MakeAvailable(spine-c)
 
-- `_spAtlasPage_createTexture` Loads a texture and stores it and its size in the `void* rendererObject`, `width` and `height` fields of an `spAtlasPage` struct.
-- `_spAtlasPage_disposeTexture` Disposes of a texture loaded with `_spAtlasPage_createTexture`.
-- `_spUtil_readFile` Reads a file. If this doesn't need to be customized, `_readFile` is provided which reads a file using `fopen`.
+# Link against spine-c
+target_link_libraries(your_target spine-c)
+```
 
-With these implemented, the spine-c API can then be used to load Spine animation data. Rendering is done by enumerating the slots for a skeleton and rendering the attachment for each slot. Each attachment has a `rendererObject` field that is set when the attachment is loaded.
+This will automatically fetch and build spine-c along with its dependency (spine-cpp).
 
-For example, `AtlasAttachmentLoader` is typically used to load attachments when using a Spine texture atlas. When `AtlasAttachmentLoader` loads a `RegionAttachment`, the attachment's `void* rendererObject` is set to an `AtlasRegion`. Rendering code can then obtain the `AtlasRegion` from the attachment, get the `AtlasPage` it belongs to, and get the page's `void* rendererObject`. This is the renderer specific texture object set by `_spAtlasPage_createTexture`. Attachment loading can be [customized](http://esotericsoftware.com/spine-using-runtimes/#attachmentloader) if not using `AtlasAttachmentLoader` or to provider different renderer specific data.
+### Manual Integration
 
-[spine-sfml](../spine-sfml/src/c/spine/spine-sfml.cpp#L39) serves as a simple example of extending spine-c.
+If you prefer manual integration:
 
-spine-c uses an OOP style of programming where each "class" is made up of a struct and a number of functions prefixed with the struct name. More detals about how this works are available in [extension.h](spine-c/include/spine/extension.h#L2). This mechanism allows you to provide your own implementations for `spAttachmentLoader`, `spAttachment` and `spTimeline`, if necessary.
+1. Download the Spine Runtimes source using git (`git clone https://github.com/esotericsoftware/spine-runtimes`) or download it as a zip.
+2. Add the required source files to your project:
+   - Add sources from `spine-cpp/src`, `spine-c/src`
+3. Add the include directories: `spine-cpp/include`, `spine-c/include`
+
+See the [Spine Runtimes documentation](http://esotericsoftware.com/spine-documentation#runtimes) for detailed API usage.
 
 ## Runtimes extending spine-c
 
-- [spine-cocos2d-objc](../spine-cocos2d-objc)
-- [spine-sfml](../spine-sfml)
+- [spine-ios](../spine-ios)
+- [spine-flutter](../spine-flutter)
+- [spine-sdl](../spine-sdl)
+- [spine-glfw](../spine-glfw)

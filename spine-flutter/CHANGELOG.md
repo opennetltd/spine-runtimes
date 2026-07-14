@@ -1,3 +1,150 @@
+# 4.3.6
+
+## Flutter
+
+- **Bug fixes**
+  - Improved clipping performance through the updated spine-cpp clipping runtime.
+
+# 4.3.5
+
+## Flutter
+
+- **Bug fixes**
+  - Fixed constraints so modifying a constrained bone's world transform preserves descendant bone transforms from earlier constraints.
+
+# 4.3.4
+
+## Flutter
+
+- **Bug fixes**
+  - Fixed automated release publishing so native source files are included in the pub.dev package.
+
+# 4.3.3
+
+## Flutter
+
+- **Additions**
+  - Added GitHub Actions release automation for spine-flutter.
+
+# 4.3.2
+
+## Flutter
+
+- **Bug fixes**
+  - Updated bundled spine-c/spine-cpp sources and WebAssembly assets for the 4.3 release.
+
+# 4.3.1
+
+## Flutter
+
+- **Additions**
+  - Added `fromMemory` methods to `AtlasFlutter`, `SkeletonDataFlutter`, `SkeletonDrawableFlutter`, and `SpineWidget` for loading Spine data from custom sources (memory, encrypted storage, databases, custom caching, etc.)
+  - Added example `load_from_memory.dart` demonstrating how to load all assets into memory and use the `fromMemory` API
+
+# 4.3.0
+
+## Dart
+
+- **Additions**
+  - Added `Slider` and `SliderData` classes for slider constraints
+  - Added `SliderTimeline` and `SliderMixTimeline` for animating sliders
+  - Added new pose system with `BoneLocal`, `BonePose`, and related classes
+  - Added `Pose`, `Posed`, and `PosedActive` base classes for unified pose management
+
+- **Breaking changes**
+  - **The Dart runtime is now fully auto-generated from the C runtime**, maintaining the full C++ type hierarchy with proper nullability annotations. The code generator creates 150+ Dart files in `lib/generated/` providing complete API coverage of all Spine runtime types.
+  - All properties are now exposed as getters and setters instead of methods
+  - API changes to match C++ naming conventions (see examples below)
+  - Timeline `apply()` methods now take an additional `appliedPose` parameter
+
+## Flutter
+
+- **Breaking changes**
+  - Updated to use the new auto-generated Dart runtime with all the Dart API changes above
+
+## Migration Examples
+
+The examples and documentation have been updated to demonstrate the minimal changes needed to migrate from 4.2 to 4.3.
+
+### Property Access Changes
+
+**Before (4.2):**
+```dart
+controller.skeleton.setScaleX(0.5);
+controller.skeleton.setScaleY(0.5);
+controller.skeleton.findSlot("gun")?.setColor(Color(1, 0, 0, 1));
+```
+
+**After (4.3):**
+```dart
+controller.skeleton.scaleX = 0.5;
+controller.skeleton.scaleY = 0.5;
+controller.skeleton.findSlot("gun")?.pose.color.set(1, 0, 0, 1);
+```
+
+### Animation State API Changes
+
+**Before (4.2):**
+```dart
+controller.animationState.getData().setDefaultMix(0.2);
+controller.animationState.setAnimationByName(0, "portal", true);
+controller.animationState.addAnimationByName(0, "run", true, 0);
+```
+
+**After (4.3):**
+```dart
+controller.animationState.data.defaultMix = 0.2;
+controller.animationState.setAnimation(0, "portal", true);
+controller.animationState.addAnimation(0, "run", true, 0);
+```
+
+### Event Access Changes
+
+**Before (4.2):**
+```dart
+print("Event: ${event?.getData().getName()}");
+print("Int value: ${event?.getIntValue()}");
+print("Animation: ${entry?.getAnimation().getName()}");
+```
+
+**After (4.3):**
+```dart
+print("Event: ${event?.data.name}");
+print("Int value: ${event?.intValue}");
+print("Animation: ${entry?.animation.name}");
+```
+
+### Bone Transform Changes (Pose System)
+
+**Before (4.2):**
+```dart
+final bone = controller.skeleton.findBone("crosshair")!;
+final parent = bone.getParent()!;
+final position = parent.worldToLocal(worldPosition.dx, worldPosition.dy);
+bone.setX(position.x);
+bone.setY(position.y);
+```
+
+**After (4.3):**
+```dart
+final bone = controller.skeleton.findBone("crosshair")!;
+final parent = bone.parent;
+if (parent != null) {
+  final position = parent.appliedPose.worldToLocal(worldPosition.dx, worldPosition.dy);
+  bone.appliedPose.x = position.x;
+  bone.appliedPose.y = position.y;
+}
+```
+
+# 4.2.36
+- Support for 16KB page alignement on Android. You must specify the NDK version in the build.gradle file of your app's Android project. See https://github.com/EsotericSoftware/spine-runtimes/issues/2849
+
+# 4.2.35
+ - Port of commit f1e0f0f: Fixed animation not being mixed out in some cases.
+
+# 4.2.34
+- Support latest emscripten SDK (4.0.6+) via update of web_ffi
+
 # 4.2.33
 - Merge fixes in spine-cpp(-lite)
 - Prepare for upcoming Dart/Flutter releases, see https://github.com/EsotericSoftware/spine-runtimes/pull/2690

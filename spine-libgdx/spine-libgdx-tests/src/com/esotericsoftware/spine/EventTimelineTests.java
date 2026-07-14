@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated February 20, 2024. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2024, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
- * https://esotericsoftware.com/spine-editor-license
+ * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,8 +23,8 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 package com.esotericsoftware.spine;
@@ -32,11 +32,9 @@ package com.esotericsoftware.spine;
 import java.util.Arrays;
 
 import com.badlogic.gdx.utils.Array;
-import com.badlogic.gdx.utils.StringBuilder;
 
+import com.esotericsoftware.spine.Animation.MixFrom;
 import com.esotericsoftware.spine.Animation.EventTimeline;
-import com.esotericsoftware.spine.Animation.MixBlend;
-import com.esotericsoftware.spine.Animation.MixDirection;
 
 /** Unit tests to ensure {@link EventTimeline} is working as expected. */
 public class EventTimelineTests {
@@ -79,7 +77,7 @@ public class EventTimelineTests {
 	private void test (float... frames) {
 		int eventCount = frames.length;
 
-		StringBuilder buffer = new StringBuilder();
+		var buffer = new StringBuilder();
 		for (int i = 0; i < eventCount; i++)
 			buffer.append((char)('a' + i));
 
@@ -177,7 +175,7 @@ public class EventTimelineTests {
 
 			int beforeCount = firedEvents.size;
 			Array<Event> original = new Array(firedEvents);
-			timeline.apply(skeleton, lastTimeLooped, timeLooped, firedEvents, 1, MixBlend.first, MixDirection.in);
+			timeline.apply(skeleton, lastTimeLooped, timeLooped, firedEvents, 1, MixFrom.setup, false, false, false);
 
 			while (beforeCount < firedEvents.size) {
 				char fired = firedEvents.get(beforeCount).getData().getName().charAt(0);
@@ -186,7 +184,7 @@ public class EventTimelineTests {
 				} else {
 					if (firedEvents.size > eventsCount) {
 						if (print) System.out.println(lastTimeLooped + "->" + timeLooped + ": " + fired + " == ?");
-						timeline.apply(skeleton, lastTimeLooped, timeLooped, original, 1, MixBlend.first, MixDirection.in);
+						timeline.apply(skeleton, lastTimeLooped, timeLooped, original, 1, MixFrom.setup, false, false, false);
 						fail("Too many events fired.");
 					}
 				}
@@ -194,7 +192,7 @@ public class EventTimelineTests {
 					System.out.println(lastTimeLooped + "->" + timeLooped + ": " + fired + " == " + events[eventIndex]);
 				}
 				if (fired != events[eventIndex]) {
-					timeline.apply(skeleton, lastTimeLooped, timeLooped, original, 1, MixBlend.first, MixDirection.in);
+					timeline.apply(skeleton, lastTimeLooped, timeLooped, original, 1, MixFrom.setup, false, false, false);
 					fail("Wrong event fired.");
 				}
 				eventIndex++;
@@ -206,7 +204,7 @@ public class EventTimelineTests {
 			i++;
 		}
 		if (firedEvents.size < eventsCount) {
-			timeline.apply(skeleton, lastTimeLooped, timeLooped, firedEvents, 1, MixBlend.first, MixDirection.in);
+			timeline.apply(skeleton, lastTimeLooped, timeLooped, firedEvents, 1, MixFrom.setup, false, false, false);
 			if (print) System.out.println(firedEvents);
 			fail("Event not fired: " + events[eventIndex] + ", " + frames[eventIndex]);
 		}

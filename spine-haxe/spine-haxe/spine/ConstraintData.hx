@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,24 +23,53 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *****************************************************************************/
 
 package spine;
 
-class ConstraintData {
-	public var name:String;
-	public var order:Int = 0;
-	public var skinRequired:Bool = false;
+/** The base class for all constraint datas. */
+abstract class ConstraintData< //
+	T:Constraint<Dynamic, Dynamic, Dynamic>, //
+	P:Pose<Any>> //
+extends PosedData<P> {
+	function new(name:String, setupPose:P) {
+		super(name, setupPose);
+	}
 
-	function new(name:String, order:Int, skinRequired:Bool) {
+	public abstract function create(skeleton:Skeleton):T;
+}
+
+/** Determines how BonePose.scaleY changes when BonePose.scaleX is set. */
+class ScaleYMode {
+	/** scaleY is not changed. */
+	public static var none(default, never):ScaleYMode = new ScaleYMode(0, "none");
+
+	/** scaleY is multiplied by the scaleX factor, preserving the bone's aspect ratio. */
+	public static var uniform(default, never):ScaleYMode = new ScaleYMode(1, "uniform");
+
+	/** scaleY is divided by the scaleX factor, preserving the bone's area. */
+	public static var volume(default, never):ScaleYMode = new ScaleYMode(2, "volume");
+
+	public static var values:Array<ScaleYMode> = [none, uniform, volume];
+
+	public final ordinal:Int;
+	public final name:String;
+
+	private function new(ordinal:Int, name:String) {
+		this.ordinal = ordinal;
 		this.name = name;
-		this.order = order;
-		this.skinRequired = skinRequired;
 	}
 
 	public function toString():String {
 		return name;
+	}
+
+	public static function fromName(name:String):ScaleYMode {
+		for (scaleYMode in values)
+			if (scaleYMode.name == name)
+				return scaleYMode;
+		return none;
 	}
 }

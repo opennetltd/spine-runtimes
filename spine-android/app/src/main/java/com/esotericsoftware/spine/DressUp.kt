@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,8 +23,8 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 package com.esotericsoftware.spine
@@ -128,7 +128,7 @@ fun DressUp(nav: NavHostController) {
         if (customSkinValue != null) {
             drawable.skeleton.setSkin(customSkinValue)
         }
-        drawable.skeleton.setSlotsToSetupPose()
+        drawable.skeleton.setupPoseSlots()
     }
 
     val localDensity = LocalDensity.current
@@ -138,9 +138,9 @@ fun DressUp(nav: NavHostController) {
             if (skin.getName() == "default") continue
             val skeleton = drawable.skeleton
             skeleton.setSkin(skin)
-            skeleton.setToSetupPose()
+            skeleton.setupPose()
             skeleton.update(0f)
-            skeleton.updateWorldTransform(Skeleton.Physics.update)
+            skeleton.updateWorldTransform(Physics.update)
             skinImages[skin.getName()] = renderer.renderToBitmap(
                 with(localDensity) { thumbnailSize.dp.toPx() },
                 with(localDensity) { thumbnailSize.dp.toPx() },

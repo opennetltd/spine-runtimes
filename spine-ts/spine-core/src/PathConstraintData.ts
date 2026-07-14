@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,30 +23,32 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
-import { BoneData } from "./BoneData.js";
+import type { BoneData } from "./BoneData.js";
 import { ConstraintData } from "./ConstraintData.js";
-import { SlotData } from "./SlotData.js";
+import { PathConstraint } from "./PathConstraint.js";
+import { PathConstraintPose } from "./PathConstraintPose.js";
+import type { Skeleton } from "./Skeleton.js";
+import type { SlotData } from "./SlotData.js";
 
 
 /** Stores the setup pose for a {@link PathConstraint}.
  *
  * See [path constraints](http://esotericsoftware.com/spine-path-constraints) in the Spine User Guide. */
-export class PathConstraintData extends ConstraintData {
-
+export class PathConstraintData extends ConstraintData<PathConstraint, PathConstraintPose> {
 	/** The bones that will be modified by this path constraint. */
-	bones = new Array<BoneData>();
+	bones = [] as BoneData[];
 
 	/** The slot whose path attachment will be used to constrained the bones. */
-	private _target: SlotData | null = null;
-	public set target (slotData: SlotData) { this._target = slotData; }
-	public get target () {
-		if (!this._target) throw new Error("SlotData not set.")
-		else return this._target;
+	public set slot (slotData: SlotData) { this._slot = slotData; }
+	public get slot () {
+		if (!this._slot) throw new Error("SlotData not set.")
+		else return this._slot;
 	}
+	private _slot: SlotData | null = null;
 
 	/** The mode for positioning the first bone on the path. */
 	positionMode: PositionMode = PositionMode.Fixed;
@@ -60,18 +62,12 @@ export class PathConstraintData extends ConstraintData {
 	/** An offset added to the constrained bone rotation. */
 	offsetRotation: number = 0;
 
-	/** The position along the path. */
-	position: number = 0;
-
-	/** The spacing between bones. */
-	spacing: number = 0;
-
-	mixRotate = 0;
-	mixX = 0;
-	mixY = 0;
-
 	constructor (name: string) {
-		super(name, 0, false);
+		super(name, new PathConstraintPose());
+	}
+
+	public create (skeleton: Skeleton) {
+		return new PathConstraint(this, skeleton);
 	}
 }
 
@@ -87,5 +83,5 @@ export enum SpacingMode { Length, Fixed, Percent, Proportional }
 
 /** Controls how bones are rotated, translated, and scaled to match the path.
  *
- * See [rotate mix](http://esotericsoftware.com/spine-path-constraints#Rotate-mix) in the Spine User Guide. */
+ * See [rotate mix](http://esotericsoftware.com/spine-path-constraints#Rotate-Mix) in the Spine User Guide. */
 export enum RotateMode { Tangent, Chain, ChainScale }

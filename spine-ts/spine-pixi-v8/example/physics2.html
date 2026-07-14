@@ -2,14 +2,14 @@
   <head>
     <meta charset="UTF-8" />
     <title>spine-pixi-v8</title>
-    <script src="https://cdn.jsdelivr.net/npm/pixi.js@8.4.1/dist/pixi.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pixi.js@8.16/dist/pixi.js"></script>
     <script src="../dist/iife/spine-pixi-v8.js"></script>
     <link rel="stylesheet" href="../../index.css">
   </head>
 
   <body>
     <script>
-      (async function () {
+      (async () => {
         var app = new PIXI.Application();
         await app.init({
           width: window.innerWidth,
@@ -20,15 +20,15 @@
           backgroundColor: 0x2c3e50,
           hello: true,
         })
-        document.body.appendChild(app.view);
+        document.body.appendChild(app.canvas);
 
         // Pre-load the skeleton data and atlas. You can also load .json skeleton data.
-        PIXI.Assets.add({alias: "girlData", src: "./assets/celestial-circus-pro.skel"});
-        PIXI.Assets.add({alias: "girlAtlas", src: "./assets/celestial-circus-pma.atlas"});
+        PIXI.Assets.add({alias: "girlData", src: "/assets/celestial-circus-pro.skel"});
+        PIXI.Assets.add({alias: "girlAtlas", src: "/assets/celestial-circus-pma.atlas"});
         await PIXI.Assets.load(["girlData", "girlAtlas"]);
 
         // Create the spine display object
-        const girl = spine.Spine.from({skeleton: "girlData", atlas: "girlAtlas",
+        const girl = new spine.Spine({skeleton: "girlData", atlas: "girlAtlas",
           scale: 0.2,
         });
 
@@ -50,17 +50,16 @@
 
         app.stage.on("pointerdown", (e) => {
           isDragging = true;
-          let mousePosition = new spine.Vector2(e.data.global.x, e.data.global.y);
+          const mousePosition = new spine.Vector2(e.data.global.x, e.data.global.y);
           lastX = mousePosition.x;
           lastY = mousePosition.y;
         });
 
         app.stage.on("pointermove", (e) => {
           if (isDragging) {
-            let mousePosition = new spine.Vector2(e.data.global.x, e.data.global.y);
+            const mousePosition = new spine.Vector2(e.data.global.x, e.data.global.y);
             girl.x += mousePosition.x - lastX;
             girl.y += mousePosition.y - lastY;
-            girl.skeleton.physicsTranslate(mousePosition.x - lastX, mousePosition.y - lastY);
             lastX = mousePosition.x;
             lastY = mousePosition.y;
           }
@@ -88,17 +87,17 @@
         };
 
         // Create the text label for the heading
-        const textHeading = new PIXI.Text("Drag anywhere", fontStyle); // Button text and color
+        const textHeading = new PIXI.Text({ text: "Drag anywhere", style: fontStyle }); // Button text and color
         textHeading.position.set(15, 15); // Set the position of the text within the button
         buttonContainer.addChild(textHeading);
 
         // Create the text label for the FPS counter
-        const textFps = new PIXI.Text("0 fps", fontStyle);
+        const textFps = new PIXI.Text({ text: "0 fps", style: fontStyle });
         textFps.position.set(15, 40);
         buttonContainer.addChild(textFps);
 
         // Create the text label for the button toggle fullscreen
-        const textButton = new PIXI.Text("Fullscreen", fontStyle); // Button text and color
+        const textButton = new PIXI.Text({ text: "Fullscreen", style: fontStyle }); // Button text and color
         textButton.position.set(15, 65); // Set the position of the text within the button
         buttonContainer.addChild(textButton);
 

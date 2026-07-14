@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,33 +23,50 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
-import { Attachment } from "./attachments/Attachment.js";
+import type { Attachment } from "./attachments/Attachment.js";
 import { MeshAttachment } from "./attachments/MeshAttachment.js";
-import { BoneData } from "./BoneData.js";
-import { ConstraintData } from "./ConstraintData.js";
-import { Skeleton } from "./Skeleton.js";
-import { Color, StringMap } from "./Utils.js";
+import type { BoneData } from "./BoneData.js";
+import type { ConstraintData } from "./ConstraintData.js";
+import type { Skeleton } from "./Skeleton.js";
+import type { SkeletonData } from "./SkeletonData.js";
+import { Color, type StringMap } from "./Utils.js";
 
 /** Stores an entry in the skin consisting of the slot index, name, and attachment **/
 export class SkinEntry {
-	constructor (public slotIndex: number = 0, public name: string, public attachment: Attachment) { }
+
+	/** The {@link Skeleton.slots} index. */
+	slotIndex: number = 0;
+
+	placeholder: string;
+
+	/** The attachment for this skin entry. */
+	attachment: Attachment
+
+	constructor (slotIndex: number = 0, placeholder: string, attachment: Attachment) {
+		this.slotIndex = slotIndex;
+		this.placeholder = placeholder;
+		this.attachment = attachment;
+	}
 }
 
-/** Stores attachments by slot index and attachment name.
+/** Stores attachments by slot index and placeholder name. Multiple {@link Skeleton} instances can use the same skins.
  *
- * See SkeletonData {@link SkeletonData#defaultSkin}, Skeleton {@link Skeleton#skin}, and
+ * See {@link SkeletonData.defaultSkin}, {@link Skeleton.skin}, and
  * [Runtime skins](http://esotericsoftware.com/spine-runtime-skins) in the Spine Runtimes Guide. */
 export class Skin {
-	/** The skin's name, which is unique across all skins in the skeleton. */
+	/** The skin's name, unique across all skins in the skeleton.
+	 *
+	 * See {@link SkeletonData.findSkin}. */
 	name: string;
 
-	attachments = new Array<StringMap<Attachment>>();
-	bones = Array<BoneData>();
-	constraints = new Array<ConstraintData>();
+	attachments = [] as StringMap<Attachment>[];
+	bones = [] as BoneData[];
+	// biome-ignore lint/suspicious/noExplicitAny: reference runtime does not restrict to specific types
+	constraints = [] as ConstraintData<any, any>[];
 
 	/** The color of the skin as it was in Spine, or a default color if nonessential data was not exported. */
 	color = new Color(0.99607843, 0.61960787, 0.30980393, 1); // fe9e4fff
@@ -60,21 +77,21 @@ export class Skin {
 	}
 
 	/** Adds an attachment to the skin for the specified slot index and name. */
-	setAttachment (slotIndex: number, name: string, attachment: Attachment) {
+	setAttachment (slotIndex: number, placeholder: string, attachment: Attachment) {
 		if (!attachment) throw new Error("attachment cannot be null.");
-		let attachments = this.attachments;
+		const attachments = this.attachments;
 		if (slotIndex >= attachments.length) attachments.length = slotIndex + 1;
 		if (!attachments[slotIndex]) attachments[slotIndex] = {};
-		attachments[slotIndex][name] = attachment;
+		attachments[slotIndex][placeholder] = attachment;
 	}
 
 	/** Adds all attachments, bones, and constraints from the specified skin to this skin. */
 	addSkin (skin: Skin) {
 		for (let i = 0; i < skin.bones.length; i++) {
-			let bone = skin.bones[i];
+			const bone = skin.bones[i];
 			let contained = false;
 			for (let ii = 0; ii < this.bones.length; ii++) {
-				if (this.bones[ii] == bone) {
+				if (this.bones[ii] === bone) {
 					contained = true;
 					break;
 				}
@@ -83,10 +100,10 @@ export class Skin {
 		}
 
 		for (let i = 0; i < skin.constraints.length; i++) {
-			let constraint = skin.constraints[i];
+			const constraint = skin.constraints[i];
 			let contained = false;
 			for (let ii = 0; ii < this.constraints.length; ii++) {
-				if (this.constraints[ii] == constraint) {
+				if (this.constraints[ii] === constraint) {
 					contained = true;
 					break;
 				}
@@ -94,10 +111,10 @@ export class Skin {
 			if (!contained) this.constraints.push(constraint);
 		}
 
-		let attachments = skin.getAttachments();
+		const attachments = skin.getAttachments();
 		for (let i = 0; i < attachments.length; i++) {
-			var attachment = attachments[i];
-			this.setAttachment(attachment.slotIndex, attachment.name, attachment.attachment);
+			const attachment = attachments[i];
+			this.setAttachment(attachment.slotIndex, attachment.placeholder, attachment.attachment);
 		}
 	}
 
@@ -105,10 +122,10 @@ export class Skin {
 	 * copied, instead a new linked mesh is created. The attachment copies can be modified without affecting the originals. */
 	copySkin (skin: Skin) {
 		for (let i = 0; i < skin.bones.length; i++) {
-			let bone = skin.bones[i];
+			const bone = skin.bones[i];
 			let contained = false;
 			for (let ii = 0; ii < this.bones.length; ii++) {
-				if (this.bones[ii] == bone) {
+				if (this.bones[ii] === bone) {
 					contained = true;
 					break;
 				}
@@ -117,10 +134,10 @@ export class Skin {
 		}
 
 		for (let i = 0; i < skin.constraints.length; i++) {
-			let constraint = skin.constraints[i];
+			const constraint = skin.constraints[i];
 			let contained = false;
 			for (let ii = 0; ii < this.constraints.length; ii++) {
-				if (this.constraints[ii] == constraint) {
+				if (this.constraints[ii] === constraint) {
 					contained = true;
 					break;
 				}
@@ -128,40 +145,40 @@ export class Skin {
 			if (!contained) this.constraints.push(constraint);
 		}
 
-		let attachments = skin.getAttachments();
+		const attachments = skin.getAttachments();
 		for (let i = 0; i < attachments.length; i++) {
-			var attachment = attachments[i];
+			const attachment = attachments[i];
 			if (!attachment.attachment) continue;
 			if (attachment.attachment instanceof MeshAttachment) {
 				attachment.attachment = attachment.attachment.newLinkedMesh();
-				this.setAttachment(attachment.slotIndex, attachment.name, attachment.attachment);
+				this.setAttachment(attachment.slotIndex, attachment.placeholder, attachment.attachment);
 			} else {
 				attachment.attachment = attachment.attachment.copy();
-				this.setAttachment(attachment.slotIndex, attachment.name, attachment.attachment);
+				this.setAttachment(attachment.slotIndex, attachment.placeholder, attachment.attachment);
 			}
 		}
 	}
 
-	/** Returns the attachment for the specified slot index and name, or null. */
-	getAttachment (slotIndex: number, name: string): Attachment | null {
-		let dictionary = this.attachments[slotIndex];
-		return dictionary ? dictionary[name] : null;
+	/** Returns the attachment for the specified slot index and placeholder, or null. */
+	getAttachment (slotIndex: number, placeholder: string): Attachment | null {
+		const dictionary = this.attachments[slotIndex];
+		return dictionary ? dictionary[placeholder] : null;
 	}
 
-	/** Removes the attachment in the skin for the specified slot index and name, if any. */
-	removeAttachment (slotIndex: number, name: string) {
-		let dictionary = this.attachments[slotIndex];
-		if (dictionary) delete dictionary[name];
+	/** Removes the attachment in the skin for the specified slot index and placeholder, if any. */
+	removeAttachment (slotIndex: number, placeholder: string) {
+		const dictionary = this.attachments[slotIndex];
+		if (dictionary) delete dictionary[placeholder];
 	}
 
 	/** Returns all attachments in this skin. */
 	getAttachments (): Array<SkinEntry> {
-		let entries = new Array<SkinEntry>();
-		for (var i = 0; i < this.attachments.length; i++) {
-			let slotAttachments = this.attachments[i];
+		const entries: SkinEntry[] = [];
+		for (let i = 0; i < this.attachments.length; i++) {
+			const slotAttachments = this.attachments[i];
 			if (slotAttachments) {
-				for (let name in slotAttachments) {
-					let attachment = slotAttachments[name];
+				for (const name in slotAttachments) {
+					const attachment = slotAttachments[name];
 					if (attachment) entries.push(new SkinEntry(i, name, attachment));
 				}
 			}
@@ -171,10 +188,10 @@ export class Skin {
 
 	/** Returns all attachments in this skin for the specified slot index. */
 	getAttachmentsForSlot (slotIndex: number, attachments: Array<SkinEntry>) {
-		let slotAttachments = this.attachments[slotIndex];
+		const slotAttachments = this.attachments[slotIndex];
 		if (slotAttachments) {
-			for (let name in slotAttachments) {
-				let attachment = slotAttachments[name];
+			for (const name in slotAttachments) {
+				const attachment = slotAttachments[name];
 				if (attachment) attachments.push(new SkinEntry(slotIndex, name, attachment));
 			}
 		}
@@ -191,15 +208,15 @@ export class Skin {
 	attachAll (skeleton: Skeleton, oldSkin: Skin) {
 		let slotIndex = 0;
 		for (let i = 0; i < skeleton.slots.length; i++) {
-			let slot = skeleton.slots[i];
-			let slotAttachment = slot.getAttachment();
+			const slot = skeleton.slots[i];
+			const slotAttachment = slot.pose.getAttachment();
 			if (slotAttachment && slotIndex < oldSkin.attachments.length) {
-				let dictionary = oldSkin.attachments[slotIndex];
-				for (let key in dictionary) {
-					let skinAttachment: Attachment = dictionary[key];
-					if (slotAttachment == skinAttachment) {
-						let attachment = this.getAttachment(slotIndex, key);
-						if (attachment) slot.setAttachment(attachment);
+				const dictionary = oldSkin.attachments[slotIndex];
+				for (const placeholder in dictionary) {
+					const skinAttachment: Attachment = dictionary[placeholder];
+					if (slotAttachment === skinAttachment) {
+						const attachment = this.getAttachment(slotIndex, placeholder);
+						if (attachment) slot.pose.setAttachment(attachment);
 						break;
 					}
 				}

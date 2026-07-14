@@ -1,26 +1,25 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<class name="SpineAttachment" inherits="SpineObjectWrapper" version="3.4">
+<class name="SpineAttachment" inherits="SpineObjectWrapper" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
 	<brief_description>
-		Represents an attachment in a Spine skeleton's skin.
+		The base class for attachments.
 	</brief_description>
 	<description>
-		Represents an attachment in a Spine skeleton's skin. See [url]http://en.esotericsoftware.com/spine-runtime-skins[/url].
-		Attachments can only be queried for their name and can not be manipulated.
+		The base class for attachments. Attachments are stored in skins and can be attached to slots. Attachments are reference counted and may be shared across multiple skeletons.
+
+		See [url=http://esotericsoftware.com/spine-attachments]Attachments[/url] in the Spine User Guide.
 	</description>
-	<tutorials>
-	</tutorials>
 	<methods>
-		<method name="copy">
-			<return type="SpineAttachment" />
-			<description>
-			</description>
-		</method>
 		<method name="get_attachment_name">
 			<return type="String" />
 			<description>
+				Returns the attachment's name.
+			</description>
+		</method>
+		<method name="copy">
+			<return type="SpineAttachment" />
+			<description>
+				Returns a copy of this attachment.
 			</description>
 		</method>
 	</methods>
-	<constants>
-	</constants>
 </class>

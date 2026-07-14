@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated February 20, 2024. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2024, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
- * https://esotericsoftware.com/spine-editor-license
+ * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,8 +23,8 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 package com.esotericsoftware.spine;
@@ -34,77 +34,63 @@ import static com.esotericsoftware.spine.utils.SpineUtils.*;
 import com.badlogic.gdx.utils.Array;
 
 import com.esotericsoftware.spine.BoneData.Inherit;
-import com.esotericsoftware.spine.Skeleton.Physics;
+import com.esotericsoftware.spine.ConstraintData.ScaleYMode;
 
-/** Stores the current pose for an IK constraint. An IK constraint adjusts the rotation of 1 or 2 constrained bones so the tip of
- * the last bone is as close to the target bone as possible.
+/** Adjusts the local rotation of 1 or 2 constrained bones so the world position of the tip of the last bone is as close to the
+ * target bone as possible.
  * <p>
  * See <a href="https://esotericsoftware.com/spine-ik-constraints">IK constraints</a> in the Spine User Guide. */
-public class IkConstraint implements Updatable {
-	final IkConstraintData data;
-	final Array<Bone> bones;
+public class IkConstraint extends Constraint<IkConstraint, IkConstraintData, IkConstraintPose> {
+	final Array<BonePose> bones;
 	Bone target;
-	int bendDirection;
-	boolean compress, stretch;
-	float mix = 1, softness;
-
-	boolean active;
 
 	public IkConstraint (IkConstraintData data, Skeleton skeleton) {
-		if (data == null) throw new IllegalArgumentException("data cannot be null.");
+		super(data, new IkConstraintPose(), new IkConstraintPose());
 		if (skeleton == null) throw new IllegalArgumentException("skeleton cannot be null.");
-		this.data = data;
 
-		bones = new Array(data.bones.size);
+		bones = new Array(true, data.bones.size, BonePose[]::new);
 		for (BoneData boneData : data.bones)
-			bones.add(skeleton.bones.get(boneData.index));
+			bones.add(skeleton.bones.items[boneData.index].constrainedPose);
 
-		target = skeleton.bones.get(data.target.index);
-
-		mix = data.mix;
-		softness = data.softness;
-		bendDirection = data.bendDirection;
-		compress = data.compress;
-		stretch = data.stretch;
+		target = skeleton.bones.items[data.target.index];
 	}
 
-	/** Copy constructor. */
-	public IkConstraint (IkConstraint constraint, Skeleton skeleton) {
-		this(constraint.data, skeleton);
-
-		mix = constraint.mix;
-		softness = constraint.softness;
-		bendDirection = constraint.bendDirection;
-		compress = constraint.compress;
-		stretch = constraint.stretch;
-	}
-
-	public void setToSetupPose () {
-		IkConstraintData data = this.data;
-		mix = data.mix;
-		softness = data.softness;
-		bendDirection = data.bendDirection;
-		compress = data.compress;
-		stretch = data.stretch;
+	public IkConstraint copy (Skeleton skeleton) {
+		var copy = new IkConstraint(data, skeleton);
+		copy.pose.set(pose);
+		return copy;
 	}
 
 	/** Applies the constraint to the constrained bones. */
-	public void update (Physics physics) {
-		if (mix == 0) return;
-		Bone target = this.target;
-		Object[] bones = this.bones.items;
+	public void update (Skeleton skeleton, Physics physics) {
+		IkConstraintPose p = appliedPose;
+		if (p.mix == 0) return;
+		BonePose target = this.target.appliedPose;
+		BonePose[] bones = this.bones.items;
 		switch (this.bones.size) {
-		case 1:
-			apply((Bone)bones[0], target.worldX, target.worldY, compress, stretch, data.uniform, mix);
-			break;
-		case 2:
-			apply((Bone)bones[0], (Bone)bones[1], target.worldX, target.worldY, bendDirection, stretch, data.uniform, softness, mix);
-			break;
+		case 1 -> apply(skeleton, bones[0], target.worldX, target.worldY, p.compress, p.stretch, data.scaleYMode, p.mix);
+		case 2 -> apply(skeleton, bones[0], bones[1], target.worldX, target.worldY, p.bendDirection, p.stretch, data.scaleYMode,
+			p.softness, p.mix);
 		}
 	}
 
-	/** The bones that will be modified by this IK constraint. */
-	public Array<Bone> getBones () {
+	void sort (Skeleton skeleton) {
+		skeleton.sortBone(target);
+		Bone parent = bones.items[0].bone;
+		skeleton.sortBone(parent);
+		skeleton.updateCache.add(this);
+		parent.sorted = false;
+		skeleton.sortReset(parent.children);
+		skeleton.constrained(parent);
+		if (bones.size > 1) skeleton.constrained(bones.items[1].bone);
+	}
+
+	boolean isSourceActive () {
+		return target.active;
+	}
+
+	/** The 1 or 2 bones that will be modified by this IK constraint. */
+	public Array<BonePose> getBones () {
 		return bones;
 	}
 
@@ -118,136 +104,77 @@ public class IkConstraint implements Updatable {
 		this.target = target;
 	}
 
-	/** A percentage (0-1) that controls the mix between the constrained and unconstrained rotation.
-	 * <p>
-	 * For two bone IK: if the parent bone has local nonuniform scale, the child bone's local Y translation is set to 0. */
-	public float getMix () {
-		return mix;
-	}
-
-	public void setMix (float mix) {
-		this.mix = mix;
-	}
-
-	/** For two bone IK, the target bone's distance from the maximum reach of the bones where rotation begins to slow. The bones
-	 * will not straighten completely until the target is this far out of range. */
-	public float getSoftness () {
-		return softness;
-	}
-
-	public void setSoftness (float softness) {
-		this.softness = softness;
-	}
-
-	/** For two bone IK, controls the bend direction of the IK bones, either 1 or -1. */
-	public int getBendDirection () {
-		return bendDirection;
-	}
-
-	public void setBendDirection (int bendDirection) {
-		this.bendDirection = bendDirection;
-	}
-
-	/** For one bone IK, when true and the target is too close, the bone is scaled to reach it. */
-	public boolean getCompress () {
-		return compress;
-	}
-
-	public void setCompress (boolean compress) {
-		this.compress = compress;
-	}
-
-	/** When true and the target is out of range, the parent bone is scaled to reach it.
-	 * <p>
-	 * For two bone IK: 1) the child bone's local Y translation is set to 0, 2) stretch is not applied if {@link #getSoftness()} is
-	 * > 0, and 3) if the parent bone has local nonuniform scale, stretch is not applied. */
-	public boolean getStretch () {
-		return stretch;
-	}
-
-	public void setStretch (boolean stretch) {
-		this.stretch = stretch;
-	}
-
-	public boolean isActive () {
-		return active;
-	}
-
-	/** The IK constraint's setup pose data. */
-	public IkConstraintData getData () {
-		return data;
-	}
-
-	public String toString () {
-		return data.name;
-	}
-
 	/** Applies 1 bone IK. The target is specified in the world coordinate system. */
-	static public void apply (Bone bone, float targetX, float targetY, boolean compress, boolean stretch, boolean uniform,
-		float alpha) {
+	static public void apply (Skeleton skeleton, BonePose bone, float targetX, float targetY, boolean compress, boolean stretch,
+		ScaleYMode scaleYMode, float mix) {
 		if (bone == null) throw new IllegalArgumentException("bone cannot be null.");
-		Bone p = bone.parent;
+		bone.modifyLocal(skeleton);
+		BonePose p = bone.bone.parent.appliedPose;
 		float pa = p.a, pb = p.b, pc = p.c, pd = p.d;
-		float rotationIK = -bone.ashearX - bone.arotation, tx, ty;
+		float rotationIK = -bone.shearX - bone.rotation, tx, ty;
 		switch (bone.inherit) {
 		case onlyTranslation:
-			tx = (targetX - bone.worldX) * Math.signum(bone.skeleton.scaleX);
-			ty = (targetY - bone.worldY) * Math.signum(bone.skeleton.scaleY);
+			tx = (targetX - bone.worldX) * Math.signum(skeleton.scaleX);
+			ty = (targetY - bone.worldY) * Math.signum(skeleton.scaleY);
 			break;
 		case noRotationOrReflection:
-			float s = Math.abs(pa * pd - pb * pc) / Math.max(0.0001f, pa * pa + pc * pc);
-			float sa = pa / bone.skeleton.scaleX;
-			float sc = pc / bone.skeleton.scaleY;
-			pb = -sc * s * bone.skeleton.scaleX;
-			pd = sa * s * bone.skeleton.scaleY;
+			float s = Math.abs(pa * pd - pb * pc) / Math.max(epsilon, pa * pa + pc * pc);
+			float sa = pa / skeleton.scaleX;
+			float sc = pc / skeleton.scaleY;
+			pb = -sc * s * skeleton.scaleX;
+			pd = sa * s * skeleton.scaleY;
 			rotationIK += atan2Deg(sc, sa);
 			// Fall through.
 		default:
 			float x = targetX - p.worldX, y = targetY - p.worldY;
 			float d = pa * pd - pb * pc;
-			if (Math.abs(d) <= 0.0001f) {
+			if (Math.abs(d) <= epsilon) {
 				tx = 0;
 				ty = 0;
 			} else {
-				tx = (x * pd - y * pb) / d - bone.ax;
-				ty = (y * pa - x * pc) / d - bone.ay;
+				tx = (x * pd - y * pb) / d - bone.x;
+				ty = (y * pa - x * pc) / d - bone.y;
 			}
 		}
 		rotationIK += atan2Deg(ty, tx);
-		if (bone.ascaleX < 0) rotationIK += 180;
+		if (bone.scaleX < 0) rotationIK += 180;
 		if (rotationIK > 180)
 			rotationIK -= 360;
-		else if (rotationIK < -180) //
+		else if (rotationIK <= -180) //
 			rotationIK += 360;
-		float sx = bone.ascaleX, sy = bone.ascaleY;
+		bone.rotation += rotationIK * mix;
 		if (compress || stretch) {
 			switch (bone.inherit) {
-			case noScale:
-			case noScaleOrReflection:
+			case noScale, noScaleOrReflection -> {
 				tx = targetX - bone.worldX;
 				ty = targetY - bone.worldY;
 			}
-			float b = bone.data.length * sx;
-			if (b > 0.0001f) {
+			}
+			float b = bone.bone.data.length * bone.scaleX;
+			if (b > epsilon) {
 				float dd = tx * tx + ty * ty;
 				if ((compress && dd < b * b) || (stretch && dd > b * b)) {
-					float s = ((float)Math.sqrt(dd) / b - 1) * alpha + 1;
-					sx *= s;
-					if (uniform) sy *= s;
+					float s = ((float)Math.sqrt(dd) / b - 1) * mix + 1;
+					bone.scaleX *= s;
+					switch (scaleYMode) {
+					case uniform -> bone.scaleY *= s;
+					case volume -> bone.scaleY /= s < 0.7f ? 0.25f + 0.642857f * s : s;
+					}
 				}
 			}
 		}
-		bone.updateWorldTransform(bone.ax, bone.ay, bone.arotation + rotationIK * alpha, sx, sy, bone.ashearX, bone.ashearY);
 	}
 
 	/** Applies 2 bone IK. The target is specified in the world coordinate system.
 	 * @param child A direct descendant of the parent bone. */
-	static public void apply (Bone parent, Bone child, float targetX, float targetY, int bendDir, boolean stretch, boolean uniform,
-		float softness, float alpha) {
+	static public void apply (Skeleton skeleton, BonePose parent, BonePose child, float targetX, float targetY, int bendDir,
+		boolean stretch, ScaleYMode scaleYMode, float softness, float mix) {
 		if (parent == null) throw new IllegalArgumentException("parent cannot be null.");
 		if (child == null) throw new IllegalArgumentException("child cannot be null.");
 		if (parent.inherit != Inherit.normal || child.inherit != Inherit.normal) return;
-		float px = parent.ax, py = parent.ay, psx = parent.ascaleX, psy = parent.ascaleY, sx = psx, sy = psy, csx = child.ascaleX;
+		parent.modifyLocal(skeleton);
+		child.modifyLocal(skeleton);
+		float px = parent.x, py = parent.y, psx = parent.scaleX, psy = parent.scaleY, csx = child.scaleX;
 		int os1, os2, s2;
 		if (psx < 0) {
 			psx = -psx;
@@ -266,29 +193,28 @@ public class IkConstraint implements Updatable {
 			os2 = 180;
 		} else
 			os2 = 0;
-		float cx = child.ax, cy, cwx, cwy, a = parent.a, b = parent.b, c = parent.c, d = parent.d;
-		boolean u = Math.abs(psx - psy) <= 0.0001f;
+		float cwx, cwy, a = parent.a, b = parent.b, c = parent.c, d = parent.d;
+		boolean u = Math.abs(psx - psy) <= epsilon;
 		if (!u || stretch) {
-			cy = 0;
-			cwx = a * cx + parent.worldX;
-			cwy = c * cx + parent.worldY;
+			child.y = 0;
+			cwx = a * child.x + parent.worldX;
+			cwy = c * child.x + parent.worldY;
 		} else {
-			cy = child.ay;
-			cwx = a * cx + b * cy + parent.worldX;
-			cwy = c * cx + d * cy + parent.worldY;
+			cwx = a * child.x + b * child.y + parent.worldX;
+			cwy = c * child.x + d * child.y + parent.worldY;
 		}
-		Bone pp = parent.parent;
+		BonePose pp = parent.bone.parent.appliedPose;
 		a = pp.a;
 		b = pp.b;
 		c = pp.c;
 		d = pp.d;
 		float id = a * d - b * c, x = cwx - pp.worldX, y = cwy - pp.worldY;
-		id = Math.abs(id) <= 0.0001f ? 0 : 1 / id;
+		id = Math.abs(id) <= epsilon ? 0 : 1 / id;
 		float dx = (x * d - y * b) * id - px, dy = (y * a - x * c) * id - py;
-		float l1 = (float)Math.sqrt(dx * dx + dy * dy), l2 = child.data.length * csx, a1, a2;
-		if (l1 < 0.0001f) {
-			apply(parent, targetX, targetY, false, stretch, false, alpha);
-			child.updateWorldTransform(cx, cy, 0, child.ascaleX, child.ascaleY, child.ashearX, child.ashearY);
+		float l1 = (float)Math.sqrt(dx * dx + dy * dy), l2 = child.bone.data.length * csx, a1, a2;
+		if (l1 < epsilon) {
+			apply(skeleton, parent, targetX, targetY, false, stretch, ScaleYMode.none, mix);
+			child.rotation = 0;
 			return;
 		}
 		x = targetX - pp.worldX;
@@ -317,9 +243,12 @@ public class IkConstraint implements Updatable {
 				cos = 1;
 				a2 = 0;
 				if (stretch) {
-					a = ((float)Math.sqrt(dd) / (l1 + l2) - 1) * alpha + 1;
-					sx *= a;
-					if (uniform) sy *= a;
+					a = ((float)Math.sqrt(dd) / (l1 + l2) - 1) * mix + 1;
+					parent.scaleX *= a;
+					switch (scaleYMode) {
+					case uniform -> parent.scaleY *= a;
+					case volume -> parent.scaleY /= a < 0.7f ? 0.25f + 0.642857f * a : a;
+					}
 				}
 			} else
 				a2 = (float)Math.acos(cos) * bendDir;
@@ -376,20 +305,18 @@ public class IkConstraint implements Updatable {
 				a2 = maxAngle * bendDir;
 			}
 		}
-		float os = atan2(cy, cx) * s2;
-		float rotation = parent.arotation;
-		a1 = (a1 - os) * radDeg + os1 - rotation;
+		float os = atan2(child.y, child.x) * s2;
+		a1 = (a1 - os) * radDeg + os1 - parent.rotation;
 		if (a1 > 180)
 			a1 -= 360;
-		else if (a1 < -180) //
+		else if (a1 <= -180) //
 			a1 += 360;
-		parent.updateWorldTransform(px, py, rotation + a1 * alpha, sx, sy, 0, 0);
-		rotation = child.arotation;
-		a2 = ((a2 + os) * radDeg - child.ashearX) * s2 + os2 - rotation;
+		parent.rotation += a1 * mix;
+		a2 = ((a2 + os) * radDeg - child.shearX) * s2 + os2 - child.rotation;
 		if (a2 > 180)
 			a2 -= 360;
-		else if (a2 < -180) //
+		else if (a2 <= -180) //
 			a2 += 360;
-		child.updateWorldTransform(cx, cy, rotation + a2 * alpha, child.ascaleX, child.ascaleY, child.ashearX, child.ashearY);
+		child.rotation += a2 * mix;
 	}
 }

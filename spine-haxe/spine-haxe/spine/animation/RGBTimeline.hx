@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,34 +23,30 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *****************************************************************************/
 
 package spine.animation;
 
-class RGBTimeline extends CurveTimeline implements SlotTimeline {
+/** Changes the RGB for a slot's spine.Slot.color. */
+class RGBTimeline extends SlotCurveTimeline {
 	private static inline var ENTRIES:Int = 4;
 	private static inline var R:Int = 1;
 	private static inline var G:Int = 2;
 	private static inline var B:Int = 3;
 
-	private var slotIndex:Int = 0;
-
 	public function new(frameCount:Int, bezierCount:Int, slotIndex:Int) {
-		super(frameCount, bezierCount, [Property.rgb + "|" + slotIndex]);
-		this.slotIndex = slotIndex;
+		super(frameCount, bezierCount, slotIndex, Property.rgb + "|" + slotIndex);
 	}
 
 	public override function getFrameEntries():Int {
 		return ENTRIES;
 	}
 
-	public function getSlotIndex():Int {
-		return slotIndex;
-	}
-
-	/** Sets the time in seconds, light, and dark colors for the specified key frame. */
+	/** Sets the time and color for the specified frame.
+	 * @param frame Between 0 and frameCount, inclusive.
+	 * @param time The frame time in seconds. */
 	public function setFrame(frame:Int, time:Float, r:Float, g:Float, b:Float):Void {
 		frame <<= 2;
 		frames[frame] = time;
@@ -59,29 +55,23 @@ class RGBTimeline extends CurveTimeline implements SlotTimeline {
 		frames[frame + B] = b;
 	}
 
-	public override function apply(skeleton:Skeleton, lastTime:Float, time:Float, events:Array<Event>, alpha:Float, blend:MixBlend,
-			direction:MixDirection):Void {
-		var slot:Slot = skeleton.slots[slotIndex];
-		if (!slot.bone.active)
-			return;
-
-		var color:Color = slot.color, setup:Color;
+	public function apply1(slot:Slot, pose:SlotPose, time:Float, alpha:Float, from:MixFrom, add:Bool) {
+		var color = pose.color;
+		var r:Float = 0, g:Float = 0, b:Float = 0;
 		if (time < frames[0]) {
-			setup = slot.data.color;
-			switch (blend) {
-				case MixBlend.setup:
-					color.r = setup.r;
-					color.g = setup.g;
-					color.b = setup.b;
-				case MixBlend.first:
-					color.r += (setup.r - color.r) * alpha;
-					color.g += (setup.g - color.g) * alpha;
-					color.b += (setup.b - color.b) * alpha;
+			var setup = slot.data.setupPose.color;
+			if (from == MixFrom.setup) {
+				color.r = setup.r;
+				color.g = setup.g;
+				color.b = setup.b;
+			} else if (from == MixFrom.first) {
+				color.r += (setup.r - color.r) * alpha;
+				color.g += (setup.g - color.g) * alpha;
+				color.b += (setup.b - color.b) * alpha;
 			}
 			return;
 		}
 
-		var r:Float = 0, g:Float = 0, b:Float = 0;
 		var i:Int = Timeline.search(frames, time, ENTRIES);
 		var curveType:Int = Std.int(curves[Std.int(i / ENTRIES)]);
 		switch (curveType) {
@@ -103,20 +93,20 @@ class RGBTimeline extends CurveTimeline implements SlotTimeline {
 				g = getBezierValue(time, i, G, curveType + CurveTimeline.BEZIER_SIZE - CurveTimeline.BEZIER);
 				b = getBezierValue(time, i, B, curveType + CurveTimeline.BEZIER_SIZE * 2 - CurveTimeline.BEZIER);
 		}
-		if (alpha == 1) {
-			color.r = r;
-			color.g = g;
-			color.b = b;
-		} else {
-			if (blend == MixBlend.setup) {
-				setup = slot.data.color;
-				color.r = setup.r;
-				color.g = setup.g;
-				color.b = setup.b;
+		if (alpha != 1) {
+			if (from == MixFrom.setup) {
+				var setup = slot.data.setupPose.color;
+				r = setup.r + (r - setup.r) * alpha;
+				g = setup.g + (g - setup.g) * alpha;
+				b = setup.b + (b - setup.b) * alpha;
+			} else {
+				r = color.r + (r - color.r) * alpha;
+				g = color.g + (g - color.g) * alpha;
+				b = color.b + (b - color.b) * alpha;
 			}
-			color.r += (r - color.r) * alpha;
-			color.g += (g - color.g) * alpha;
-			color.b += (b - color.b) * alpha;
 		}
+		color.r = r < 0 ? 0 : (r > 1 ? 1 : r);
+		color.g = g < 0 ? 0 : (g > 1 ? 1 : g);
+		color.b = b < 0 ? 0 : (b > 1 ? 1 : b);
 	}
 }

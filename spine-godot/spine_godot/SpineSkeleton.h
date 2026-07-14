@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,8 +23,8 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 #pragma once
@@ -33,14 +33,16 @@
 #include "SpineSkeletonDataResource.h"
 #include "SpineBone.h"
 #include "SpineSlot.h"
-#include "SpineIkConstraint.h"
-#include "SpineTransformConstraint.h"
-#include "SpinePathConstraint.h"
-#include "SpinePhysicsConstraint.h"
 
 #include <unordered_map>
 
+// Forward declarations to avoid circular includes
 class SpineSprite;
+class SpineIkConstraint;
+class SpineTransformConstraint;
+class SpinePathConstraint;
+class SpinePhysicsConstraint;
+class SpineSlider;
 
 class SpineSkeleton : public REFCOUNTED {
 	GDCLASS(SpineSkeleton, REFCOUNTED);
@@ -54,19 +56,30 @@ class SpineSkeleton : public REFCOUNTED {
 	friend class SpineAnimationTrack;
 	friend class SpineBoneNode;
 	friend class SpineSlotNode;
+	friend class SpinePhysicsConstraint;
+	friend class SpineIkConstraint;
+	friend class SpineTransformConstraint;
+	friend class SpinePathConstraint;
+	friend class SpineSlider;
+	friend class SpineBonePose;
+	friend class SpineBoneLocal;
 
 protected:
 	static void _bind_methods();
 
 	void set_spine_sprite(SpineSprite *_sprite);
-	spine::Skeleton *get_spine_object() { return skeleton; }
-	SpineSprite *get_spine_owner() { return sprite; }
+	spine::Skeleton *get_spine_object() {
+		return skeleton;
+	}
+	SpineSprite *get_spine_owner() {
+		return sprite;
+	}
 	Ref<SpineSkeletonDataResource> get_skeleton_data_res() const;
 
 private:
 	spine::Skeleton *skeleton;
 	SpineSprite *sprite;
-	spine::Vector<float> bounds_vertex_buffer;
+	spine::Array<float> bounds_vertex_buffer;
 	Ref<SpineSkin> last_skin;
 
 	std::unordered_map<spine::Bone *, Ref<SpineBone>> _cached_bones;
@@ -106,6 +119,8 @@ public:
 
 	Ref<SpinePhysicsConstraint> find_physics_constraint(const String &constraint_name);
 
+	Ref<SpineSlider> find_slider(const String &slider_name);
+
 	Rect2 get_bounds();
 
 	Ref<SpineBone> get_root_bone();
@@ -123,6 +138,8 @@ public:
 	Array get_path_constraints();
 
 	Array get_physics_constraints();
+
+	Array get_sliders();
 
 	Ref<SpineSkin> get_skin();
 

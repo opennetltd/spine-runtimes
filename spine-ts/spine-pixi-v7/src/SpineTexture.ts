@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,20 +23,20 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 import { BlendMode, Texture, TextureFilter, TextureWrap } from "@esotericsoftware/spine-core";
-import type { BaseTexture as PixiBaseTexture, BaseImageResource } from "@pixi/core";
-import { Texture as PixiTexture, SCALE_MODES, MIPMAP_MODES, WRAP_MODES, BLEND_MODES } from "@pixi/core";
+import type { BaseImageResource, BaseTexture as PixiBaseTexture } from "@pixi/core";
+import { BLEND_MODES, MIPMAP_MODES, Texture as PixiTexture, SCALE_MODES, WRAP_MODES } from "@pixi/core";
 
 export class SpineTexture extends Texture {
 	private static textureMap: Map<PixiBaseTexture, SpineTexture> = new Map<PixiBaseTexture, SpineTexture>();
 
 	public static from (texture: PixiBaseTexture): SpineTexture {
 		if (SpineTexture.textureMap.has(texture)) {
-			return SpineTexture.textureMap.get(texture)!;
+			return SpineTexture.textureMap.get(texture) as SpineTexture;
 		}
 		return new SpineTexture(texture);
 	}
@@ -45,7 +45,7 @@ export class SpineTexture extends Texture {
 
 	private constructor (image: PixiBaseTexture) {
 		// Todo: maybe add error handling if you feed a video texture to spine?
-		super((image.resource as BaseImageResource).source as any);
+		super((image.resource as BaseImageResource).source);
 		this.texture = PixiTexture.from(image);
 	}
 

@@ -2,14 +2,14 @@
   <head>
     <meta charset="UTF-8" />
     <title>spine-pixi-v8</title>
-    <script src="https://cdn.jsdelivr.net/npm/pixi.js@8.4.1/dist/pixi.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pixi.js@8.16/dist/pixi.js"></script>
     <script src="../dist/iife/spine-pixi-v8.js"></script>
     <link rel="stylesheet" href="../../index.css">
   </head>
 
   <body>
     <script>
-      (async function () {
+      (async () => {
         var app = new PIXI.Application();
         await app.init({
           width: window.innerWidth,
@@ -20,15 +20,15 @@
           backgroundColor: 0x2c3e50,
           hello: true,
         })
-        document.body.appendChild(app.view);
+        document.body.appendChild(app.canvas);
 
         // Pre-load the skeleton data and atlas. You can also load .json skeleton data.
-        PIXI.Assets.add({alias: "spineboyData", src: "./assets/spineboy-pro.skel"});
-        PIXI.Assets.add({alias: "spineboyAtlas", src: "./assets/spineboy-pma.atlas"});
+        PIXI.Assets.add({alias: "spineboyData", src: "/assets/spineboy-pro.skel"});
+        PIXI.Assets.add({alias: "spineboyAtlas", src: "/assets/spineboy-pma.atlas"});
         await PIXI.Assets.load(["spineboyData", "spineboyAtlas"]);
 
         // Create the spine display object
-        const spineboy = spine.Spine.from({skeleton: "spineboyData", atlas: "spineboyAtlas",
+        const spineboy = new spine.Spine({skeleton: "spineboyData", atlas: "spineboyAtlas",
           scale: 0.5,
         });
 
@@ -37,7 +37,10 @@
         spineboy.state.data.defaultMix = 0.2;
 
         // Set animation "run" on track 0, looped.
-        spineboy.state.setAnimation(0, "run", true);
+        spineboy.state.setAnimation(0, "run", false);
+        setTimeout(() => {
+          spineboy.state.addAnimation(0, "run", false, 1);
+        }, 2000)
 
         // Center the spine object on screen.
         spineboy.x = window.innerWidth / 2;

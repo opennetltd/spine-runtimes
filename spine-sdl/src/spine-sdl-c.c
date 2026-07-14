@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,214 +23,156 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 #include "spine-sdl-c.h"
-#include <spine/spine.h>
-#include <spine/extension.h>
+#include <stdlib.h>
 
 #define STB_IMAGE_IMPLEMENTATION
-
 #include <stb_image.h>
 
-_SP_ARRAY_IMPLEMENT_TYPE_NO_CONTAINS(spSdlVertexArray, SDL_Vertex)
+static spine_skeleton_renderer renderer = NULL;
 
-spSkeletonDrawable *spSkeletonDrawable_create(spSkeletonData *skeletonData, spAnimationStateData *animationStateData) {
-	spBone_setYDown(-1);
-	spSkeletonDrawable *self = NEW(spSkeletonDrawable);
-	self->skeleton = spSkeleton_create(skeletonData);
-	self->animationState = spAnimationState_create(animationStateData);
-	self->usePremultipliedAlpha = 0;
-	self->sdlIndices = spIntArray_create(12);
-	self->sdlVertices = spSdlVertexArray_create(12);
-	self->worldVertices = spFloatArray_create(12);
-	self->clipper = spSkeletonClipping_create();
-	return self;
+static void ensure_renderer(void) {
+	if (!renderer) {
+		renderer = spine_skeleton_renderer_create();
+	}
 }
 
-void spSkeletonDrawable_dispose(spSkeletonDrawable *self) {
-	spSkeleton_dispose(self->skeleton);
-	spAnimationState_dispose(self->animationState);
-	spIntArray_dispose(self->sdlIndices);
-	spSdlVertexArray_dispose(self->sdlVertices);
-	spFloatArray_dispose(self->worldVertices);
-	spSkeletonClipping_dispose(self->clipper);
-	FREE(self);
+void spine_sdl_draw(spine_skeleton_drawable drawable, struct SDL_Renderer *sdl_renderer, bool premultipliedAlpha) {
+	spine_skeleton skeleton = spine_skeleton_drawable_get_skeleton(drawable);
+	spine_sdl_draw_skeleton(skeleton, sdl_renderer, premultipliedAlpha);
 }
 
-void spSkeletonDrawable_update(spSkeletonDrawable *self, float delta, spPhysics physics) {
-	spAnimationState_update(self->animationState, delta);
-	spAnimationState_apply(self->animationState, self->skeleton);
-	spSkeleton_update(self->skeleton, delta);
-	spSkeleton_updateWorldTransform(self->skeleton, physics);
-}
+void spine_sdl_draw_skeleton(spine_skeleton skeleton, struct SDL_Renderer *sdl_renderer, bool premultipliedAlpha) {
+	ensure_renderer();
 
-void spSkeletonDrawable_draw(spSkeletonDrawable *self, struct SDL_Renderer *renderer) {
-	static unsigned short quadIndices[] = {0, 1, 2, 2, 3, 0};
-	spSkeleton *skeleton = self->skeleton;
-	spSkeletonClipping *clipper = self->clipper;
-	SDL_Texture *texture;
-	SDL_Vertex sdlVertex;
-	for (int i = 0; i < skeleton->slotsCount; ++i) {
-		spSlot *slot = skeleton->drawOrder[i];
-		spAttachment *attachment = slot->attachment;
-		if (!attachment) {
-			spSkeletonClipping_clipEnd(clipper, slot);
-			continue;
+	spine_render_command command = spine_skeleton_renderer_render(renderer, skeleton);
+
+	// Pre-allocate vertex and index arrays
+	int max_vertices = 1024;
+	int max_indices = 1024 * 3;
+	SDL_Vertex *vertices = (SDL_Vertex *) malloc(sizeof(SDL_Vertex) * max_vertices);
+	int *indices = (int *) malloc(sizeof(int) * max_indices);
+
+	while (command) {
+		int num_vertices = spine_render_command_get_num_vertices(command);
+		int num_indices = spine_render_command_get_num_indices(command);
+
+		// Resize buffers if needed
+		if (num_vertices > max_vertices) {
+			max_vertices = num_vertices * 2;
+			vertices = (SDL_Vertex *) realloc(vertices, sizeof(SDL_Vertex) * max_vertices);
+		}
+		if (num_indices > max_indices) {
+			max_indices = num_indices * 2;
+			indices = (int *) realloc(indices, sizeof(int) * max_indices);
 		}
 
-		// Early out if the slot color is 0 or the bone is not active
-		if (slot->color.a == 0 || !slot->bone->active) {
-			spSkeletonClipping_clipEnd(clipper, slot);
-			continue;
+		// Get vertex data from render command
+		float *positions = spine_render_command_get_positions(command);
+		float *uvs = spine_render_command_get_uvs(command);
+		uint32_t *colors = spine_render_command_get_colors(command);
+		uint16_t *command_indices = spine_render_command_get_indices(command);
+		SDL_Texture *texture = (SDL_Texture *) spine_render_command_get_texture(command);
+		spine_blend_mode blend_mode = spine_render_command_get_blend_mode(command);
+
+		// Fill SDL vertices
+		for (int i = 0; i < num_vertices; i++) {
+			vertices[i].position.x = positions[i * 2];
+			vertices[i].position.y = positions[i * 2 + 1];
+			vertices[i].tex_coord.x = uvs[i * 2];
+			vertices[i].tex_coord.y = uvs[i * 2 + 1];
+
+			// Convert color from packed uint32 to SDL_Color
+			uint32_t color = colors[i];
+			vertices[i].color.r = (color >> 24) & 0xFF;
+			vertices[i].color.g = (color >> 16) & 0xFF;
+			vertices[i].color.b = (color >> 8) & 0xFF;
+			vertices[i].color.a = color & 0xFF;
 		}
 
-		spFloatArray *vertices = self->worldVertices;
-		int verticesCount = 0;
-		float *uvs = NULL;
-		unsigned short *indices;
-		int indicesCount = 0;
-		spColor *attachmentColor = NULL;
-
-		if (attachment->type == SP_ATTACHMENT_REGION) {
-			spRegionAttachment *region = (spRegionAttachment *) attachment;
-			attachmentColor = &region->color;
-
-			// Early out if the slot color is 0
-			if (attachmentColor->a == 0) {
-				spSkeletonClipping_clipEnd(clipper, slot);
-				continue;
-			}
-
-			spFloatArray_setSize(vertices, 8);
-			spRegionAttachment_computeWorldVertices(region, slot, vertices->items, 0, 2);
-			verticesCount = 4;
-			uvs = region->uvs;
-			indices = quadIndices;
-			indicesCount = 6;
-			texture = (SDL_Texture *) ((spAtlasRegion *) region->rendererObject)->page->rendererObject;
-		} else if (attachment->type == SP_ATTACHMENT_MESH) {
-			spMeshAttachment *mesh = (spMeshAttachment *) attachment;
-			attachmentColor = &mesh->color;
-
-			// Early out if the slot color is 0
-			if (attachmentColor->a == 0) {
-				spSkeletonClipping_clipEnd(clipper, slot);
-				continue;
-			}
-
-			spFloatArray_setSize(vertices, mesh->super.worldVerticesLength);
-			spVertexAttachment_computeWorldVertices(SUPER(mesh), slot, 0, mesh->super.worldVerticesLength, vertices->items, 0, 2);
-			verticesCount = mesh->super.worldVerticesLength >> 1;
-			uvs = mesh->uvs;
-			indices = mesh->triangles;
-			indicesCount = mesh->trianglesCount;
-			texture = (SDL_Texture *) ((spAtlasRegion *) mesh->rendererObject)->page->rendererObject;
-		} else if (attachment->type == SP_ATTACHMENT_CLIPPING) {
-			spClippingAttachment *clip = (spClippingAttachment *) slot->attachment;
-			spSkeletonClipping_clipStart(clipper, slot, clip);
-			continue;
-		} else
-			continue;
-
-		Uint8 r = (Uint8) (skeleton->color.r * slot->color.r * attachmentColor->r * 255);
-		Uint8 g = (Uint8) (skeleton->color.g * slot->color.g * attachmentColor->g * 255);
-		Uint8 b = (Uint8) (skeleton->color.b * slot->color.b * attachmentColor->b * 255);
-		Uint8 a = (Uint8) (skeleton->color.a * slot->color.a * attachmentColor->a * 255);
-		sdlVertex.color.r = r;
-		sdlVertex.color.g = g;
-		sdlVertex.color.b = b;
-		sdlVertex.color.a = a;
-
-		if (spSkeletonClipping_isClipping(clipper)) {
-			spSkeletonClipping_clipTriangles(clipper, vertices->items, verticesCount << 1, indices, indicesCount, uvs, 2);
-			vertices = clipper->clippedVertices;
-			verticesCount = clipper->clippedVertices->size >> 1;
-			uvs = clipper->clippedUVs->items;
-			indices = clipper->clippedTriangles->items;
-			indicesCount = clipper->clippedTriangles->size;
+		// Copy indices
+		for (int i = 0; i < num_indices; i++) {
+			indices[i] = command_indices[i];
 		}
 
-		spSdlVertexArray_clear(self->sdlVertices);
-		for (int ii = 0; ii < verticesCount << 1; ii += 2) {
-			sdlVertex.position.x = vertices->items[ii];
-			sdlVertex.position.y = vertices->items[ii + 1];
-			sdlVertex.tex_coord.x = uvs[ii];
-			sdlVertex.tex_coord.y = uvs[ii + 1];
-			spSdlVertexArray_add(self->sdlVertices, sdlVertex);
-		}
-		spIntArray_clear(self->sdlIndices);
-		for (int ii = 0; ii < (int) indicesCount; ii++)
-			spIntArray_add(self->sdlIndices, indices[ii]);
-
-		if (!self->usePremultipliedAlpha) {
-			switch (slot->data->blendMode) {
-				case SP_BLEND_MODE_NORMAL:
+		// Set blend mode
+		if (!premultipliedAlpha) {
+			switch (blend_mode) {
+				case SPINE_BLEND_MODE_NORMAL:
 					SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
 					break;
-				case SP_BLEND_MODE_MULTIPLY:
+				case SPINE_BLEND_MODE_MULTIPLY:
 					SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_MOD);
 					break;
-				case SP_BLEND_MODE_ADDITIVE:
+				case SPINE_BLEND_MODE_ADDITIVE:
 					SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_ADD);
 					break;
-				case SP_BLEND_MODE_SCREEN:
+				case SPINE_BLEND_MODE_SCREEN:
 					SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
 					break;
 			}
 		} else {
 			SDL_BlendMode target;
-			switch (slot->data->blendMode) {
-				case SP_BLEND_MODE_NORMAL:
-					target = SDL_ComposeCustomBlendMode(SDL_BLENDFACTOR_ONE, SDL_BLENDFACTOR_ONE_MINUS_SRC_ALPHA, SDL_BLENDOPERATION_ADD, SDL_BLENDFACTOR_ONE, SDL_BLENDFACTOR_ONE_MINUS_SRC_ALPHA, SDL_BLENDOPERATION_ADD);
+			switch (blend_mode) {
+				case SPINE_BLEND_MODE_NORMAL:
+					target = SDL_ComposeCustomBlendMode(SDL_BLENDFACTOR_ONE, SDL_BLENDFACTOR_ONE_MINUS_SRC_ALPHA, SDL_BLENDOPERATION_ADD,
+														SDL_BLENDFACTOR_ONE, SDL_BLENDFACTOR_ONE_MINUS_SRC_ALPHA, SDL_BLENDOPERATION_ADD);
 					SDL_SetTextureBlendMode(texture, target);
 					break;
-				case SP_BLEND_MODE_MULTIPLY:
+				case SPINE_BLEND_MODE_MULTIPLY:
 					SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_MOD);
 					break;
-				case SP_BLEND_MODE_ADDITIVE:
-					target = SDL_ComposeCustomBlendMode(SDL_BLENDFACTOR_ONE, SDL_BLENDFACTOR_ONE, SDL_BLENDOPERATION_ADD, SDL_BLENDFACTOR_ONE, SDL_BLENDFACTOR_ONE, SDL_BLENDOPERATION_ADD);
-					SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_ADD);
+				case SPINE_BLEND_MODE_ADDITIVE:
+					target = SDL_ComposeCustomBlendMode(SDL_BLENDFACTOR_ONE, SDL_BLENDFACTOR_ONE, SDL_BLENDOPERATION_ADD, SDL_BLENDFACTOR_ONE,
+														SDL_BLENDFACTOR_ONE, SDL_BLENDOPERATION_ADD);
+					SDL_SetTextureBlendMode(texture, target);
 					break;
-				case SP_BLEND_MODE_SCREEN:
-					target = SDL_ComposeCustomBlendMode(SDL_BLENDFACTOR_ONE, SDL_BLENDFACTOR_ONE_MINUS_SRC_ALPHA, SDL_BLENDOPERATION_ADD, SDL_BLENDFACTOR_ONE, SDL_BLENDFACTOR_ONE_MINUS_SRC_ALPHA, SDL_BLENDOPERATION_ADD);
-					SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
+				case SPINE_BLEND_MODE_SCREEN:
+					target = SDL_ComposeCustomBlendMode(SDL_BLENDFACTOR_ONE, SDL_BLENDFACTOR_ONE_MINUS_SRC_ALPHA, SDL_BLENDOPERATION_ADD,
+														SDL_BLENDFACTOR_ONE, SDL_BLENDFACTOR_ONE_MINUS_SRC_ALPHA, SDL_BLENDOPERATION_ADD);
+					SDL_SetTextureBlendMode(texture, target);
 					break;
 			}
 		}
 
-		SDL_RenderGeometry(renderer, texture, self->sdlVertices->items, self->sdlVertices->size, self->sdlIndices->items,
-						   indicesCount);
-		spSkeletonClipping_clipEnd(clipper, slot);
+		// Draw the geometry
+		SDL_RenderGeometry(sdl_renderer, texture, vertices, num_vertices, indices, num_indices);
+
+		// Move to next command
+		spine_render_command next = spine_render_command_get_next(command);
+		command = next;
 	}
-	spSkeletonClipping_clipEnd2(clipper);
+
+	free(vertices);
+	free(indices);
 }
 
-void _spAtlasPage_createTexture(spAtlasPage *self, const char *path) {
+// Texture loading functions for atlas
+void *load_texture(const char *path, SDL_Renderer *renderer) {
 	int width, height, components;
 	stbi_uc *imageData = stbi_load(path, &width, &height, &components, 4);
-	if (!imageData) return;
-	SDL_Texture *texture = SDL_CreateTexture((SDL_Renderer *) self->atlas->rendererObject, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STATIC, width,
-											 height);
+	if (!imageData) return NULL;
+
+	SDL_Texture *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STATIC, width, height);
 	if (!texture) {
 		stbi_image_free(imageData);
-		return;
+		return NULL;
 	}
+
 	if (SDL_UpdateTexture(texture, NULL, imageData, width * 4)) {
+		SDL_DestroyTexture(texture);
 		stbi_image_free(imageData);
-		return;
+		return NULL;
 	}
+
 	stbi_image_free(imageData);
-	self->rendererObject = texture;
-	return;
+	return texture;
 }
 
-void _spAtlasPage_disposeTexture(spAtlasPage *self) {
-	SDL_DestroyTexture((SDL_Texture *) self->rendererObject);
-}
-
-char *_spUtil_readFile(const char *path, int *length) {
-	return _spReadFile(path, length);
+void unload_texture(void *texture) {
+	SDL_DestroyTexture((SDL_Texture *) texture);
 }

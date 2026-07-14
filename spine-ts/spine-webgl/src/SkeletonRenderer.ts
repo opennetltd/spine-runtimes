@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,14 +23,14 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
-import { NumberArrayLike, Color, SkeletonClipping, Vector2, Utils, Skeleton, BlendMode, RegionAttachment, TextureAtlasRegion, MeshAttachment, ClippingAttachment } from "@esotericsoftware/spine-core";
-import { GLTexture } from "./GLTexture.js";
-import { PolygonBatcher } from "./PolygonBatcher.js";
-import { ManagedWebGLRenderingContext } from "./WebGL.js";
+import { BlendMode, ClippingAttachment, Color, MeshAttachment, type NumberArrayLike, RegionAttachment, type Skeleton, SkeletonClipping, Utils, Vector2 } from "@esotericsoftware/spine-core";
+import type { GLTexture } from "./GLTexture.js";
+import type { PolygonBatcher } from "./PolygonBatcher.js";
+import type { ManagedWebGLRenderingContext } from "./WebGL.js";
 
 
 class Renderable {
@@ -42,7 +42,6 @@ export type VertexTransformer = (vertices: NumberArrayLike, numVertices: number,
 export class SkeletonRenderer {
 	static QUAD_TRIANGLES = [0, 1, 2, 2, 3, 0];
 
-	premultipliedAlpha = false;
 	private tempColor = new Color();
 	private tempColor2 = new Color();
 	private vertices: NumberArrayLike;
@@ -50,10 +49,13 @@ export class SkeletonRenderer {
 	private twoColorTint = false;
 	private renderable: Renderable = new Renderable([], 0, 0);
 	private clipper: SkeletonClipping = new SkeletonClipping();
-	private temp = new Vector2();
-	private temp2 = new Vector2();
-	private temp3 = new Color();
-	private temp4 = new Color();
+
+	/**
+	 * Batches additive slots together with normal slots by rendering additive slots with premultiplied alpha RGB and zero alpha,
+	 * while using normal PMA blending. This reduces draw calls for normal/additive/normal sequences with the same texture.
+	 * Disable this if rendering to a transparent target and the accumulated destination alpha from additive blending must be preserved.
+	 */
+	pmaAdditiveBatching = true;
 
 	constructor (context: ManagedWebGLRenderingContext, twoColorTint: boolean = true) {
 		this.twoColorTint = twoColorTint;
@@ -63,115 +65,116 @@ export class SkeletonRenderer {
 	}
 
 	draw (batcher: PolygonBatcher, skeleton: Skeleton, slotRangeStart: number = -1, slotRangeEnd: number = -1, transformer: VertexTransformer | null = null) {
-		let clipper = this.clipper;
-		let premultipliedAlpha = this.premultipliedAlpha;
-		let twoColorTint = this.twoColorTint;
+		const clipper = this.clipper;
+		const twoColorTint = this.twoColorTint;
 		let blendMode: BlendMode | null = null;
 
-		let renderable: Renderable = this.renderable;
+		const renderable: Renderable = this.renderable;
 		let uvs: NumberArrayLike;
 		let triangles: Array<number>;
-		let drawOrder = skeleton.drawOrder;
+		const drawOrder = skeleton.drawOrder.appliedPose;
 		let attachmentColor: Color;
-		let skeletonColor = skeleton.color;
-		let vertexSize = twoColorTint ? 12 : 8;
+		const skeletonColor = skeleton.color;
+		const vertexSize = twoColorTint ? 12 : 8;
 		let inRange = false;
-		if (slotRangeStart == -1) inRange = true;
+		if (slotRangeStart === -1) inRange = true;
 		for (let i = 0, n = drawOrder.length; i < n; i++) {
-			let clippedVertexSize = clipper.isClipping() ? 2 : vertexSize;
-			let slot = drawOrder[i];
+			const slot = drawOrder[i];
 			if (!slot.bone.active) {
-				clipper.clipEndWithSlot(slot);
+				clipper.clipEnd(slot);
 				continue;
 			}
 
-			if (slotRangeStart >= 0 && slotRangeStart == slot.data.index) {
+			if (slotRangeStart >= 0 && slotRangeStart === slot.data.index) {
 				inRange = true;
 			}
 
 			if (!inRange) {
-				clipper.clipEndWithSlot(slot);
+				clipper.clipEnd(slot);
 				continue;
 			}
 
-			if (slotRangeEnd >= 0 && slotRangeEnd == slot.data.index) {
+			if (slotRangeEnd >= 0 && slotRangeEnd === slot.data.index) {
 				inRange = false;
 			}
 
-			let attachment = slot.getAttachment();
+			const pose = slot.appliedPose;
+			const attachment = pose.attachment;
 			let texture: GLTexture;
 			if (attachment instanceof RegionAttachment) {
-				let region = <RegionAttachment>attachment;
 				renderable.vertices = this.vertices;
 				renderable.numVertices = 4;
-				renderable.numFloats = clippedVertexSize << 2;
-				region.computeWorldVertices(slot, renderable.vertices, 0, clippedVertexSize);
+				renderable.numFloats = vertexSize << 2;
+
+				const sequence = attachment.sequence;
+				const sequenceIndex = sequence.resolveIndex(pose);
+				attachment.computeWorldVertices(slot, attachment.getOffsets(pose), renderable.vertices, 0, vertexSize);
+
 				triangles = SkeletonRenderer.QUAD_TRIANGLES;
-				uvs = region.uvs;
-				texture = <GLTexture>region.region!.texture;
-				attachmentColor = region.color;
+				uvs = sequence.getUVs(sequenceIndex);
+				texture = sequence.regions[sequenceIndex]?.texture as GLTexture;
+				attachmentColor = attachment.color;
 			} else if (attachment instanceof MeshAttachment) {
-				let mesh = <MeshAttachment>attachment;
 				renderable.vertices = this.vertices;
-				renderable.numVertices = (mesh.worldVerticesLength >> 1);
-				renderable.numFloats = renderable.numVertices * clippedVertexSize;
+				renderable.numVertices = (attachment.worldVerticesLength >> 1);
+				renderable.numFloats = renderable.numVertices * vertexSize;
+
 				if (renderable.numFloats > renderable.vertices.length) {
 					renderable.vertices = this.vertices = Utils.newFloatArray(renderable.numFloats);
 				}
-				mesh.computeWorldVertices(slot, 0, mesh.worldVerticesLength, renderable.vertices, 0, clippedVertexSize);
-				triangles = mesh.triangles;
-				texture = <GLTexture>mesh.region!.texture;
-				uvs = mesh.uvs;
-				attachmentColor = mesh.color;
+				attachment.computeWorldVertices(skeleton, slot, 0, attachment.worldVerticesLength, renderable.vertices, 0, vertexSize);
+				triangles = attachment.triangles;
+
+				const sequence = attachment.sequence;
+				const sequenceIndex = sequence.resolveIndex(pose);
+
+				texture = sequence.regions[sequenceIndex]?.texture as GLTexture;
+				uvs = sequence.getUVs(sequenceIndex);
+				attachmentColor = attachment.color;
 			} else if (attachment instanceof ClippingAttachment) {
-				let clip = <ClippingAttachment>(attachment);
-				clipper.clipStart(slot, clip);
+				clipper.clipEnd(slot);
+				clipper.clipStart(skeleton, slot, attachment);
 				continue;
 			} else {
-				clipper.clipEndWithSlot(slot);
+				clipper.clipEnd(slot);
 				continue;
 			}
 
 			if (texture) {
-				let slotColor = slot.color;
-				let finalColor = this.tempColor;
-				finalColor.r = skeletonColor.r * slotColor.r * attachmentColor.r;
-				finalColor.g = skeletonColor.g * slotColor.g * attachmentColor.g;
-				finalColor.b = skeletonColor.b * slotColor.b * attachmentColor.b;
-				finalColor.a = skeletonColor.a * slotColor.a * attachmentColor.a;
-				if (premultipliedAlpha) {
-					finalColor.r *= finalColor.a;
-					finalColor.g *= finalColor.a;
-					finalColor.b *= finalColor.a;
-				}
-				let darkColor = this.tempColor2;
-				if (!slot.darkColor)
+				const slotColor = pose.color;
+				const finalColor = this.tempColor;
+				const alpha = skeletonColor.a * slotColor.a * attachmentColor.a;
+				finalColor.r = skeletonColor.r * slotColor.r * attachmentColor.r * alpha;
+				finalColor.g = skeletonColor.g * slotColor.g * attachmentColor.g * alpha;
+				finalColor.b = skeletonColor.b * slotColor.b * attachmentColor.b * alpha;
+
+				const slotBlendMode = slot.data.blendMode;
+				const additiveBlend = this.pmaAdditiveBatching && slotBlendMode === BlendMode.Additive;
+				finalColor.a = additiveBlend ? 0 : alpha;
+
+				const darkColor = this.tempColor2;
+				if (!pose.darkColor)
 					darkColor.set(0, 0, 0, 1.0);
 				else {
-					if (premultipliedAlpha) {
-						darkColor.r = slot.darkColor.r * finalColor.a;
-						darkColor.g = slot.darkColor.g * finalColor.a;
-						darkColor.b = slot.darkColor.b * finalColor.a;
-					} else {
-						darkColor.setFromColor(slot.darkColor);
-					}
-					darkColor.a = premultipliedAlpha ? 1.0 : 0.0;
+					darkColor.r = pose.darkColor.r * alpha;
+					darkColor.g = pose.darkColor.g * alpha;
+					darkColor.b = pose.darkColor.b * alpha;
+					darkColor.a = 1;
 				}
 
-				let slotBlendMode = slot.data.blendMode;
-				if (slotBlendMode != blendMode) {
-					blendMode = slotBlendMode;
-					batcher.setBlendMode(blendMode, premultipliedAlpha);
+				const batchBlendMode = additiveBlend ? BlendMode.Normal : slotBlendMode;
+				if (batchBlendMode !== blendMode) {
+					blendMode = batchBlendMode;
+					batcher.setBlendMode(blendMode);
 				}
 
-				if (clipper.isClipping()) {
-					clipper.clipTriangles(renderable.vertices, triangles, triangles.length, uvs, finalColor, darkColor, twoColorTint);
-					let clippedVertices = new Float32Array(clipper.clippedVertices);
-					let clippedTriangles = clipper.clippedTriangles;
+				if (clipper.isClipping() && clipper.clipTriangles(renderable.vertices, triangles, triangles.length, uvs, finalColor, darkColor, twoColorTint, vertexSize)) {
+					const clippedVertices = new Float32Array(clipper.clippedVertices);
+					const clippedTriangles = clipper.clippedTriangles;
 					if (transformer) transformer(clippedVertices, clippedVertices.length, vertexSize);
 					batcher.draw(texture, clippedVertices, clippedTriangles);
 				} else {
-					let verts = renderable.vertices;
+					const verts = renderable.vertices;
 					if (!twoColorTint) {
 						for (let v = 2, u = 0, n = renderable.numFloats; v < n; v += vertexSize, u += 2) {
 							verts[v] = finalColor.r;
@@ -195,13 +198,13 @@ export class SkeletonRenderer {
 							verts[v + 9] = darkColor.a;
 						}
 					}
-					let view = (renderable.vertices as Float32Array).subarray(0, renderable.numFloats);
+					const view = (renderable.vertices as Float32Array).subarray(0, renderable.numFloats);
 					if (transformer) transformer(renderable.vertices, renderable.numFloats, vertexSize);
 					batcher.draw(texture, view, triangles);
 				}
 			}
 
-			clipper.clipEndWithSlot(slot);
+			clipper.clipEnd(slot);
 		}
 		clipper.clipEnd();
 	}

@@ -42,7 +42,7 @@
 		<method name="get_index">
 			<return type="int" />
 			<description>
-				The index of the slot in [code]Skeleton.get_slots()[/code].
+				Returns the index of the slot in Skeleton.slots.
 			</description>
 		</method>
 		<method name="get_name">

@@ -11,10 +11,19 @@
       "path": "./spine-canvaskit"
     },
     {
+      "path": "./spine-construct3"
+    },
+    {
+      "path": "./spine-construct3/spine-construct3-lib"
+    },
+    {
       "path": "./spine-webgl"
     },
     {
-      "path": "./spine-phaser"
+      "path": "./spine-phaser-v3"
+    },
+    {
+      "path": "./spine-phaser-v4"
     },
     {
       "path": "./spine-player"
@@ -27,6 +36,9 @@
     },
     {
       "path": "./spine-pixi-v8"
+    },
+    {
+      "path": "./spine-webcomponents"
     }
   ]
 }

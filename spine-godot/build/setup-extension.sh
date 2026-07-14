@@ -35,6 +35,11 @@ fi
 
 godot_cpp_branch=$(echo $godot_branch | cut -d. -f1-2 | cut -d- -f1)
 
+if ! git ls-remote --exit-code --heads $godot_cpp_repo $godot_cpp_branch > /dev/null 2>&1; then
+    echo "godot-cpp branch '$godot_cpp_branch' not found, falling back to 'master'"
+    godot_cpp_branch="master"
+fi
+
 cpus=2
 if [ "$OSTYPE" == "msys" ]; then
 	cpus=$NUMBER_OF_PROCESSORS
@@ -66,12 +71,11 @@ if [ $dev == "true" ]; then
     pushd godot
     scons target=editor dev_build=true optimize=debug --jobs=$cpus
     popd
-    cp spine_godot_extension.dev.gdextension example-v4-extension/bin/spine_godot_extension.gdextension
-else
-    cp spine_godot_extension.gdextension example-v4-extension/bin
 fi
 
-cp -r ../spine-cpp/spine-cpp spine_godot
+cp spine_godot_extension.gdextension example-v4-extension/bin
+rm -rf spine_godot/spine-cpp
+cp -r ../spine-cpp spine_godot
 
 popd
 popd > /dev/null

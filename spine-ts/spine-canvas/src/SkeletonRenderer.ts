@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,12 +23,12 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
-import { Utils, Color, Skeleton, RegionAttachment, BlendMode, MeshAttachment, Slot, TextureRegion, TextureAtlasRegion } from "@esotericsoftware/spine-core";
-import { CanvasTexture } from "./CanvasTexture.js";
+import { type BlendMode, Color, MeshAttachment, type NumberArrayLike, RegionAttachment, type Skeleton, type Slot, type TextureRegion, Utils } from "@esotericsoftware/spine-core";
+import type { CanvasTexture } from "./CanvasTexture.js";
 
 const worldVertices = Utils.newFloatArray(8);
 
@@ -53,44 +53,51 @@ export class SkeletonRenderer {
 	}
 
 	private drawImages (skeleton: Skeleton) {
-		let ctx = this.ctx;
-		let color = this.tempColor;
-		let skeletonColor = skeleton.color;
-		let drawOrder = skeleton.drawOrder;
+		const ctx = this.ctx;
+		const color = this.tempColor;
+		const skeletonColor = skeleton.color;
+		const drawOrder = skeleton.drawOrder.appliedPose;
 
 		if (this.debugRendering) ctx.strokeStyle = "green";
 
 		for (let i = 0, n = drawOrder.length; i < n; i++) {
-			let slot = drawOrder[i];
-			let bone = slot.bone;
+			const slot = drawOrder[i];
+			const bone = slot.bone;
 			if (!bone.active) continue;
 
-			let attachment = slot.getAttachment();
+			const pose = slot.appliedPose;
+			const attachment = pose.attachment;
 			if (!(attachment instanceof RegionAttachment)) continue;
-			attachment.computeWorldVertices(slot, worldVertices, 0, 2);
-			let region: TextureRegion = <TextureRegion>attachment.region;
 
-			let image: HTMLImageElement = (<CanvasTexture>region.texture).getImage() as HTMLImageElement;
+			const sequence = attachment.sequence;
+			const sequenceIndex = sequence.resolveIndex(pose);
+			attachment.computeWorldVertices(slot, attachment.getOffsets(pose), worldVertices, 0, 2);
 
-			let slotColor = slot.color;
-			let regionColor = attachment.color;
+			const region = sequence.regions[sequenceIndex] as TextureRegion;
+
+			const image: HTMLImageElement = region.texture.getImage() as HTMLImageElement;
+
+			const slotColor = pose.color;
+			const regionColor = attachment.color;
 			color.set(skeletonColor.r * slotColor.r * regionColor.r,
 				skeletonColor.g * slotColor.g * regionColor.g,
 				skeletonColor.b * slotColor.b * regionColor.b,
 				skeletonColor.a * slotColor.a * regionColor.a);
 
 			ctx.save();
-			ctx.transform(bone.a, bone.c, bone.b, bone.d, bone.worldX, bone.worldY);
-			ctx.translate(attachment.offset[0], attachment.offset[1]);
+			const boneApplied = bone.appliedPose;
+			ctx.transform(boneApplied.a, boneApplied.c, boneApplied.b, boneApplied.d, boneApplied.worldX, boneApplied.worldY);
+			const offsets = attachment.getOffsets(pose);
+			ctx.translate(offsets[0], offsets[1]);
 			ctx.rotate(attachment.rotation * Math.PI / 180);
 
-			let atlasScale = attachment.width / region.originalWidth;
+			const atlasScale = attachment.width / region.originalWidth;
 			ctx.scale(atlasScale * attachment.scaleX, atlasScale * attachment.scaleY);
 
 			let w = region.width, h = region.height;
 			ctx.translate(w / 2, h / 2);
-			if (attachment.region!.degrees == 90) {
-				let t = w;
+			if (region.degrees === 90) {
+				const t = w;
 				w = h;
 				h = t;
 				ctx.rotate(-Math.PI / 2);
@@ -106,39 +113,49 @@ export class SkeletonRenderer {
 	}
 
 	private drawTriangles (skeleton: Skeleton) {
-		let ctx = this.ctx;
-		let color = this.tempColor;
-		let skeletonColor = skeleton.color;
-		let drawOrder = skeleton.drawOrder;
+		const ctx = this.ctx;
+		const color = this.tempColor;
+		const skeletonColor = skeleton.color;
+		const drawOrder = skeleton.drawOrder.appliedPose;
 
 		let blendMode: BlendMode | null = null;
 		let vertices: ArrayLike<number> = this.vertices;
 		let triangles: Array<number> | null = null;
 
 		for (let i = 0, n = drawOrder.length; i < n; i++) {
-			let slot = drawOrder[i];
-			let attachment = slot.getAttachment();
+			const slot = drawOrder[i];
+			const pose = slot.appliedPose;
+			const attachment = pose.attachment;
 
 			let texture: HTMLImageElement;
-			let region: TextureAtlasRegion;
 			if (attachment instanceof RegionAttachment) {
-				let regionAttachment = <RegionAttachment>attachment;
-				vertices = this.computeRegionVertices(slot, regionAttachment, false);
+				const sequence = attachment.sequence;
+				const sequenceIndex = sequence.resolveIndex(pose);
+
+				const uvs = sequence.getUVs(sequenceIndex);
+				const offsets = attachment.getOffsets(pose);
+
+				vertices = this.computeRegionVertices(slot, attachment, offsets, uvs, false);
 				triangles = SkeletonRenderer.QUAD_TRIANGLES;
-				texture = (<CanvasTexture>regionAttachment.region!.texture).getImage() as HTMLImageElement;
+
+				texture = (sequence.regions[sequenceIndex]?.texture as CanvasTexture).getImage();
 			} else if (attachment instanceof MeshAttachment) {
-				let mesh = <MeshAttachment>attachment;
-				vertices = this.computeMeshVertices(slot, mesh, false);
-				triangles = mesh.triangles;
-				texture = (<CanvasTexture>mesh.region!.texture).getImage() as HTMLImageElement;
+				const sequence = attachment.sequence;
+				const sequenceIndex = sequence.resolveIndex(pose);
+
+				const uvs = sequence.getUVs(sequenceIndex);
+				vertices = this.computeMeshVertices(slot, attachment, uvs, false);
+				triangles = attachment.triangles;
+
+				texture = (sequence.regions[sequenceIndex]?.texture as CanvasTexture).getImage();
 			} else
 				continue;
 
 			if (texture) {
-				if (slot.data.blendMode != blendMode) blendMode = slot.data.blendMode;
+				if (slot.data.blendMode !== blendMode) blendMode = slot.data.blendMode;
 
-				let slotColor = slot.color;
-				let attachmentColor = attachment.color;
+				const slotColor = pose.color;
+				const attachmentColor = attachment.color;
 				color.set(skeletonColor.r * slotColor.r * attachmentColor.r,
 					skeletonColor.g * slotColor.g * attachmentColor.g,
 					skeletonColor.b * slotColor.b * attachmentColor.b,
@@ -146,12 +163,12 @@ export class SkeletonRenderer {
 
 				ctx.globalAlpha = color.a;
 
-				for (var j = 0; j < triangles.length; j += 3) {
-					let t1 = triangles[j] * 8, t2 = triangles[j + 1] * 8, t3 = triangles[j + 2] * 8;
+				for (let j = 0; j < triangles.length; j += 3) {
+					const t1 = triangles[j] * 8, t2 = triangles[j + 1] * 8, t3 = triangles[j + 2] * 8;
 
-					let x0 = vertices[t1], y0 = vertices[t1 + 1], u0 = vertices[t1 + 6], v0 = vertices[t1 + 7];
-					let x1 = vertices[t2], y1 = vertices[t2 + 1], u1 = vertices[t2 + 6], v1 = vertices[t2 + 7];
-					let x2 = vertices[t3], y2 = vertices[t3 + 1], u2 = vertices[t3 + 6], v2 = vertices[t3 + 7];
+					const x0 = vertices[t1], y0 = vertices[t1 + 1], u0 = vertices[t1 + 6], v0 = vertices[t1 + 7];
+					const x1 = vertices[t2], y1 = vertices[t2 + 1], u1 = vertices[t2 + 6], v1 = vertices[t2 + 7];
+					const x2 = vertices[t3], y2 = vertices[t3 + 1], u2 = vertices[t3 + 6], v2 = vertices[t3 + 7];
 
 					this.drawTriangle(texture, x0, y0, u0, v0, x1, y1, u1, v1, x2, y2, u2, v2);
 
@@ -176,7 +193,7 @@ export class SkeletonRenderer {
 	private drawTriangle (img: HTMLImageElement, x0: number, y0: number, u0: number, v0: number,
 		x1: number, y1: number, u1: number, v1: number,
 		x2: number, y2: number, u2: number, v2: number) {
-		let ctx = this.ctx;
+		const ctx = this.ctx;
 
 		const width = img.width - 1;
 		const height = img.height - 1;
@@ -204,7 +221,7 @@ export class SkeletonRenderer {
 		v2 -= v0;
 
 		let det = u1 * v2 - u2 * v1;
-		if (det == 0) return;
+		if (det === 0) return;
 		det = 1 / det;
 
 		// linear transformation
@@ -224,22 +241,21 @@ export class SkeletonRenderer {
 		ctx.restore();
 	}
 
-	private computeRegionVertices (slot: Slot, region: RegionAttachment, pma: boolean) {
-		let skeletonColor = slot.bone.skeleton.color;
-		let slotColor = slot.color;
-		let regionColor = region.color;
-		let alpha = skeletonColor.a * slotColor.a * regionColor.a;
-		let multiplier = pma ? alpha : 1;
-		let color = this.tempColor;
+	private computeRegionVertices (slot: Slot, region: RegionAttachment, offsets: NumberArrayLike, uvs: NumberArrayLike, pma: boolean) {
+		const skeletonColor = slot.skeleton.color;
+		const slotColor = slot.appliedPose.color;
+		const regionColor = region.color;
+		const alpha = skeletonColor.a * slotColor.a * regionColor.a;
+		const multiplier = pma ? alpha : 1;
+		const color = this.tempColor;
 		color.set(skeletonColor.r * slotColor.r * regionColor.r * multiplier,
 			skeletonColor.g * slotColor.g * regionColor.g * multiplier,
 			skeletonColor.b * slotColor.b * regionColor.b * multiplier,
 			alpha);
 
-		region.computeWorldVertices(slot, this.vertices, 0, SkeletonRenderer.VERTEX_SIZE);
+		region.computeWorldVertices(slot, offsets, this.vertices, 0, SkeletonRenderer.VERTEX_SIZE);
 
-		let vertices = this.vertices;
-		let uvs = region.uvs;
+		const vertices = this.vertices;
 
 		vertices[RegionAttachment.C1R] = color.r;
 		vertices[RegionAttachment.C1G] = color.g;
@@ -272,24 +288,25 @@ export class SkeletonRenderer {
 		return vertices;
 	}
 
-	private computeMeshVertices (slot: Slot, mesh: MeshAttachment, pma: boolean) {
-		let skeletonColor = slot.bone.skeleton.color;
-		let slotColor = slot.color;
-		let regionColor = mesh.color;
-		let alpha = skeletonColor.a * slotColor.a * regionColor.a;
-		let multiplier = pma ? alpha : 1;
-		let color = this.tempColor;
+	private computeMeshVertices (slot: Slot, mesh: MeshAttachment, uvs: NumberArrayLike, pma: boolean) {
+		const skeleton = slot.skeleton;
+		const skeletonColor = skeleton.color;
+		const slotColor = slot.appliedPose.color;
+		const regionColor = mesh.color;
+		const alpha = skeletonColor.a * slotColor.a * regionColor.a;
+		const multiplier = pma ? alpha : 1;
+		const color = this.tempColor;
 		color.set(skeletonColor.r * slotColor.r * regionColor.r * multiplier,
 			skeletonColor.g * slotColor.g * regionColor.g * multiplier,
 			skeletonColor.b * slotColor.b * regionColor.b * multiplier,
 			alpha);
 
-		let vertexCount = mesh.worldVerticesLength / 2;
+		const vertexCount = mesh.worldVerticesLength / 2;
 		let vertices = this.vertices;
 		if (vertices.length < mesh.worldVerticesLength) this.vertices = vertices = Utils.newFloatArray(mesh.worldVerticesLength);
-		mesh.computeWorldVertices(slot, 0, mesh.worldVerticesLength, vertices, 0, SkeletonRenderer.VERTEX_SIZE);
+		mesh.computeWorldVertices(skeleton, slot, 0, mesh.worldVerticesLength, vertices, 0, SkeletonRenderer.VERTEX_SIZE);
 
-		let uvs = mesh.uvs;
+
 		for (let i = 0, u = 0, v = 2; i < vertexCount; i++) {
 			vertices[v++] = color.r;
 			vertices[v++] = color.g;

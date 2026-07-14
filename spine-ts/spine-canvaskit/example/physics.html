@@ -37,8 +37,8 @@
     const surface = ck.MakeCanvasSurface('foo');
     surface.getCanvas().scale(dpr, dpr);
 
-    const atlas = await spine.loadTextureAtlas(ck, "assets/celestial-circus.atlas", readFile);
-    const skeletonData = await spine.loadSkeletonData("assets/celestial-circus-pro.json", atlas, readFile);
+    const atlas = await spine.loadTextureAtlas(ck, "/assets/celestial-circus.atlas", readFile);
+    const skeletonData = await spine.loadSkeletonData("/assets/celestial-circus-pro.json", atlas, readFile);
     const drawable = new spine.SkeletonDrawable(skeletonData);
     drawable.skeleton.scaleX = drawable.skeleton.scaleY = 0.15;
     drawable.skeleton.x = 300;
@@ -68,8 +68,8 @@
     // the last touch/mouse location and the current touch/mouse location.
     const drag = (touchX, touchY) => {
         const clientRect = canvasElement.getBoundingClientRect();
-        let x = touchX - clientRect.left;
-        let y = touchY - clientRect.top;
+        const x = touchX - clientRect.left;
+        const y = touchY - clientRect.top;
         if (lastX == -1 && lastY == -1) {
             lastX = x;
             lastY = y;

@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,8 +23,8 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 #include "SpineAtlasImportFactory.h"
@@ -53,7 +53,8 @@ bool USpineAtlasAssetFactory::FactoryCanImport(const FString &Filename) {
 	return true;
 }
 
-UObject *USpineAtlasAssetFactory::FactoryCreateFile(UClass *InClass, UObject *InParent, FName InName, EObjectFlags Flags, const FString &Filename, const TCHAR *Parms, FFeedbackContext *Warn, bool &bOutOperationCanceled) {
+UObject *USpineAtlasAssetFactory::FactoryCreateFile(UClass *InClass, UObject *InParent, FName InName, EObjectFlags Flags, const FString &Filename,
+													const TCHAR *Parms, FFeedbackContext *Warn, bool &bOutOperationCanceled) {
 	FString FileExtension = FPaths::GetExtension(Filename);
 	GEditor->GetEditorSubsystem<UImportSubsystem>()->BroadcastAssetPreImport(this, InClass, InParent, InName, *FileExtension);
 
@@ -79,8 +80,7 @@ bool USpineAtlasAssetFactory::CanReimport(UObject *Obj, TArray<FString> &OutFile
 	if (!asset) return false;
 
 	FString filename = asset->GetAtlasFileName().ToString();
-	if (!filename.IsEmpty())
-		OutFilenames.Add(filename);
+	if (!filename.IsEmpty()) OutFilenames.Add(filename);
 
 	return true;
 }
@@ -88,8 +88,7 @@ bool USpineAtlasAssetFactory::CanReimport(UObject *Obj, TArray<FString> &OutFile
 void USpineAtlasAssetFactory::SetReimportPaths(UObject *Obj, const TArray<FString> &NewReimportPaths) {
 	USpineAtlasAsset *asset = Cast<USpineAtlasAsset>(Obj);
 
-	if (asset && ensure(NewReimportPaths.Num() == 1))
-		asset->SetAtlasFileName(FName(*NewReimportPaths[0]));
+	if (asset && ensure(NewReimportPaths.Num() == 1)) asset->SetAtlasFileName(FName(*NewReimportPaths[0]));
 }
 
 EReimportResult::Type USpineAtlasAssetFactory::Reimport(UObject *Obj) {
@@ -105,7 +104,8 @@ EReimportResult::Type USpineAtlasAssetFactory::Reimport(UObject *Obj) {
 
 	LoadAtlas(asset, currentSourcePath, longPackagePath);
 
-	if (Obj->GetOuter()) Obj->GetOuter()->MarkPackageDirty();
+	if (Obj->GetOuter())
+		Obj->GetOuter()->MarkPackageDirty();
 	else
 		Obj->MarkPackageDirty();
 
@@ -131,7 +131,7 @@ void USpineAtlasAssetFactory::LoadAtlas(USpineAtlasAsset *Asset, const FString &
 
 	const FString targetTexturePath = LongPackagePath / TEXT("Textures");
 
-	Vector<AtlasPage *> &pages = atlas->getPages();
+	Array<AtlasPage *> &pages = atlas->getPages();
 	for (size_t i = 0, n = pages.size(); i < n; i++) {
 		AtlasPage *page = pages[i];
 		const FString sourceTextureFilename = FPaths::Combine(*CurrentSourcePath, UTF8_TO_TCHAR(page->name.buffer()));

@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,8 +23,8 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 #include "SpineSlotData.h"
@@ -53,7 +53,13 @@ int SpineSlotData::get_index() {
 
 String SpineSlotData::get_name() {
 	SPINE_CHECK(get_spine_object(), String(""))
-	return get_spine_object()->getName().buffer();
+	String name;
+#if (VERSION_MAJOR >= 4 && VERSION_MINOR >= 5)
+	name = String::utf8(get_spine_object()->getName().buffer());
+#else
+	name.parse_utf8(get_spine_object()->getName().buffer());
+#endif
+	return name;
 }
 
 Ref<SpineBoneData> SpineSlotData::get_bone_data() {
@@ -66,36 +72,36 @@ Ref<SpineBoneData> SpineSlotData::get_bone_data() {
 
 Color SpineSlotData::get_color() {
 	SPINE_CHECK(get_spine_object(), Color(0, 0, 0, 0))
-	auto &color = get_spine_object()->getColor();
+	auto &color = get_spine_object()->getSetupPose().getColor();
 	return Color(color.r, color.g, color.b, color.a);
 }
 
 void SpineSlotData::set_color(Color v) {
 	SPINE_CHECK(get_spine_object(), )
-	auto &color = get_spine_object()->getColor();
+	auto &color = get_spine_object()->getSetupPose().getColor();
 	color.set(v.r, v.g, v.b, v.a);
 }
 
 Color SpineSlotData::get_dark_color() {
 	SPINE_CHECK(get_spine_object(), Color(0, 0, 0, 0))
-	auto &color = get_spine_object()->getDarkColor();
+	auto &color = get_spine_object()->getSetupPose().getDarkColor();
 	return Color(color.r, color.g, color.b, color.a);
 }
 
 void SpineSlotData::set_dark_color(Color v) {
 	SPINE_CHECK(get_spine_object(), )
-	auto &color = get_spine_object()->getDarkColor();
+	auto &color = get_spine_object()->getSetupPose().getDarkColor();
 	color.set(v.r, v.g, v.b, v.a);
 }
 
 bool SpineSlotData::has_dark_color() {
 	SPINE_CHECK(get_spine_object(), false)
-	return get_spine_object()->hasDarkColor();
+	return get_spine_object()->getSetupPose().hasDarkColor();
 }
 
 void SpineSlotData::set_has_dark_color(bool v) {
 	SPINE_CHECK(get_spine_object(), )
-	get_spine_object()->setHasDarkColor(v);
+	get_spine_object()->getSetupPose().setHasDarkColor(v);
 }
 
 String SpineSlotData::get_attachment_name() {

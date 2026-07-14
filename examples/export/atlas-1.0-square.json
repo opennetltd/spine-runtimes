@@ -32,6 +32,7 @@
 "bleed": false,
 "limitMemory": true,
 "grid": false,
+"packing": "polygons",
 "scale": [ 1 ],
 "scaleSuffix": [ "" ],
 "atlasExtension": ".atlas",

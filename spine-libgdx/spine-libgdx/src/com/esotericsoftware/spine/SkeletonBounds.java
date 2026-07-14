@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated February 20, 2024. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2024, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
- * https://esotericsoftware.com/spine-editor-license
+ * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,8 +23,8 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 package com.esotericsoftware.spine;
@@ -41,8 +41,8 @@ import com.esotericsoftware.spine.attachments.BoundingBoxAttachment;
  * provided along with convenience methods for doing hit detection. */
 public class SkeletonBounds {
 	private float minX, minY, maxX, maxY;
-	private Array<BoundingBoxAttachment> boundingBoxes = new Array();
-	private Array<FloatArray> polygons = new Array();
+	private Array<BoundingBoxAttachment> boundingBoxes = new Array(true, 8, BoundingBoxAttachment[]::new);
+	private Array<FloatArray> polygons = new Array(true, 8, FloatArray[]::new);
 	private Pool<FloatArray> polygonPool = new Pool() {
 		protected Object newObject () {
 			return new FloatArray();
@@ -55,26 +55,25 @@ public class SkeletonBounds {
 	 *           SkeletonBounds AABB methods will always return true. */
 	public void update (Skeleton skeleton, boolean updateAabb) {
 		if (skeleton == null) throw new IllegalArgumentException("skeleton cannot be null.");
+
 		Array<BoundingBoxAttachment> boundingBoxes = this.boundingBoxes;
 		Array<FloatArray> polygons = this.polygons;
-		Object[] slots = skeleton.slots.items;
-		int slotCount = skeleton.slots.size;
-
 		boundingBoxes.clear();
 		polygonPool.freeAll(polygons);
 		polygons.clear();
 
+		Slot[] slots = skeleton.slots.items;
+		int slotCount = skeleton.slots.size;
 		for (int i = 0; i < slotCount; i++) {
-			Slot slot = (Slot)slots[i];
+			Slot slot = slots[i];
 			if (!slot.bone.active) continue;
-			Attachment attachment = slot.attachment;
-			if (attachment instanceof BoundingBoxAttachment) {
-				BoundingBoxAttachment boundingBox = (BoundingBoxAttachment)attachment;
+			Attachment attachment = slot.appliedPose.attachment;
+			if (attachment instanceof BoundingBoxAttachment boundingBox) {
 				boundingBoxes.add(boundingBox);
 
 				FloatArray polygon = polygonPool.obtain();
 				polygons.add(polygon);
-				boundingBox.computeWorldVertices(slot, 0, boundingBox.getWorldVerticesLength(),
+				boundingBox.computeWorldVertices(skeleton, slot, 0, boundingBox.getWorldVerticesLength(),
 					polygon.setSize(boundingBox.getWorldVerticesLength()), 0, 2);
 			}
 		}
@@ -91,9 +90,9 @@ public class SkeletonBounds {
 
 	private void aabbCompute () {
 		float minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE;
-		Object[] polygons = this.polygons.items;
+		FloatArray[] polygons = this.polygons.items;
 		for (int i = 0, n = this.polygons.size; i < n; i++) {
-			FloatArray polygon = (FloatArray)polygons[i];
+			FloatArray polygon = polygons[i];
 			float[] vertices = polygon.items;
 			for (int ii = 0, nn = polygon.size; ii < nn; ii += 2) {
 				float x = vertices[ii];
@@ -144,9 +143,9 @@ public class SkeletonBounds {
 	/** Returns the first bounding box attachment that contains the point, or null. When doing many checks, it is usually more
 	 * efficient to only call this method if {@link #aabbContainsPoint(float, float)} returns true. */
 	public @Null BoundingBoxAttachment containsPoint (float x, float y) {
-		Object[] polygons = this.polygons.items;
+		FloatArray[] polygons = this.polygons.items;
 		for (int i = 0, n = this.polygons.size; i < n; i++)
-			if (containsPoint((FloatArray)polygons[i], x, y)) return boundingBoxes.get(i);
+			if (containsPoint(polygons[i], x, y)) return boundingBoxes.items[i];
 		return null;
 	}
 
@@ -174,9 +173,9 @@ public class SkeletonBounds {
 	 * is usually more efficient to only call this method if {@link #aabbIntersectsSegment(float, float, float, float)} returns
 	 * true. */
 	public @Null BoundingBoxAttachment intersectsSegment (float x1, float y1, float x2, float y2) {
-		Object[] polygons = this.polygons.items;
+		FloatArray[] polygons = this.polygons.items;
 		for (int i = 0, n = this.polygons.size; i < n; i++)
-			if (intersectsSegment((FloatArray)polygons[i], x1, y1, x2, y2)) return boundingBoxes.get(i);
+			if (intersectsSegment(polygons[i], x1, y1, x2, y2)) return boundingBoxes.items[i];
 		return null;
 	}
 
@@ -249,6 +248,6 @@ public class SkeletonBounds {
 	public @Null FloatArray getPolygon (BoundingBoxAttachment boundingBox) {
 		if (boundingBox == null) throw new IllegalArgumentException("boundingBox cannot be null.");
 		int index = boundingBoxes.indexOf(boundingBox, true);
-		return index == -1 ? null : polygons.get(index);
+		return index == -1 ? null : polygons.items[index];
 	}
 }

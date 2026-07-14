@@ -1,0 +1,74 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "shell",
+            "command": "swift",
+            "args": [
+                "build",
+                "-c", "debug",
+                "-Xswiftc", "-Onone",
+                "-Xswiftc", "-g",
+                "--product",
+                "SpineTest"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/test"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "label": "swift: Build Debug",
+            "detail": "Build SpineTest in debug mode"
+        },
+        {
+            "type": "shell", 
+            "command": "swift",
+            "args": [
+                "build",
+                "-c", "debug",
+                "-Xswiftc", "-Onone",
+                "-Xswiftc", "-g"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/test"
+            },
+            "group": "build",
+            "label": "swift: Build All",
+            "detail": "Build all targets"
+        },
+        {
+            "type": "shell",
+            "command": "swift",
+            "args": [
+                "build",
+                "-c", "debug",
+                "-Xswiftc", "-Onone",
+                "-Xswiftc", "-g",
+                "--product",
+                "SimpleTest"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/test"
+            },
+            "group": "build",
+            "label": "swift: Build SimpleTest",
+            "detail": "Build SimpleTest in debug mode"
+        },
+        {
+            "type": "shell",
+            "command": "swift",
+            "args": [
+                "package",
+                "clean"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/test"
+            },
+            "group": "none",
+            "label": "swift: Clean",
+            "detail": "Clean build artifacts"
+        }
+    ]
+}

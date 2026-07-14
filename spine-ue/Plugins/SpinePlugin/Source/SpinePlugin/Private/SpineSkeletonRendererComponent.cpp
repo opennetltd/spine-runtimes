@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,8 +23,8 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 #include "SpineSkeletonRendererComponent.h"
@@ -130,11 +130,12 @@ void USpineSkeletonRendererComponent::UpdateRenderer(USpineSkeletonComponent *co
 	}
 }
 
-void USpineSkeletonRendererComponent::UpdateMaterial(UTexture2D *Texture, UMaterialInstanceDynamic *&CurrentInstance, UMaterialInterface *ParentMaterial) {
+void USpineSkeletonRendererComponent::UpdateMaterial(UTexture2D *Texture, UMaterialInstanceDynamic *&CurrentInstance,
+													 UMaterialInterface *ParentMaterial) {
 
 	UTexture *oldTexture = nullptr;
-	if (!CurrentInstance || !CurrentInstance->GetTextureParameterValue(TextureParameterName, oldTexture) ||
-		oldTexture != Texture || CurrentInstance->Parent != ParentMaterial) {
+	if (!CurrentInstance || !CurrentInstance->GetTextureParameterValue(TextureParameterName, oldTexture) || oldTexture != Texture ||
+		CurrentInstance->Parent != ParentMaterial) {
 
 		UMaterialInstanceDynamic *material = UMaterialInstanceDynamic::Create(ParentMaterial, this);
 		material->SetTextureParameterValue(TextureParameterName, Texture);
@@ -142,7 +143,8 @@ void USpineSkeletonRendererComponent::UpdateMaterial(UTexture2D *Texture, UMater
 	}
 }
 
-void USpineSkeletonRendererComponent::Flush(int &Idx, TArray<FVector> &Vertices, TArray<int32> &Indices, TArray<FVector> &Normals, TArray<FVector2D> &Uvs, TArray<FColor> &Colors, UMaterialInstanceDynamic *Material) {
+void USpineSkeletonRendererComponent::Flush(int &Idx, TArray<FVector> &Vertices, TArray<int32> &Indices, TArray<FVector> &Normals,
+											TArray<FVector2D> &Uvs, TArray<FColor> &Colors, UMaterialInstanceDynamic *Material) {
 	if (Vertices.Num() == 0) return;
 	SetMaterial(Idx, Material);
 
@@ -185,7 +187,7 @@ void USpineSkeletonRendererComponent::UpdateMesh(USpineSkeletonComponent *compon
 	unsigned short quadIndices[] = {0, 1, 2, 0, 2, 3};
 
 	for (size_t i = 0; i < Skeleton->getSlots().size(); ++i) {
-		Vector<float> *attachmentVertices = &worldVertices;
+		Array<float> *attachmentVertices = &worldVertices;
 		unsigned short *attachmentIndices = nullptr;
 		int numVertices;
 		int numIndices;
@@ -194,10 +196,11 @@ void USpineSkeletonRendererComponent::UpdateMesh(USpineSkeletonComponent *compon
 		attachmentColor.set(1, 1, 1, 1);
 		float *attachmentUvs = nullptr;
 
-		Slot *slot = Skeleton->getDrawOrder()[i];
-		Attachment *attachment = slot->getAttachment();
+		Slot *slot = Skeleton->getDrawOrder().getAppliedPose()[i];
+		SlotPose &slotPose = slot->getAppliedPose();
+		Attachment *attachment = slotPose.getAttachment();
 
-		if (slot->getColor().a == 0 || !slot->getBone().isActive()) {
+		if (slotPose.getColor().a == 0 || !slot->getBone().isActive()) {
 			clipper.clipEnd(*slot);
 			continue;
 		}
@@ -206,7 +209,8 @@ void USpineSkeletonRendererComponent::UpdateMesh(USpineSkeletonComponent *compon
 			clipper.clipEnd(*slot);
 			continue;
 		}
-		if (!attachment->getRTTI().isExactly(RegionAttachment::rtti) && !attachment->getRTTI().isExactly(MeshAttachment::rtti) && !attachment->getRTTI().isExactly(ClippingAttachment::rtti)) {
+		if (!attachment->getRTTI().isExactly(RegionAttachment::rtti) && !attachment->getRTTI().isExactly(MeshAttachment::rtti) &&
+			!attachment->getRTTI().isExactly(ClippingAttachment::rtti)) {
 			clipper.clipEnd(*slot);
 			continue;
 		}
@@ -220,12 +224,14 @@ void USpineSkeletonRendererComponent::UpdateMesh(USpineSkeletonComponent *compon
 				continue;
 			}
 
+			Sequence &sequence = regionAttachment->getSequence();
+			int sequenceIndex = sequence.resolveIndex(slotPose);
 			attachmentColor.set(regionAttachment->getColor());
 			attachmentVertices->setSize(8, 0);
-			regionAttachment->computeWorldVertices(*slot, *attachmentVertices, 0, 2);
-			attachmentAtlasRegion = (AtlasRegion *) regionAttachment->getRegion();
+			regionAttachment->computeWorldVertices(*slot, regionAttachment->getOffsets(slotPose), *attachmentVertices, 0, 2);
+			attachmentAtlasRegion = (AtlasRegion *) sequence.getRegion(sequenceIndex);
 			attachmentIndices = quadIndices;
-			attachmentUvs = regionAttachment->getUVs().buffer();
+			attachmentUvs = sequence.getUVs(sequenceIndex).buffer();
 			numVertices = 4;
 			numIndices = 6;
 		} else if (attachment->getRTTI().isExactly(MeshAttachment::rtti)) {
@@ -237,17 +243,19 @@ void USpineSkeletonRendererComponent::UpdateMesh(USpineSkeletonComponent *compon
 				continue;
 			}
 
+			Sequence &sequence = mesh->getSequence();
+			int sequenceIndex = sequence.resolveIndex(slotPose);
 			attachmentColor.set(mesh->getColor());
 			attachmentVertices->setSize(mesh->getWorldVerticesLength(), 0);
-			mesh->computeWorldVertices(*slot, 0, mesh->getWorldVerticesLength(), attachmentVertices->buffer(), 0, 2);
-			attachmentAtlasRegion = (AtlasRegion *) mesh->getRegion();
+			mesh->computeWorldVertices(*Skeleton, *slot, 0, mesh->getWorldVerticesLength(), attachmentVertices->buffer(), 0, 2);
+			attachmentAtlasRegion = (AtlasRegion *) sequence.getRegion(sequenceIndex);
 			attachmentIndices = mesh->getTriangles().buffer();
-			attachmentUvs = mesh->getUVs().buffer();
+			attachmentUvs = sequence.getUVs(sequenceIndex).buffer();
 			numVertices = mesh->getWorldVerticesLength() >> 1;
 			numIndices = mesh->getTriangles().size();
 		} else /* clipping */ {
 			ClippingAttachment *clip = (ClippingAttachment *) attachment;
-			clipper.clipStart(*slot, clip);
+			clipper.clipStart(*Skeleton, *slot, clip);
 			continue;
 		}
 
@@ -268,7 +276,7 @@ void USpineSkeletonRendererComponent::UpdateMesh(USpineSkeletonComponent *compon
 		// to the correct skeleton data yet, we won't find any regions.
 		// ignore regions for which we can't find a material
 		UMaterialInstanceDynamic *material = nullptr;
-		int foundPageIndex = (int) (intptr_t) attachmentAtlasRegion->rendererObject;
+		int foundPageIndex = attachmentAtlasRegion->getPage() ? attachmentAtlasRegion->getPage()->index : -1;
 		if (foundPageIndex == -1) {
 			clipper.clipEnd(*slot);
 			continue;
@@ -313,10 +321,10 @@ void USpineSkeletonRendererComponent::UpdateMesh(USpineSkeletonComponent *compon
 
 		SetMaterial(meshSection, material);
 
-		uint8 r = static_cast<uint8>(Skeleton->getColor().r * slot->getColor().r * attachmentColor.r * 255);
-		uint8 g = static_cast<uint8>(Skeleton->getColor().g * slot->getColor().g * attachmentColor.g * 255);
-		uint8 b = static_cast<uint8>(Skeleton->getColor().b * slot->getColor().b * attachmentColor.b * 255);
-		uint8 a = static_cast<uint8>(Skeleton->getColor().a * slot->getColor().a * attachmentColor.a * 255);
+		uint8 r = static_cast<uint8>(Skeleton->getColor().r * slot->getAppliedPose().getColor().r * attachmentColor.r * 255);
+		uint8 g = static_cast<uint8>(Skeleton->getColor().g * slot->getAppliedPose().getColor().g * attachmentColor.g * 255);
+		uint8 b = static_cast<uint8>(Skeleton->getColor().b * slot->getAppliedPose().getColor().b * attachmentColor.b * 255);
+		uint8 a = static_cast<uint8>(Skeleton->getColor().a * slot->getAppliedPose().getColor().a * attachmentColor.a * 255);
 
 		float *verticesPtr = attachmentVertices->buffer();
 		for (int j = 0; j < numVertices << 1; j += 2) {
@@ -332,10 +340,9 @@ void USpineSkeletonRendererComponent::UpdateMesh(USpineSkeletonComponent *compon
 		int numTriangles = indices.Num() / 3;
 		for (int j = 0; j < numTriangles; j++) {
 			const int triangleIndex = j * 3;
-			if (FVector::CrossProduct(
-						vertices[indices[triangleIndex + 2]] - vertices[indices[triangleIndex]],
-						vertices[indices[triangleIndex + 1]] - vertices[indices[triangleIndex]])
-						.Y < 0.f) {
+			if (FVector::CrossProduct(vertices[indices[triangleIndex + 2]] - vertices[indices[triangleIndex]],
+									  vertices[indices[triangleIndex + 1]] - vertices[indices[triangleIndex]])
+					.Y < 0.f) {
 				const int32 targetVertex = indices[triangleIndex];
 				indices[triangleIndex] = indices[triangleIndex + 2];
 				indices[triangleIndex + 2] = targetVertex;

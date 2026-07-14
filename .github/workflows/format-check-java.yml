@@ -1,0 +1,34 @@
+name: Check Java Formatting
+
+on:
+  push:
+    branches:
+      - '**'
+    paths:
+      - 'spine-libgdx/**'
+      - 'spine-android/**'
+      - 'formatters/eclipse-formatter.xml'
+      - 'formatters/eclipse-formatter/**'
+      - 'formatters/format-java.sh'
+      - '.github/workflows/format-check-java.yml'
+  workflow_dispatch:
+
+jobs:
+  check-java:
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install JDK
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'zulu'
+        java-version: "16"
+
+    - name: Format Java
+      run: ./formatters/format-java.sh
+
+    - name: Check for changes
+      run: |
+        git ls-files -m
+        if [[ `git ls-files -m` ]]; then echo "Detected Java formatting errors!" & exit 1; fi

@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,31 +23,31 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
-import * as THREE from "three";
 import {
 	AnimationState,
 	AnimationStateData,
 	ClippingAttachment,
 	Color,
 	MeshAttachment,
-	NumberArrayLike,
+	type NumberArrayLike,
 	Physics,
 	RegionAttachment,
 	Skeleton,
-	SkeletonClipping,
-	SkeletonData,
 	SkeletonBinary,
+	SkeletonClipping,
+	type SkeletonData,
 	SkeletonJson,
 	Utils,
 	Vector2,
 } from "@esotericsoftware/spine-core";
+import * as THREE from "three";
 
-import { MaterialWithMap, MeshBatcher } from "./MeshBatcher.js";
-import { ThreeJsTexture } from "./ThreeJsTexture.js";
+import { type MaterialWithMap, MeshBatcher } from "./MeshBatcher.js";
+import type { ThreeJsTexture } from "./ThreeJsTexture.js";
 
 type SkeletonMeshMaterialParametersCustomizer = (materialParameters: THREE.MaterialParameters) => void;
 type SkeletonMeshConfiguration = {
@@ -83,6 +83,7 @@ export class SkeletonMesh extends THREE.Object3D {
 		alphaTest: 0.001,
 		vertexColors: true,
 		premultipliedAlpha: true,
+		forceSinglePass: true,
 	}
 
 	tempPos: Vector2 = new Vector2();
@@ -93,7 +94,7 @@ export class SkeletonMesh extends THREE.Object3D {
 	state: AnimationState;
 	zOffset: number = 0.1;
 
-	private batches = new Array<MeshBatcher>();
+	private batches = [] as MeshBatcher[];
 	private materialFactory: (parameters: THREE.MaterialParameters) => MaterialWithMap;
 	private nextBatchIndex = 0;
 	private clipper: SkeletonClipping = new SkeletonClipping();
@@ -101,7 +102,7 @@ export class SkeletonMesh extends THREE.Object3D {
 	static QUAD_TRIANGLES = [0, 1, 2, 2, 3, 0];
 	static VERTEX_SIZE = 2 + 2 + 4;
 	private vertexSize = 2 + 2 + 4;
-	private twoColorTint;
+	private twoColorTint: boolean;
 
 	private vertices = Utils.newFloatArray(1024);
 	private tempColor = new Color();
@@ -109,6 +110,58 @@ export class SkeletonMesh extends THREE.Object3D {
 
 	private _castShadow = false;
 	private _receiveShadow = false;
+	private _physicsPositionInheritanceFactorX = 1;
+	private _physicsPositionInheritanceFactorY = 1;
+	private _physicsRotationInheritanceFactor = 1;
+	private hasLastPhysicsTransform = false;
+	private lastPhysicsX = 0;
+	private lastPhysicsY = 0;
+	private lastPhysicsRotation = 0;
+	private readonly currentPhysicsPosition = new THREE.Vector3();
+	private readonly lastPhysicsPosition = new THREE.Vector3();
+	private readonly physicsWorldPosition = new THREE.Vector3();
+	private readonly physicsWorldQuaternion = new THREE.Quaternion();
+	private readonly physicsWorldScale = new THREE.Vector3();
+	private readonly physicsEuler = new THREE.Euler();
+
+	/** Scales how much horizontal translation of this Three.js object is inherited by skeleton physics constraints. */
+	public get physicsPositionInheritanceFactorX (): number {
+		return this._physicsPositionInheritanceFactorX;
+	}
+
+	/** Scales how much vertical translation of this Three.js object is inherited by skeleton physics constraints. */
+	public get physicsPositionInheritanceFactorY (): number {
+		return this._physicsPositionInheritanceFactorY;
+	}
+
+	/**
+	 * Sets how much translation of this Three.js object is inherited by skeleton physics constraints.
+	 * The default is (1, 1), which applies object translation normally. Use (0, 0)
+	 * to prevent object translation from affecting physics constraints.
+	 */
+	public setPhysicsPositionInheritanceFactor (x: number, y: number): void {
+		const wasDisabled = this._physicsPositionInheritanceFactorX === 0 && this._physicsPositionInheritanceFactorY === 0;
+		const isEnabled = x !== 0 || y !== 0;
+
+		this._physicsPositionInheritanceFactorX = x;
+		this._physicsPositionInheritanceFactorY = y;
+		if (wasDisabled && isEnabled) this.resetPhysicsPosition();
+	}
+
+	/**
+	 * Scales how much rotation of this Three.js object is inherited by skeleton physics constraints.
+	 * The default is `1`, which applies object rotation normally. Use `0` to prevent object rotation
+	 * from affecting physics constraints.
+	 */
+	public get physicsRotationInheritanceFactor (): number {
+		return this._physicsRotationInheritanceFactor;
+	}
+
+	public set physicsRotationInheritanceFactor (value: number) {
+		const wasDisabled = this._physicsRotationInheritanceFactor === 0;
+		this._physicsRotationInheritanceFactor = value;
+		if (wasDisabled && value !== 0) this.resetPhysicsRotation();
+	}
 
 	/**
 	 * Create an Object3D containing meshes representing your Spine animation.
@@ -148,7 +201,7 @@ export class SkeletonMesh extends THREE.Object3D {
 
 		this.materialFactory = skeletonDataOrConfiguration.materialFactory ?? (() => new THREE.MeshBasicMaterial(SkeletonMesh.DEFAULT_MATERIAL_PARAMETERS));
 		this.skeleton = new Skeleton(skeletonDataOrConfiguration.skeletonData);
-		let animData = new AnimationStateData(skeletonDataOrConfiguration.skeletonData);
+		const animData = new AnimationStateData(skeletonDataOrConfiguration.skeletonData);
 		this.state = new AnimationState(animData);
 
 		Object.defineProperty(this, 'castShadow', {
@@ -178,25 +231,109 @@ export class SkeletonMesh extends THREE.Object3D {
 	}
 
 	update (deltaTime: number) {
-		let state = this.state;
-		let skeleton = this.skeleton;
+		const state = this.state;
+		const skeleton = this.skeleton;
 
 		state.update(deltaTime);
 		state.apply(skeleton);
+		this.applyTransformMovementToPhysics();
 		skeleton.update(deltaTime);
 		skeleton.updateWorldTransform(Physics.update);
 
 		this.updateGeometry();
 	}
 
+	/** Resets the position used for calculating inherited physics translation. */
+	public resetPhysicsPosition (): void {
+		this.getWorldPosition(this.physicsWorldPosition);
+		this.lastPhysicsX = this.physicsWorldPosition.x;
+		this.lastPhysicsY = this.physicsWorldPosition.y;
+		if (!this.hasLastPhysicsTransform) this.lastPhysicsRotation = this.getPhysicsRotation();
+		this.hasLastPhysicsTransform = true;
+	}
+
+	/** Resets the rotation used for calculating inherited physics rotation. */
+	public resetPhysicsRotation (): void {
+		this.getWorldPosition(this.physicsWorldPosition);
+		this.lastPhysicsRotation = this.getPhysicsRotation();
+		if (!this.hasLastPhysicsTransform) {
+			this.lastPhysicsX = this.physicsWorldPosition.x;
+			this.lastPhysicsY = this.physicsWorldPosition.y;
+		}
+		this.hasLastPhysicsTransform = true;
+	}
+
+	/** Resets the transform used for calculating inherited physics translation and rotation. */
+	public resetPhysicsTransform (): void {
+		this.resetPhysicsPosition();
+		this.resetPhysicsRotation();
+	}
+
+	private applyTransformMovementToPhysics (): void {
+		this.getWorldPosition(this.physicsWorldPosition);
+		const { x, y } = this.physicsWorldPosition;
+		const currentRotation = this.getPhysicsRotation();
+
+		if (this.hasLastPhysicsTransform) {
+			this.applyPositionMovementToPhysics(x, y);
+			this.applyRotationMovementToPhysics(currentRotation);
+		}
+
+		this.setLastPhysicsTransform(x, y, currentRotation);
+	}
+
+	private applyPositionMovementToPhysics (currentX: number, currentY: number): void {
+		if (this._physicsPositionInheritanceFactorX === 0 && this._physicsPositionInheritanceFactorY === 0) return;
+
+		const currentPosition = this.currentPhysicsPosition;
+		currentPosition.set(currentX, currentY, 0);
+		this.worldToLocal(currentPosition);
+
+		const lastPosition = this.lastPhysicsPosition;
+		lastPosition.set(this.lastPhysicsX, this.lastPhysicsY, 0);
+		this.worldToLocal(lastPosition);
+
+		this.skeleton.physicsTranslate(
+			(currentPosition.x - lastPosition.x) * this._physicsPositionInheritanceFactorX,
+			(currentPosition.y - lastPosition.y) * this._physicsPositionInheritanceFactorY
+		);
+	}
+
+	private applyRotationMovementToPhysics (currentRotation: number): void {
+		const rotationFactor = this._physicsRotationInheritanceFactor;
+		if (rotationFactor === 0) return;
+
+		this.skeleton.physicsRotate(0, 0, this.getRotationDelta(currentRotation, this.lastPhysicsRotation) * rotationFactor);
+	}
+
+	private setLastPhysicsTransform (x: number, y: number, rotation: number): void {
+		this.lastPhysicsX = x;
+		this.lastPhysicsY = y;
+		this.lastPhysicsRotation = rotation;
+		this.hasLastPhysicsTransform = true;
+	}
+
+	private getPhysicsRotation (): number {
+		this.updateWorldMatrix(true, false);
+		this.matrixWorld.decompose(this.physicsWorldPosition, this.physicsWorldQuaternion, this.physicsWorldScale);
+		this.physicsEuler.setFromQuaternion(this.physicsWorldQuaternion, 'XYZ');
+		return this.physicsEuler.z * 180 / Math.PI;
+	}
+
+	private getRotationDelta (current: number, previous: number): number {
+		let delta = current - previous;
+		delta = (delta + 180) % 360 - 180;
+		return delta < -180 ? delta + 360 : delta;
+	}
+
 	dispose () {
-		for (var i = 0; i < this.batches.length; i++) {
+		for (let i = 0; i < this.batches.length; i++) {
 			this.batches[i].dispose();
 		}
 	}
 
 	private clearBatches () {
-		for (var i = 0; i < this.batches.length; i++) {
+		for (let i = 0; i < this.batches.length; i++) {
 			this.batches[i].clear();
 			this.batches[i].visible = false;
 		}
@@ -204,14 +341,14 @@ export class SkeletonMesh extends THREE.Object3D {
 	}
 
 	private nextBatch () {
-		if (this.batches.length == this.nextBatchIndex) {
-			let batch = new MeshBatcher(MeshBatcher.MAX_VERTICES, this.materialFactory, this.twoColorTint);
+		if (this.batches.length === this.nextBatchIndex) {
+			const batch = new MeshBatcher(MeshBatcher.MAX_VERTICES, this.materialFactory, this.twoColorTint);
 			batch.castShadow = this._castShadow;
 			batch.receiveShadow = this._receiveShadow;
 			this.add(batch);
 			this.batches.push(batch);
 		}
-		let batch = this.batches[this.nextBatchIndex++];
+		const batch = this.batches[this.nextBatchIndex++];
 		batch.visible = true;
 		return batch;
 	}
@@ -219,72 +356,78 @@ export class SkeletonMesh extends THREE.Object3D {
 	private updateGeometry () {
 		this.clearBatches();
 
-		let tempLight = this.tempLight;
-		let tempDark = this.tempDark;
-		let clipper = this.clipper;
+		const clipper = this.clipper;
 
 		let vertices: NumberArrayLike = this.vertices;
 		let triangles: Array<number> | null = null;
 		let uvs: NumberArrayLike | null = null;
-		let drawOrder = this.skeleton.drawOrder;
+		const skeleton = this.skeleton;
+		const drawOrder = skeleton.drawOrder.appliedPose;
 		let batch = this.nextBatch();
 		batch.begin();
 		let z = 0;
-		let zOffset = this.zOffset;
+		const zOffset = this.zOffset;
+		const vertexSize = this.vertexSize;
 		for (let i = 0, n = drawOrder.length; i < n; i++) {
-			let vertexSize = clipper.isClipping() ? 2 : this.vertexSize;
-			let slot = drawOrder[i];
+			const slot = drawOrder[i];
 			if (!slot.bone.active) {
-				clipper.clipEndWithSlot(slot);
+				clipper.clipEnd(slot);
 				continue;
 			}
-			let attachment = slot.getAttachment();
+			const pose = slot.appliedPose;
+			const attachment = pose.attachment;
 			let attachmentColor: Color | null;
 			let texture: ThreeJsTexture | null;
 			let numFloats = 0;
 			if (attachment instanceof RegionAttachment) {
-				let region = <RegionAttachment>attachment;
-				attachmentColor = region.color;
+				attachmentColor = attachment.color;
 				vertices = this.vertices;
 				numFloats = vertexSize * 4;
-				region.computeWorldVertices(slot, vertices, 0, vertexSize);
+
+				const sequence = attachment.sequence;
+				const sequenceIndex = sequence.resolveIndex(pose);
+				attachment.computeWorldVertices(slot, attachment.getOffsets(pose), vertices, 0, vertexSize);
+
 				triangles = SkeletonMesh.QUAD_TRIANGLES;
-				uvs = region.uvs;
-				texture = <ThreeJsTexture>region.region!.texture;
+				uvs = sequence.getUVs(sequenceIndex);
+				texture = sequence.regions[sequenceIndex]?.texture;
 			} else if (attachment instanceof MeshAttachment) {
-				let mesh = <MeshAttachment>attachment;
-				attachmentColor = mesh.color;
+				attachmentColor = attachment.color;
 				vertices = this.vertices;
-				numFloats = (mesh.worldVerticesLength >> 1) * vertexSize;
+				numFloats = (attachment.worldVerticesLength >> 1) * vertexSize;
 				if (numFloats > vertices.length) {
 					vertices = this.vertices = Utils.newFloatArray(numFloats);
 				}
-				mesh.computeWorldVertices(
+				attachment.computeWorldVertices(
+					skeleton,
 					slot,
 					0,
-					mesh.worldVerticesLength,
+					attachment.worldVerticesLength,
 					vertices,
 					0,
 					vertexSize
 				);
-				triangles = mesh.triangles;
-				uvs = mesh.uvs;
-				texture = <ThreeJsTexture>mesh.region!.texture;
+				triangles = attachment.triangles;
+
+				const sequence = attachment.sequence;
+				const sequenceIndex = sequence.resolveIndex(pose);
+
+				uvs = sequence.getUVs(sequenceIndex);
+				texture = sequence.regions[sequenceIndex]?.texture;
 			} else if (attachment instanceof ClippingAttachment) {
-				let clip = <ClippingAttachment>attachment;
-				clipper.clipStart(slot, clip);
+				clipper.clipEnd(slot);
+				clipper.clipStart(skeleton, slot, attachment);
 				continue;
 			} else {
-				clipper.clipEndWithSlot(slot);
+				clipper.clipEnd(slot);
 				continue;
 			}
 
 			if (texture != null) {
-				let skeleton = slot.bone.skeleton;
-				let skeletonColor = skeleton.color;
-				let slotColor = slot.color;
-				let alpha = skeletonColor.a * slotColor.a * attachmentColor.a;
-				let color = this.tempColor;
+				const skeletonColor = skeleton.color;
+				const slotColor = pose.color;
+				const alpha = skeletonColor.a * slotColor.a * attachmentColor.a;
+				const color = this.tempColor;
 				color.set(
 					skeletonColor.r * slotColor.r * attachmentColor.r * alpha,
 					skeletonColor.g * slotColor.g * attachmentColor.g * alpha,
@@ -292,13 +435,13 @@ export class SkeletonMesh extends THREE.Object3D {
 					alpha
 				);
 
-				let darkColor = this.tempDarkColor;
-				if (!slot.darkColor)
-					darkColor.set(1, 1, 1, 0);
+				const darkColor = this.tempDarkColor;
+				if (!pose.darkColor)
+					darkColor.set(0, 0, 0, 1);
 				else {
-					darkColor.r = slot.darkColor.r * alpha;
-					darkColor.g = slot.darkColor.g * alpha;
-					darkColor.b = slot.darkColor.b * alpha;
+					darkColor.r = pose.darkColor.r * alpha;
+					darkColor.g = pose.darkColor.g * alpha;
+					darkColor.b = pose.darkColor.b * alpha;
 					darkColor.a = 1;
 				}
 
@@ -307,24 +450,15 @@ export class SkeletonMesh extends THREE.Object3D {
 				let finalIndices: NumberArrayLike;
 				let finalIndicesLength: number;
 
-				if (clipper.isClipping()) {
-					clipper.clipTriangles(
-						vertices,
-						triangles,
-						triangles.length,
-						uvs,
-						color,
-						tempLight,
-						this.twoColorTint,
-					);
-					let clippedVertices = clipper.clippedVertices;
-					let clippedTriangles = clipper.clippedTriangles;
+				if (clipper.isClipping() && clipper.clipTriangles(vertices, triangles, triangles.length, uvs, color, darkColor, this.twoColorTint, vertexSize)) {
+					const clippedVertices = clipper.clippedVertices;
+					const clippedTriangles = clipper.clippedTriangles;
 					finalVertices = clippedVertices;
 					finalVerticesLength = clippedVertices.length;
 					finalIndices = clippedTriangles;
 					finalIndicesLength = clippedTriangles.length;
 				} else {
-					let verts = vertices;
+					const verts = vertices;
 					if (!this.twoColorTint) {
 						for (let v = 2, u = 0, n = numFloats; v < n; v += vertexSize, u += 2) {
 							verts[v] = color.r;
@@ -355,8 +489,8 @@ export class SkeletonMesh extends THREE.Object3D {
 					finalIndicesLength = triangles.length;
 				}
 
-				if (finalVerticesLength == 0 || finalIndicesLength == 0) {
-					clipper.clipEndWithSlot(slot);
+				if (finalVerticesLength === 0 || finalIndicesLength === 0) {
+					clipper.clipEnd(slot);
 					continue;
 				}
 
@@ -390,7 +524,7 @@ export class SkeletonMesh extends THREE.Object3D {
 				z += zOffset;
 			}
 
-			clipper.clipEndWithSlot(slot);
+			clipper.clipEnd(slot);
 		}
 		clipper.clipEnd();
 		batch.end();

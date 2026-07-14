@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated February 20, 2024. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2024, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
- * https://esotericsoftware.com/spine-editor-license
+ * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,8 +23,8 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 package com.esotericsoftware.spine;
@@ -43,6 +43,7 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.Texture.TextureFilter;
+import com.badlogic.gdx.math.Interpolation;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
@@ -55,6 +56,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.List;
 import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane;
+import com.badlogic.gdx.scenes.scene2d.ui.SelectBox;
 import com.badlogic.gdx.scenes.scene2d.ui.Slider;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
@@ -64,10 +66,10 @@ import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.scenes.scene2d.utils.Drawable;
 import com.badlogic.gdx.utils.Align;
+import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Null;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 
-import com.esotericsoftware.spine.Animation.MixBlend;
 import com.esotericsoftware.spine.AnimationState.TrackEntry;
 
 import java.awt.FileDialog;
@@ -144,6 +146,8 @@ class SkeletonViewerUI {
 	Slider mixSlider = new Slider(0, 4, 0.01f, false, skin);
 	Label mixLabel = new Label("0.3s", skin);
 
+	SelectBox<MixInterpolation> mixInterpolation = new SelectBox(skin, "default");
+
 	Label statusLabel = new Label("", skin);
 	WidgetGroup toasts = new WidgetGroup();
 
@@ -189,6 +193,14 @@ class SkeletonViewerUI {
 
 		mixSlider.setValue(0.3f);
 		mixSlider.setSnapToValues(0.12f, 1, 1.5f, 2, 2.5f, 3, 3.5f);
+
+		mixInterpolation.setItems(Array.with( //
+			new MixInterpolation("linear", linear), //
+			new MixInterpolation("slowFast", slowFast), //
+			new MixInterpolation("fastSlow", fastSlow), //
+			new MixInterpolation("smooth", smooth), //
+			new MixInterpolation("circle", circle) //
+		));
 
 		speedSlider.setValue(1);
 		speedSlider.setSnapToValues(0.09f, 0.5f, 0.75f, 1, 1.25f, 1.5f, 2, 2.5f);
@@ -319,6 +331,7 @@ class SkeletonViewerUI {
 			Table table = table();
 			table.add(mixLabel).width(29);
 			table.add(mixSlider).growX();
+			table.add(mixInterpolation);
 			root.add(table).fill().row();
 		}
 
@@ -370,23 +383,22 @@ class SkeletonViewerUI {
 
 		setupPoseButton.addListener(new ChangeListener() {
 			public void changed (ChangeEvent event, Actor actor) {
-				if (viewer.skeleton != null) viewer.skeleton.setToSetupPose();
+				if (viewer.skeleton != null) viewer.skeleton.setupPose();
 			}
 		});
 		bonesSetupPoseButton.addListener(new ChangeListener() {
 			public void changed (ChangeEvent event, Actor actor) {
-				if (viewer.skeleton != null) viewer.skeleton.setBonesToSetupPose();
+				if (viewer.skeleton != null) viewer.skeleton.setupPoseBones();
 			}
 		});
 		slotsSetupPoseButton.addListener(new ChangeListener() {
 			public void changed (ChangeEvent event, Actor actor) {
-				if (viewer.skeleton != null) viewer.skeleton.setSlotsToSetupPose();
+				if (viewer.skeleton != null) viewer.skeleton.setupPoseSlots();
 			}
 		});
 
 		reloadButton.addListener(new ChangeListener() {
 			public void changed (ChangeEvent event, Actor actor) {
-				viewer.resetCameraPosition();
 				if (viewer.loadSkeleton(viewer.lastFile)) toast("Reloaded.");
 			}
 		});
@@ -481,7 +493,7 @@ class SkeletonViewerUI {
 				alphaLabel.setText(Integer.toString((int)(alphaSlider.getValue() * 100)) + "%");
 				int track = trackButtons.getCheckedIndex();
 				if (track > 0) {
-					TrackEntry current = viewer.state.getCurrent(track);
+					TrackEntry current = viewer.state.getTrack(track);
 					if (current != null) {
 						current.setAlpha(alphaSlider.getValue());
 						current.resetRotationDirections();
@@ -547,7 +559,7 @@ class SkeletonViewerUI {
 						viewer.skeleton.setSkin((Skin)null);
 					else
 						viewer.skeleton.setSkin(skinName);
-					viewer.skeleton.setSlotsToSetupPose();
+					viewer.skeleton.setupPoseSlots();
 				}
 			}
 		});
@@ -557,7 +569,7 @@ class SkeletonViewerUI {
 			public void changed (ChangeEvent event, Actor actor) {
 				int track = trackButtons.getCheckedIndex();
 				if (track == -1) return;
-				TrackEntry current = viewer.state.getCurrent(track);
+				TrackEntry current = viewer.state.getTrack(track);
 				animationList.getSelection().setProgrammaticChangeEvents(false);
 				animationList.setSelected(current == null ? null : current.animation.name);
 				animationList.getSelection().setProgrammaticChangeEvents(true);
@@ -572,10 +584,7 @@ class SkeletonViewerUI {
 				if (current != null) {
 					loopCheckbox.setChecked(current.getLoop());
 					reverseCheckbox.setChecked(current.getReverse());
-					if (track > 0) {
-						addCheckbox.setChecked(current.getMixBlend() == MixBlend.add);
-						holdPrevCheckbox.setChecked(current.getHoldPrevious());
-					}
+					if (track > 0) addCheckbox.setChecked(current.getAdditive());
 				}
 			}
 		};
@@ -659,7 +668,7 @@ class SkeletonViewerUI {
 	}
 
 	void render () {
-		if (viewer.state != null && viewer.state.getCurrent(trackButtons.getCheckedIndex()) == null) {
+		if (viewer.state != null && viewer.state.getTrack(trackButtons.getCheckedIndex()) == null) {
 			animationList.getSelection().setProgrammaticChangeEvents(false);
 			animationList.setSelected(null);
 			animationList.getSelection().setProgrammaticChangeEvents(true);
@@ -724,7 +733,7 @@ class SkeletonViewerUI {
 		prefs.putFloat("x", camera.position.x);
 		prefs.putFloat("y", camera.position.y);
 		if (viewer.state != null) {
-			TrackEntry current = viewer.state.getCurrent(0);
+			TrackEntry current = viewer.state.getTrack(0);
 			if (current != null) {
 				String name = current.animation.name;
 				if (name.equals("<empty>")) name = current.next == null ? "" : current.next.animation.name;
@@ -780,6 +789,20 @@ class SkeletonViewerUI {
 		protected Drawable getImageDrawable () {
 			if (trackButtons.getCheckedIndex() == 0) return getStyle().checkboxOffDisabled;
 			return super.getImageDrawable();
+		}
+	}
+
+	static class MixInterpolation {
+		String name;
+		Interpolation interpolation;
+
+		MixInterpolation (String name, Interpolation interpolation) {
+			this.name = name;
+			this.interpolation = interpolation;
+		}
+
+		public final String toString () {
+			return name;
 		}
 	}
 }

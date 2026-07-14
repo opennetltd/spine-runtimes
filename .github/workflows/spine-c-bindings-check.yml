@@ -1,0 +1,80 @@
+name: spine-c bindings check
+
+on:
+  push:
+    branches:
+      - '*'
+
+jobs:
+  check-bindings:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: 'recursive'
+
+    - name: Check if branch qualifies for bindings check
+      run: |
+        BRANCH_NAME=${GITHUB_REF#refs/heads/}
+        echo "Branch: $BRANCH_NAME"
+
+        # Strip -beta suffix and extract version
+        VERSION=$(echo "$BRANCH_NAME" | sed 's/-beta$//')
+
+        # Check if it's a version branch (starts with number)
+        if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+'; then
+          echo "Not a version branch, skipping bindings check"
+          exit 0
+        fi
+
+        # Extract major.minor version
+        MAJOR=$(echo "$VERSION" | cut -d. -f1)
+        MINOR=$(echo "$VERSION" | cut -d. -f2)
+
+        # Check if version >= 4.3
+        if [ "$MAJOR" -gt 4 ] || ([ "$MAJOR" -eq 4 ] && [ "$MINOR" -ge 3 ]); then
+          echo "Branch qualifies for bindings check (version $MAJOR.$MINOR >= 4.3)"
+          echo "SHOULD_CHECK=true" >> $GITHUB_ENV
+        else
+          echo "Branch version $MAJOR.$MINOR < 4.3, skipping bindings check"
+          echo "SHOULD_CHECK=false" >> $GITHUB_ENV
+        fi
+
+    - name: Setup Node.js
+      if: env.SHOULD_CHECK == 'true'
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: Install build dependencies
+      if: env.SHOULD_CHECK == 'true'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential cmake ninja-build
+
+    - name: Setup clang-format
+      run: ./formatters/setup-clang-format-docker.sh
+
+    - name: Generate and compile spine-c bindings
+      if: env.SHOULD_CHECK == 'true'
+      run: |
+        cd spine-c
+        ./build.sh codegen
+        ./build.sh clean
+
+    - name: Check for changes in generated bindings
+      if: env.SHOULD_CHECK == 'true'
+      run: |
+        if ! git diff --quiet; then
+          echo "❌ Generated bindings have changed!"
+          echo "This indicates that spine-cpp has been modified but spine-c bindings haven't been regenerated."
+          echo ""
+          echo "Changed files:"
+          git diff --name-only
+          echo ""
+          echo "Please run './generate-all-bindings.sh' locally and commit the changes."
+          exit 1
+        else
+          echo "✅ Generated bindings are up to date"
+        fi

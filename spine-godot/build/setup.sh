@@ -60,7 +60,8 @@ if [ $dev = "true" ]; then
 		./build/install-macos-vulkan-sdk.sh
 	fi
 fi
-cp -r ../spine-cpp/spine-cpp spine_godot
+rm -rf spine_godot/spine-cpp
+cp -r ../spine-cpp spine_godot
 
 # Apply patch for 4.3-stable, see https://github.com/godotengine/godot/issues/95861/#issuecomment-2486021565
 if [ "$branch" = "4.3-stable" ]; then
@@ -70,6 +71,68 @@ if [ "$branch" = "4.3-stable" ]; then
     popd
 fi
 
+# Apply iOS Vulkan fix for C++ module imports in extern "C" blocks
+# This fixes compilation errors with newer Xcode versions on Godot 4.x
+if [[ "$branch" == 4* ]]; then
+    pushd godot
+    if [ -f platform/ios/detect.py ]; then
+        # Check if the fix is already applied
+        if ! grep -q "Wno-error=module-import-in-extern-c" platform/ios/detect.py; then
+            # Insert the fix after the -Wno-ambiguous-macro line
+            sed -i.bak '/Wno-ambiguous-macro/a\
+\
+    # Fix for C++ module imports in extern "C" blocks in Vulkan headers\
+    env.Append(CCFLAGS=["-Wno-error=module-import-in-extern-c"])
+' platform/ios/detect.py && rm platform/ios/detect.py.bak
+            echo "Applied iOS Vulkan fix to platform/ios/detect.py"
+        fi
+    fi
+    popd
+fi
+
 popd
+
+# Generate compile_commands.json for IDE integration (only in dev mode)
+if [ $dev = "true" ]; then
+	echo "Generating compile_commands.json for IDE integration..."
+	pushd ../godot > /dev/null
+
+	# Detect architecture for macOS
+	arch=""
+	platform=""
+	if [[ "$OSTYPE" == "darwin"* ]]; then
+		if [ `uname -m` == "arm64" ]; then
+			arch="arch=arm64"
+		else
+			arch="arch=x86_64"
+		fi
+		platform="platform=osx"
+	elif [[ "$OSTYPE" == "msys"* ]] || [[ "$OSTYPE" == "win32"* ]]; then
+		platform="platform=windows"
+	else
+		# Linux - only generate if X11 dev libraries are available
+		if pkg-config --exists x11 2>/dev/null; then
+			platform="platform=x11"
+		else
+			echo "Skipping compile_commands.json generation (X11 libraries not available)"
+			popd > /dev/null
+			popd > /dev/null
+			exit 0
+		fi
+	fi
+
+	# Generate compilation database without building
+	scons compiledb=yes custom_modules="../spine_godot" opengl3=yes $platform $arch compiledb
+
+	# Copy to parent directory for easy IDE access
+	if [ -f compile_commands.json ]; then
+		cp compile_commands.json ..
+		echo "compile_commands.json generated successfully and copied to spine-godot/"
+	else
+		echo "Warning: Failed to generate compile_commands.json"
+	fi
+
+	popd > /dev/null
+fi
 
 popd > /dev/null

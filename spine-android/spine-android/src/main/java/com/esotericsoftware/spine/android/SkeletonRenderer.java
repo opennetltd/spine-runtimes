@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,8 +23,8 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 package com.esotericsoftware.spine.android;
@@ -39,10 +39,12 @@ import com.badlogic.gdx.utils.ShortArray;
 import com.esotericsoftware.spine.BlendMode;
 import com.esotericsoftware.spine.Skeleton;
 import com.esotericsoftware.spine.Slot;
+import com.esotericsoftware.spine.SlotPose;
 import com.esotericsoftware.spine.attachments.Attachment;
 import com.esotericsoftware.spine.attachments.ClippingAttachment;
 import com.esotericsoftware.spine.attachments.MeshAttachment;
 import com.esotericsoftware.spine.attachments.RegionAttachment;
+import com.esotericsoftware.spine.attachments.Sequence;
 import com.esotericsoftware.spine.utils.SkeletonClipping;
 
 import android.graphics.Bitmap;
@@ -98,9 +100,10 @@ public class SkeletonRenderer {
 		commandList.add(command);
 		int vertexStart = 0;
 
-		Object[] drawOrder = skeleton.getDrawOrder().items;
-		for (int i = 0, n = skeleton.getDrawOrder().size; i < n; i++) {
-			Slot slot = (Slot)drawOrder[i];
+		Array<Slot> drawOrder = skeleton.getDrawOrder().getAppliedPose();
+		Slot[] drawOrderItems = drawOrder.items;
+		for (int i = 0, n = drawOrder.size; i < n; i++) {
+			Slot slot = drawOrderItems[i];
 			if (!slot.getBone().isActive()) {
 				clipper.clipEnd(slot);
 				continue;
@@ -110,7 +113,8 @@ public class SkeletonRenderer {
 			int vertexSize = 2;
 			float[] uvs = null;
 			short[] indices = null;
-			Attachment attachment = slot.getAttachment();
+			SlotPose pose = slot.getAppliedPose();
+			Attachment attachment = pose.getAttachment();
 			if (attachment == null) {
 				clipper.clipEnd(slot);
 				continue;
@@ -119,8 +123,9 @@ public class SkeletonRenderer {
 			if (attachment instanceof RegionAttachment) {
 				RegionAttachment region = (RegionAttachment)attachment;
 				verticesLength = vertexSize << 2;
-				if (region.getSequence() != null) region.getSequence().apply(slot, region);
-				AndroidTexture texture = (AndroidTexture)region.getRegion().getTexture();
+				Sequence sequence = region.getSequence();
+				int sequenceIndex = sequence.resolveIndex(pose);
+				AndroidTexture texture = (AndroidTexture)sequence.getRegion(sequenceIndex).getTexture();
 				BlendMode blendMode = slot.getData().getBlendMode();
 				if (command.blendMode == null && command.texture == null) {
 					command.blendMode = blendMode;
@@ -136,15 +141,17 @@ public class SkeletonRenderer {
 				}
 
 				command.vertices.setSize(command.vertices.size + verticesLength);
-				region.computeWorldVertices(slot, command.vertices.items, vertexStart, vertexSize);
-				uvs = region.getUVs();
+				region.computeWorldVertices(slot, sequence.getOffsets(sequenceIndex), command.vertices.items, vertexStart,
+					vertexSize);
+				uvs = sequence.getUVs(sequenceIndex);
 				indices = quadTriangles;
 				color = region.getColor();
 			} else if (attachment instanceof MeshAttachment) {
 				MeshAttachment mesh = (MeshAttachment)attachment;
 				verticesLength = mesh.getWorldVerticesLength();
-				if (mesh.getSequence() != null) mesh.getSequence().apply(slot, mesh);
-				AndroidTexture texture = (AndroidTexture)mesh.getRegion().getTexture();
+				Sequence sequence = mesh.getSequence();
+				int sequenceIndex = sequence.resolveIndex(pose);
+				AndroidTexture texture = (AndroidTexture)sequence.getRegion(sequenceIndex).getTexture();
 				BlendMode blendMode = slot.getData().getBlendMode();
 
 				if (command.blendMode == null && command.texture == null) {
@@ -161,19 +168,19 @@ public class SkeletonRenderer {
 				}
 
 				command.vertices.setSize(command.vertices.size + verticesLength);
-				mesh.computeWorldVertices(slot, 0, verticesLength, command.vertices.items, vertexStart, vertexSize);
-				uvs = mesh.getUVs();
+				mesh.computeWorldVertices(skeleton, slot, 0, verticesLength, command.vertices.items, vertexStart, vertexSize);
+				uvs = sequence.getUVs(sequenceIndex);
 				indices = mesh.getTriangles();
 				color = mesh.getColor();
 			} else if (attachment instanceof ClippingAttachment) {
 				ClippingAttachment clip = (ClippingAttachment)attachment;
-				clipper.clipStart(slot, clip);
+				clipper.clipStart(skeleton, slot, clip);
 				continue;
 			} else {
 				continue;
 			}
 
-			Color slotColor = slot.getColor();
+			Color slotColor = pose.getColor();
 			int c = (int)(a * slotColor.a * color.a * 255) << 24 //
 				| (int)(r * slotColor.r * color.r * 255) << 16 //
 				| (int)(g * slotColor.g * color.g * 255) << 8 //

@@ -12,14 +12,9 @@ A new Flutter FFI plugin project.
   s.homepage         = 'http://example.com'
   s.license          = { :file => '../LICENSE' }
   s.author           = { 'Your Company' => 'email@example.com' }
-
-  # This will ensure the source files in Classes/ are included in the native
-  # builds of apps using this FFI plugin. Podspec does not support relative
-  # paths, so Classes contains a forwarder C file that relatively imports
-  # `../src/*` so that the C sources can be shared among all target platforms.
   s.source           = { :path => '.' }
-  s.source_files     = 'Classes/**/*.{cpp}'
-  s.xcconfig = { 'HEADER_SEARCH_PATHS' => '"$(PODS_TARGET_SRCROOT)/Classes/spine-cpp/include"' }
+  s.source_files     = 'Classes/spine-c/src/**/*.{cpp,h}', 'Classes/spine-cpp/src/**/*.{cpp,h}'
+  s.xcconfig = { 'HEADER_SEARCH_PATHS' => '"$(PODS_TARGET_SRCROOT)/Classes/spine-cpp/include" "$(PODS_TARGET_SRCROOT)/Classes/spine-c/include"' }
   s.dependency 'FlutterMacOS'
 
   s.platform = :osx, '10.11'

@@ -5,6 +5,20 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "headless-test (dart)",
+            "type": "dart",
+            "request": "launch",
+            "program": "headless_test.dart",
+            "cwd": "${workspaceFolder}/test"
+        },
+        {
+            "name": "skeleton_drawable_test (dart)",
+            "type": "dart",
+            "request": "launch",
+            "program": "skeleton_drawable_test.dart",
+            "cwd": "${workspaceFolder}/test"
+        },
+        {
             "name": "spine-flutter",
             "request": "launch",
             "type": "dart"
@@ -21,25 +35,5 @@
             "type": "dart",
             "flutterMode": "release"
         },
-        {
-            "name": "example",
-            "cwd": "example",
-            "request": "launch",
-            "type": "dart"
-        },
-        {
-            "name": "example (profile mode)",
-            "cwd": "example",
-            "request": "launch",
-            "type": "dart",
-            "flutterMode": "profile"
-        },
-        {
-            "name": "example (release mode)",
-            "cwd": "example",
-            "request": "launch",
-            "type": "dart",
-            "flutterMode": "release"
-        }
     ]
 }

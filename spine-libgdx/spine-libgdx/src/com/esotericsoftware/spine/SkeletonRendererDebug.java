@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated February 20, 2024. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2024, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
- * https://esotericsoftware.com/spine-editor-license
+ * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,8 +23,8 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 package com.esotericsoftware.spine;
@@ -38,7 +38,6 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.FloatArray;
 
-import com.esotericsoftware.spine.attachments.Attachment;
 import com.esotericsoftware.spine.attachments.BoundingBoxAttachment;
 import com.esotericsoftware.spine.attachments.ClippingAttachment;
 import com.esotericsoftware.spine.attachments.MeshAttachment;
@@ -80,14 +79,15 @@ public class SkeletonRendererDebug {
 		Gdx.gl.glBlendFunc(srcFunc, GL20.GL_ONE_MINUS_SRC_ALPHA);
 
 		ShapeRenderer shapes = this.shapes;
-		Array<Bone> bones = skeleton.getBones();
-		Array<Slot> slots = skeleton.getSlots();
+		Bone[] bones = skeleton.bones.items;
+		Slot[] slots = skeleton.slots.items;
+		int boneCount = skeleton.bones.size, slotCount = skeleton.slots.size;
 
 		shapes.begin(ShapeType.Filled);
 
 		if (drawBones) {
-			for (int i = 0, n = bones.size; i < n; i++) {
-				Bone bone = bones.get(i);
+			for (int i = 0; i < boneCount; i++) {
+				Bone bone = bones[i];
 				if (bone.parent == null || !bone.active) continue;
 				float length = bone.data.length, width = boneWidth;
 				if (length == 0) {
@@ -96,22 +96,22 @@ public class SkeletonRendererDebug {
 					shapes.setColor(boneOriginColor);
 				} else
 					shapes.setColor(boneLineColor);
-				float x = length * bone.a + bone.worldX;
-				float y = length * bone.c + bone.worldY;
-				shapes.rectLine(bone.worldX, bone.worldY, x, y, width * scale);
+				BonePose applied = bone.appliedPose;
+				float x = length * applied.a + applied.worldX;
+				float y = length * applied.c + applied.worldY;
+				shapes.rectLine(applied.worldX, applied.worldY, x, y, width * scale);
 			}
-			shapes.x(skeleton.getX(), skeleton.getY(), 4 * scale);
+			shapes.x(skeleton.x, skeleton.y, 4 * scale);
 		}
 
 		if (drawPoints) {
 			shapes.setColor(boneOriginColor);
-			for (int i = 0, n = slots.size; i < n; i++) {
-				Slot slot = slots.get(i);
-				Attachment attachment = slot.attachment;
-				if (!(attachment instanceof PointAttachment)) continue;
-				PointAttachment point = (PointAttachment)attachment;
-				point.computeWorldPosition(slot.getBone(), temp1);
-				temp2.set(8, 0).rotate(point.computeWorldRotation(slot.getBone()));
+			for (int i = 0; i < slotCount; i++) {
+				Slot slot = slots[i];
+				if (!slot.bone.active) continue;
+				if (!(slot.appliedPose.attachment instanceof PointAttachment point)) continue;
+				point.computeWorldPosition(slot.bone.appliedPose, temp1);
+				temp2.set(8, 0).rotate(point.computeWorldRotation(slot.bone.appliedPose));
 				shapes.rectLine(temp1, temp2, boneWidth / 2 * scale);
 			}
 		}
@@ -121,13 +121,13 @@ public class SkeletonRendererDebug {
 
 		if (drawRegionAttachments) {
 			shapes.setColor(attachmentLineColor);
-			for (int i = 0, n = slots.size; i < n; i++) {
-				Slot slot = slots.get(i);
-				Attachment attachment = slot.attachment;
-				if (attachment instanceof RegionAttachment) {
-					RegionAttachment region = (RegionAttachment)attachment;
+			for (int i = 0; i < slotCount; i++) {
+				Slot slot = slots[i];
+				if (!slot.bone.active) continue;
+				if (slot.pose.attachment instanceof RegionAttachment region) {
 					float[] vertices = this.vertices.items;
-					region.computeWorldVertices(slot, vertices, 0, 2);
+					float[] offsets = region.getOffsets(slot.appliedPose);
+					region.computeWorldVertices(slot, offsets, vertices, 0, 2);
 					shapes.line(vertices[0], vertices[1], vertices[2], vertices[3]);
 					shapes.line(vertices[2], vertices[3], vertices[4], vertices[5]);
 					shapes.line(vertices[4], vertices[5], vertices[6], vertices[7]);
@@ -137,13 +137,12 @@ public class SkeletonRendererDebug {
 		}
 
 		if (drawMeshHull || drawMeshTriangles) {
-			for (int i = 0, n = slots.size; i < n; i++) {
-				Slot slot = slots.get(i);
-				Attachment attachment = slot.attachment;
-				if (!(attachment instanceof MeshAttachment)) continue;
-				MeshAttachment mesh = (MeshAttachment)attachment;
+			for (int i = 0; i < slotCount; i++) {
+				Slot slot = slots[i];
+				if (!slot.bone.active) continue;
+				if (!(slot.pose.attachment instanceof MeshAttachment mesh)) continue;
 				float[] vertices = this.vertices.setSize(mesh.getWorldVerticesLength());
-				mesh.computeWorldVertices(slot, 0, mesh.getWorldVerticesLength(), vertices, 0, 2);
+				mesh.computeWorldVertices(skeleton, slot, 0, mesh.getWorldVerticesLength(), vertices, 0, 2);
 				short[] triangles = mesh.getTriangles();
 				int hullLength = mesh.getHullLength();
 				if (drawMeshTriangles) {
@@ -177,21 +176,20 @@ public class SkeletonRendererDebug {
 			Array<FloatArray> polygons = bounds.getPolygons();
 			Array<BoundingBoxAttachment> boxes = bounds.getBoundingBoxes();
 			for (int i = 0, n = polygons.size; i < n; i++) {
-				FloatArray polygon = polygons.get(i);
-				shapes.setColor(boxes.get(i).getColor());
+				FloatArray polygon = polygons.items[i];
+				shapes.setColor(boxes.items[i].getColor());
 				shapes.polygon(polygon.items, 0, polygon.size);
 			}
 		}
 
 		if (drawClipping) {
-			for (int i = 0, n = slots.size; i < n; i++) {
-				Slot slot = slots.get(i);
-				Attachment attachment = slot.attachment;
-				if (!(attachment instanceof ClippingAttachment)) continue;
-				ClippingAttachment clip = (ClippingAttachment)attachment;
+			for (int i = 0; i < slotCount; i++) {
+				Slot slot = slots[i];
+				if (!slot.bone.active) continue;
+				if (!(slot.pose.attachment instanceof ClippingAttachment clip)) continue;
 				int nn = clip.getWorldVerticesLength();
 				float[] vertices = this.vertices.setSize(nn);
-				clip.computeWorldVertices(slot, 0, nn, vertices, 0, 2);
+				clip.computeWorldVertices(skeleton, slot, 0, nn, vertices, 0, 2);
 				shapes.setColor(clip.getColor());
 				for (int ii = 2; ii < nn; ii += 2)
 					shapes.line(vertices[ii - 2], vertices[ii - 1], vertices[ii], vertices[ii + 1]);
@@ -200,14 +198,13 @@ public class SkeletonRendererDebug {
 		}
 
 		if (drawPaths) {
-			for (int i = 0, n = slots.size; i < n; i++) {
-				Slot slot = slots.get(i);
-				Attachment attachment = slot.attachment;
-				if (!(attachment instanceof PathAttachment)) continue;
-				PathAttachment path = (PathAttachment)attachment;
+			for (int i = 0; i < slotCount; i++) {
+				Slot slot = slots[i];
+				if (!slot.bone.active) continue;
+				if (!(slot.pose.attachment instanceof PathAttachment path)) continue;
 				int nn = path.getWorldVerticesLength();
 				float[] vertices = this.vertices.setSize(nn);
-				path.computeWorldVertices(slot, 0, nn, vertices, 0, 2);
+				path.computeWorldVertices(skeleton, slot, 0, nn, vertices, 0, 2);
 				Color color = path.getColor();
 				float x1 = vertices[2], y1 = vertices[3], x2 = 0, y2 = 0;
 				if (path.getClosed()) {
@@ -241,27 +238,25 @@ public class SkeletonRendererDebug {
 
 		if (drawBones) {
 			shapes.setColor(boneOriginColor);
-			for (int i = 0, n = bones.size; i < n; i++) {
-				Bone bone = bones.get(i);
+			for (int i = 0; i < boneCount; i++) {
+				Bone bone = bones[i];
 				if (!bone.active) continue;
-				shapes.circle(bone.worldX, bone.worldY, 3 * scale, 8);
+				shapes.circle(bone.appliedPose.worldX, bone.appliedPose.worldY, 3 * scale, 8);
 			}
 		}
 
 		if (drawPoints) {
 			shapes.setColor(boneOriginColor);
-			for (int i = 0, n = slots.size; i < n; i++) {
-				Slot slot = slots.get(i);
-				Attachment attachment = slot.attachment;
-				if (!(attachment instanceof PointAttachment)) continue;
-				PointAttachment point = (PointAttachment)attachment;
-				point.computeWorldPosition(slot.getBone(), temp1);
+			for (int i = 0; i < slotCount; i++) {
+				Slot slot = slots[i];
+				if (!slot.bone.active) continue;
+				if (!(slot.pose.attachment instanceof PointAttachment point)) continue;
+				point.computeWorldPosition(slot.bone.appliedPose, temp1);
 				shapes.circle(temp1.x, temp1.y, 3 * scale, 8);
 			}
 		}
 
 		shapes.end();
-
 	}
 
 	public ShapeRenderer getShapeRenderer () {

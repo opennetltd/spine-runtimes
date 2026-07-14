@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,8 +23,8 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 using Microsoft.Xna.Framework;
@@ -112,19 +112,26 @@ namespace Spine {
 		}
 
 		public void Draw (Skeleton skeleton) {
-			var drawOrder = skeleton.DrawOrder;
-			var drawOrderItems = skeleton.DrawOrder.Items;
-			float skeletonR = skeleton.R, skeletonG = skeleton.G, skeletonB = skeleton.B, skeletonA = skeleton.A;
-			Color color = new Color();
+			var drawOrder = skeleton.DrawOrder.AppliedPose;
+			var drawOrderItems = drawOrder.Items;
+			Color32F skeletonColor = skeleton.GetColor();
 
 			if (VertexEffect != null) VertexEffect.Begin(skeleton);
 
 			for (int i = 0, n = drawOrder.Count; i < n; i++) {
 				Slot slot = drawOrderItems[i];
-				Attachment attachment = slot.Attachment;
+				SlotPose slotPose = slot.AppliedPose;
+				if (!slot.Bone.Active) {
+					clipper.ClipEnd(slot);
+					continue;
+				}
+
+				Attachment attachment = slotPose.Attachment;
 				float attachmentZOffset = z + zSpacing * i;
 
-				float attachmentColorR, attachmentColorG, attachmentColorB, attachmentColorA;
+				Color32F attachmentColor;
+				Color32F slotColor = slotPose.GetColor();
+				Color color;
 				object textureObject = null;
 				int verticesCount = 0;
 				float[] vertices = this.vertices;
@@ -134,31 +141,36 @@ namespace Spine {
 
 				if (attachment is RegionAttachment) {
 					RegionAttachment regionAttachment = (RegionAttachment)attachment;
-					attachmentColorR = regionAttachment.R; attachmentColorG = regionAttachment.G; attachmentColorB = regionAttachment.B; attachmentColorA = regionAttachment.A;
-					regionAttachment.ComputeWorldVertices(slot, vertices, 0, 2);
+					attachmentColor = regionAttachment.GetColor();
+					Sequence sequence = regionAttachment.Sequence;
+					int sequenceIndex = sequence.ResolveIndex(slotPose);
+					regionAttachment.ComputeWorldVertices(slot, sequence.GetOffsets(sequenceIndex), vertices, 0, 2);
 					verticesCount = 4;
 					indicesCount = 6;
 					indices = quadTriangles;
-					uvs = regionAttachment.UVs;
-					AtlasRegion region = (AtlasRegion)regionAttachment.Region;
+					uvs = sequence.GetUVs(sequenceIndex);
+					AtlasRegion region = (AtlasRegion)sequence.GetRegion(sequenceIndex);
 					textureObject = region.page.rendererObject;
 				} else if (attachment is MeshAttachment) {
 					MeshAttachment mesh = (MeshAttachment)attachment;
-					attachmentColorR = mesh.R; attachmentColorG = mesh.G; attachmentColorB = mesh.B; attachmentColorA = mesh.A;
+					attachmentColor = mesh.GetColor();
 					int vertexCount = mesh.WorldVerticesLength;
-					if (vertices.Length < vertexCount) vertices = new float[vertexCount];
+					if (vertices.Length < vertexCount) this.vertices = vertices = new float[vertexCount];
 					verticesCount = vertexCount >> 1;
-					mesh.ComputeWorldVertices(slot, vertices);
+					mesh.ComputeWorldVertices(skeleton, slot, vertices);
 					indicesCount = mesh.Triangles.Length;
 					indices = mesh.Triangles;
-					uvs = mesh.UVs;
-					AtlasRegion region = (AtlasRegion)mesh.Region;
+					Sequence sequence = mesh.Sequence;
+					int sequenceIndex = sequence.ResolveIndex(slotPose);
+					uvs = sequence.GetUVs(sequenceIndex);
+					AtlasRegion region = (AtlasRegion)sequence.GetRegion(sequenceIndex);
 					textureObject = region.page.rendererObject;
 				} else if (attachment is ClippingAttachment) {
 					ClippingAttachment clip = (ClippingAttachment)attachment;
-					clipper.ClipStart(slot, clip);
+					clipper.ClipStart(skeleton, slot, clip);
 					continue;
 				} else {
+					clipper.ClipEnd(slot);
 					continue;
 				}
 
@@ -181,25 +193,25 @@ namespace Spine {
 				}
 
 				// calculate color
-				float a = skeletonA * slot.A * attachmentColorA;
+				Color32F combinedColor = skeletonColor * slotColor * attachmentColor;
+				float a = combinedColor.a;
 				if (premultipliedAlpha) {
 					color = new Color(
-							skeletonR * slot.R * attachmentColorR * a,
-							skeletonG * slot.G * attachmentColorG * a,
-							skeletonB * slot.B * attachmentColorB * a, a);
+						combinedColor.r * a,
+						combinedColor.g * a,
+						combinedColor.b * a, a);
 				} else {
-					color = new Color(
-							skeletonR * slot.R * attachmentColorR,
-							skeletonG * slot.G * attachmentColorG,
-							skeletonB * slot.B * attachmentColorB, a);
+					color = combinedColor;
 				}
 
 				Color darkColor = new Color();
-				if (slot.HasSecondColor) {
+				Color32F? slotDarkColorOptional = slotPose.GetDarkColor();
+				if (slotDarkColorOptional.HasValue) {
+					Color32F slotDarkColor = slotDarkColorOptional.Value;
 					if (premultipliedAlpha) {
-						darkColor = new Color(slot.R2 * a, slot.G2 * a, slot.B2 * a);
+						darkColor = new Color(slotDarkColor.r * a, slotDarkColor.g * a, slotDarkColor.b * a);
 					} else {
-						darkColor = new Color(slot.R2 * a, slot.G2 * a, slot.B2 * a);
+						darkColor = new Color(slotDarkColor.r * a, slotDarkColor.g * a, slotDarkColor.b * a);
 					}
 				}
 				darkColor.A = premultipliedAlpha ? (byte)255 : (byte)0;
@@ -214,8 +226,10 @@ namespace Spine {
 					uvs = clipper.ClippedUVs.Items;
 				}
 
-				if (verticesCount == 0 || indicesCount == 0)
+				if (verticesCount == 0 || indicesCount == 0) {
+					clipper.ClipEnd(slot);
 					continue;
+				}
 
 				// submit to batch
 				MeshItem item = batcher.NextItem(verticesCount, indicesCount);

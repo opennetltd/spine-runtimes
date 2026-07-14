@@ -2,6 +2,8 @@ name: Build spine-libgdx
 
 on:
   push:
+    branches:
+      - '**'
     paths:
       - 'spine-libgdx/**'
   workflow_dispatch:
@@ -26,4 +28,4 @@ jobs:
 
     - name: Build spine-libgdx
       working-directory: spine-libgdx
-      run: ./gradlew publishReleasePublicationToSonaType -PossrhUsername=${{ secrets.SONATYPE_USER }} -PossrhPassword=${{ secrets.SONATYPE_PASSWORD }}
+      run: ./gradlew publishReleasePublicationToSonaTypeRepository -PMAVEN_USERNAME=${{ secrets.MAVEN_USERNAME }} -PMAVEN_PASSWORD=${{ secrets.MAVEN_PASSWORD }}

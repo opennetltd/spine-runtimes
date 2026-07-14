@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated February 20, 2024. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2024, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
- * https://esotericsoftware.com/spine-editor-license
+ * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,8 +23,8 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 package com.esotericsoftware.spine;
@@ -36,7 +36,6 @@ import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
-import com.badlogic.gdx.graphics.g2d.TextureAtlas.AtlasRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Matrix4;
@@ -49,12 +48,9 @@ import com.badlogic.gdx.physics.box2d.FixtureDef;
 import com.badlogic.gdx.physics.box2d.PolygonShape;
 import com.badlogic.gdx.physics.box2d.World;
 import com.badlogic.gdx.utils.Array;
-import com.badlogic.gdx.utils.Null;
 import com.badlogic.gdx.utils.ScreenUtils;
 
-import com.esotericsoftware.spine.Animation.MixBlend;
-import com.esotericsoftware.spine.Animation.MixDirection;
-import com.esotericsoftware.spine.Skeleton.Physics;
+import com.esotericsoftware.spine.Animation.MixFrom;
 import com.esotericsoftware.spine.attachments.AtlasAttachmentLoader;
 import com.esotericsoftware.spine.attachments.RegionAttachment;
 import com.esotericsoftware.spine.attachments.Sequence;
@@ -89,12 +85,10 @@ public class Box2DExample extends ApplicationAdapter {
 		// This loader creates Box2dAttachments instead of RegionAttachments for an easy way to keep track of the Box2D body for
 		// each attachment.
 		AtlasAttachmentLoader atlasLoader = new AtlasAttachmentLoader(atlas) {
-			public RegionAttachment newRegionAttachment (Skin skin, String name, String path, @Null Sequence sequence) {
-				Box2dAttachment attachment = new Box2dAttachment(name);
-				AtlasRegion region = atlas.findRegion(attachment.getName());
-				if (region == null) throw new RuntimeException("Region not found in atlas: " + attachment);
-				attachment.setRegion(region);
-				return attachment;
+			public RegionAttachment newRegionAttachment (Skin skin, String placeholder, String name, String path,
+				Sequence sequence) {
+				findRegions(name, path, sequence);
+				return new Box2dAttachment(name, sequence);
 			}
 		};
 		SkeletonJson json = new SkeletonJson(atlasLoader);
@@ -116,8 +110,8 @@ public class Box2DExample extends ApplicationAdapter {
 		// Create a body for each attachment. Note it is probably better to create just a few bodies rather than one for each
 		// region attachment, but this is just an example.
 		for (Slot slot : skeleton.getSlots()) {
-			if (!(slot.getAttachment() instanceof Box2dAttachment)) continue;
-			Box2dAttachment attachment = (Box2dAttachment)slot.getAttachment();
+			if (!(slot.getPose().getAttachment() instanceof Box2dAttachment)) continue;
+			Box2dAttachment attachment = (Box2dAttachment)slot.getPose().getAttachment();
 
 			PolygonShape boxPoly = new PolygonShape();
 			boxPoly.setAsBox(attachment.getWidth() / 2 * attachment.getScaleX(), attachment.getHeight() / 2 * attachment.getScaleY(),
@@ -149,7 +143,7 @@ public class Box2DExample extends ApplicationAdapter {
 		batch.setTransformMatrix(camera.view);
 		batch.begin();
 
-		animation.apply(skeleton, time, time, true, events, 1, MixBlend.first, MixDirection.in);
+		animation.apply(skeleton, time, time, true, events, 1, MixFrom.setup, false, false, false);
 		skeleton.x += 8 * delta;
 		skeleton.update(delta);
 		skeleton.updateWorldTransform(Physics.update);
@@ -159,12 +153,13 @@ public class Box2DExample extends ApplicationAdapter {
 
 		// Position the physics body for each attachment.
 		for (Slot slot : skeleton.getSlots()) {
-			if (!(slot.getAttachment() instanceof Box2dAttachment)) continue;
-			Box2dAttachment attachment = (Box2dAttachment)slot.getAttachment();
+			if (!(slot.getAppliedPose().getAttachment() instanceof Box2dAttachment)) continue;
+			Box2dAttachment attachment = (Box2dAttachment)slot.getAppliedPose().getAttachment();
 			if (attachment.body == null) continue;
-			float x = slot.getBone().getWorldX();
-			float y = slot.getBone().getWorldY();
-			float rotation = slot.getBone().getWorldRotationX();
+			BonePose bone = slot.getBone().getAppliedPose();
+			float x = bone.getWorldX();
+			float y = bone.getWorldY();
+			float rotation = bone.getWorldRotationX();
 			attachment.body.setTransform(x, y, rotation * MathUtils.degRad);
 		}
 
@@ -231,12 +226,12 @@ public class Box2DExample extends ApplicationAdapter {
 	static class Box2dAttachment extends RegionAttachment {
 		Body body;
 
-		public Box2dAttachment (String name) {
-			super(name);
+		public Box2dAttachment (String name, Sequence sequence) {
+			super(name, sequence);
 		}
 	}
 
-	public static void main (String[] args) throws Exception {
+	static public void main (String[] args) throws Exception {
 		Lwjgl3ApplicationConfiguration config = new Lwjgl3ApplicationConfiguration();
 		config.setTitle("Box2D - Spine");
 		config.setWindowedMode(800, 600);

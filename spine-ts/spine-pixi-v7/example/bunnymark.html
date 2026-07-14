@@ -9,9 +9,9 @@
   </head>
 
   <body>
-    <script>javascript:(function(){var script=document.createElement('script');script.onload=function(){var stats=new Stats();document.body.appendChild(stats.dom);stats.dom.children[1].style.display='block';stats.dom.children[2].style.display='block';requestAnimationFrame(function loop(){stats.update();requestAnimationFrame(loop)});};script.src='https://mrdoob.github.io/stats.js/build/stats.min.js';document.head.appendChild(script);})()</script>
+    <script>javascript:(()=> {var script=document.createElement('script');script.onload=()=> {var stats=new Stats();document.body.appendChild(stats.dom);stats.dom.children[1].style.display='block';stats.dom.children[2].style.display='block';requestAnimationFrame(function loop(){stats.update();requestAnimationFrame(loop)});};script.src='https://mrdoob.github.io/stats.js/build/stats.min.js';document.head.appendChild(script);})()</script>
     <script>
-      (async function () {
+      (async () => {
         const params = new URLSearchParams(window.location.search);
         const totalBunnies = parseInt(params.get('count')) || 100;
 
@@ -31,8 +31,8 @@
 
         const stage = new PIXI.Container();
 
-        PIXI.Assets.add({ alias: "spineboyData", src: "assets/spineboy-pro.skel" });
-        PIXI.Assets.add({ alias: "spineboyAtlas", src: "assets/spineboy-pma.atlas" });
+        PIXI.Assets.add({ alias: "spineboyData", src: "/assets/spineboy-pro.skel" });
+        PIXI.Assets.add({ alias: "spineboyAtlas", src: "/assets/spineboy-pma.atlas" });
         await PIXI.Assets.load(["spineboyData", "spineboyAtlas"]);
 
         const bounds = new PIXI.Rectangle(0, 0, 800, 600);
@@ -88,7 +88,7 @@
         bounds;
 
         constructor(bounds) {
-            const spineboy = spine.Spine.from({
+            const spineboy = new spine.Spine({
                 atlas: "spineboyAtlas",
                 skeleton: "spineboyData",
                 scale: 0.125,

@@ -11,6 +11,10 @@ on:
         required: true
         type: string
         default: "Godot version not specified!"
+      godot_cpp_api_version:
+        required: true
+        type: string
+        default: "Godot C++ API version not specified!"
       dev:
         required: true
         type: boolean
@@ -22,6 +26,7 @@ env:
   AWS_EC2_METADATA_DISABLED: true
   GODOT_TAG: ${{ inputs.godot_tag }}
   GODOT_VERSION: ${{ inputs.godot_version }}
+  GODOT_CPP_API_VERSION: ${{ inputs.godot_cpp_api_version }}
   DEV_BUILD: ${{ inputs.dev }}
 
 jobs:
@@ -47,9 +52,10 @@ jobs:
         with:
           name: gdextension-windows-${{ env.GODOT_TAG }}
           path: spine-godot/example-v4-extension/bin/windows/*.dll
+          retention-days: 1
 
   build-linux-x86_64:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
         with:
@@ -74,6 +80,7 @@ jobs:
         with:
           name: gdextension-linux-x86_64-${{ env.GODOT_TAG }}
           path: spine-godot/example-v4-extension/bin/linux/*.so
+          retention-days: 1
 
   build-macos:
     runs-on: macos-latest
@@ -95,7 +102,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: gdextension-macos-${{ env.GODOT_TAG }}
-          path: spine-godot/example-v4-extension/bin/macos/macos.framework/*
+          path: spine-godot/example-v4-extension/bin/macos/**/*
+          retention-days: 1
 
   build-ios:
     runs-on: macos-latest
@@ -117,10 +125,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: gdextension-ios-${{ env.GODOT_TAG }}
-          path: spine-godot/example-v4-extension/bin/ios/*.xcframework/**/*
+          path: spine-godot/example-v4-extension/bin/ios/**/*
+          retention-days: 1
 
   build-android:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
         with:
@@ -144,7 +153,7 @@ jobs:
       - name: Install NDK
         run: |
           yes | sudo ${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager --licenses
-          ${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager --install "ndk;23.2.8568313"
+          ${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager --install "ndk;28.1.13356709"
 
       - name: Setup python and scons
         uses: ./.github/actions/setup-godot-deps-4
@@ -153,17 +162,18 @@ jobs:
         run: |
           cd spine-godot/build
           ./setup-extension.sh $GODOT_TAG $DEV_BUILD
-          ANDROID_NDK_ROOT=$ANDROID_SDK_ROOT/ndk/23.2.8568313 ./build-extension.sh android
-          ANDROID_NDK_ROOT=$ANDROID_SDK_ROOT/ndk/23.2.8568313 ./build-extension.sh android x86_64
+          ANDROID_NDK_ROOT=$ANDROID_SDK_ROOT/ndk/28.1.13356709 ./build-extension.sh android
+          ANDROID_NDK_ROOT=$ANDROID_SDK_ROOT/ndk/28.1.13356709 ./build-extension.sh android x86_64
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: gdextension-android-${{ env.GODOT_TAG }}
           path: spine-godot/example-v4-extension/bin/android/*.so
+          retention-days: 1
 
   build-web:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
         with:
@@ -172,7 +182,7 @@ jobs:
       - name: Set up Emscripten latest
         uses: mymindstorm/setup-emsdk@v11
         with:
-          version: 3.1.26
+          version: 4.0.20
 
       - name: Setup python and scons
         uses: ./.github/actions/setup-godot-deps-4
@@ -188,6 +198,7 @@ jobs:
         with:
           name: gdextension-web-${{ env.GODOT_TAG }}
           path: spine-godot/example-v4-extension/bin/web/*.wasm
+          retention-days: 1
 
   upload-to-s3:
     needs: [build-windows, build-linux-x86_64, build-macos, build-ios, build-android, build-web]
@@ -252,7 +263,7 @@ jobs:
           # Move artifacts to their correct locations
           mv gdextension-windows-$GODOT_TAG/* bin/windows/
           mv gdextension-linux-x86_64-$GODOT_TAG/* bin/linux/
-          mv gdextension-macos-$GODOT_TAG/* bin/macos/macos.framework/
+          mv gdextension-macos-$GODOT_TAG/* bin/macos/
           mv gdextension-ios-$GODOT_TAG/* bin/ios/
           mv gdextension-android-$GODOT_TAG/* bin/android/
           mv gdextension-web-$GODOT_TAG/* bin/web/

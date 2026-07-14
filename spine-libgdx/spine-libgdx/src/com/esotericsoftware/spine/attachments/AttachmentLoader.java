@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated February 20, 2024. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2024, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
- * https://esotericsoftware.com/spine-editor-license
+ * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,8 +23,8 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 package com.esotericsoftware.spine.attachments;
@@ -39,20 +39,20 @@ import com.esotericsoftware.spine.Skin;
  * Runtimes Guide. */
 public interface AttachmentLoader {
 	/** @return May be null to not load the attachment. */
-	public @Null RegionAttachment newRegionAttachment (Skin skin, String name, String path, @Null Sequence sequence);
+	public @Null RegionAttachment newRegionAttachment (Skin skin, String placeholder, String name, String path, Sequence sequence);
 
 	/** @return May be null to not load the attachment. In that case null should also be returned for child meshes. */
-	public @Null MeshAttachment newMeshAttachment (Skin skin, String name, String path, @Null Sequence sequence);
+	public @Null MeshAttachment newMeshAttachment (Skin skin, String placeholder, String name, String path, Sequence sequence);
 
 	/** @return May be null to not load the attachment. */
-	public @Null BoundingBoxAttachment newBoundingBoxAttachment (Skin skin, String name);
+	public @Null BoundingBoxAttachment newBoundingBoxAttachment (Skin skin, String placeholder, String name);
 
 	/** @return May be null to not load the attachment. */
-	public @Null ClippingAttachment newClippingAttachment (Skin skin, String name);
+	public @Null ClippingAttachment newClippingAttachment (Skin skin, String placeholder, String name);
 
 	/** @return May be null to not load the attachment. */
-	public @Null PathAttachment newPathAttachment (Skin skin, String name);
+	public @Null PathAttachment newPathAttachment (Skin skin, String placeholder, String name);
 
 	/** @return May be null to not load the attachment. */
-	public @Null PointAttachment newPointAttachment (Skin skin, String name);
+	public @Null PointAttachment newPointAttachment (Skin skin, String placeholder, String name);
 }

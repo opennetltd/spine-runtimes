@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,8 +23,8 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 #include "SpineEventData.h"
@@ -48,37 +48,43 @@ void SpineEventData::_bind_methods() {
 
 String SpineEventData::get_event_name() {
 	SPINE_CHECK(get_spine_object(), "")
-	return get_spine_object()->getName().buffer();
+	String name;
+#if (VERSION_MAJOR >= 4 && VERSION_MINOR >= 5)
+	name = String::utf8(get_spine_object()->getName().buffer());
+#else
+	name.parse_utf8(get_spine_object()->getName().buffer());
+#endif
+	return name;
 }
 
 int SpineEventData::get_int_value() {
 	SPINE_CHECK(get_spine_object(), 0)
-	return get_spine_object()->getIntValue();
+	return get_spine_object()->getSetupPose().getInt();
 }
 
 void SpineEventData::set_int_value(int v) {
 	SPINE_CHECK(get_spine_object(), )
-	get_spine_object()->setIntValue(v);
+	get_spine_object()->getSetupPose().setInt(v);
 }
 
 float SpineEventData::get_float_value() {
 	SPINE_CHECK(get_spine_object(), 0)
-	return get_spine_object()->getFloatValue();
+	return get_spine_object()->getSetupPose().getFloat();
 }
 
 void SpineEventData::set_float_value(float v) {
 	SPINE_CHECK(get_spine_object(), )
-	get_spine_object()->setFloatValue(v);
+	get_spine_object()->getSetupPose().setFloat(v);
 }
 
 String SpineEventData::get_string_value() {
 	SPINE_CHECK(get_spine_object(), "")
-	return get_spine_object()->getStringValue().buffer();
+	return get_spine_object()->getSetupPose().getString().buffer();
 }
 
 void SpineEventData::set_string_value(const String &v) {
 	SPINE_CHECK(get_spine_object(), )
-	get_spine_object()->setStringValue(spine::String(v.utf8()));
+	get_spine_object()->getSetupPose().setString(spine::String(v.utf8().ptr()));
 }
 
 String SpineEventData::get_audio_path() {
@@ -88,25 +94,25 @@ String SpineEventData::get_audio_path() {
 
 void SpineEventData::set_audio_path(const String &v) {
 	SPINE_CHECK(get_spine_object(), )
-	get_spine_object()->setAudioPath(spine::String(v.utf8()));
+	get_spine_object()->setAudioPath(spine::String(v.utf8().ptr()));
 }
 
 float SpineEventData::get_volume() {
 	SPINE_CHECK(get_spine_object(), 0)
-	return get_spine_object()->getVolume();
+	return get_spine_object()->getSetupPose().getVolume();
 }
 
 void SpineEventData::set_volume(float v) {
 	SPINE_CHECK(get_spine_object(), )
-	get_spine_object()->setVolume(v);
+	get_spine_object()->getSetupPose().setVolume(v);
 }
 
 float SpineEventData::get_balance() {
 	SPINE_CHECK(get_spine_object(), 0)
-	return get_spine_object()->getBalance();
+	return get_spine_object()->getSetupPose().getBalance();
 }
 
 void SpineEventData::set_balance(float v) {
 	SPINE_CHECK(get_spine_object(), )
-	get_spine_object()->setBalance(v);
+	get_spine_object()->getSetupPose().setBalance(v);
 }

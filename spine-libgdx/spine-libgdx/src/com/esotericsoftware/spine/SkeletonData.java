@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated February 20, 2024. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2024, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
- * https://esotericsoftware.com/spine-editor-license
+ * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,8 +23,8 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 package com.esotericsoftware.spine;
@@ -38,16 +38,13 @@ import com.badlogic.gdx.utils.Null;
  * Guide. */
 public class SkeletonData {
 	@Null String name;
-	final Array<BoneData> bones = new Array(); // Ordered parents first.
-	final Array<SlotData> slots = new Array(); // Setup pose draw order.
-	final Array<Skin> skins = new Array();
+	final Array<BoneData> bones = new Array(true, 0, BoneData[]::new); // Ordered parents first.
+	final Array<SlotData> slots = new Array(true, 0, SlotData[]::new); // Setup pose draw order.
+	final Array<Skin> skins = new Array(true, 0, Skin[]::new);
 	@Null Skin defaultSkin;
-	final Array<EventData> events = new Array();
-	final Array<Animation> animations = new Array();
-	final Array<IkConstraintData> ikConstraints = new Array();
-	final Array<TransformConstraintData> transformConstraints = new Array();
-	final Array<PathConstraintData> pathConstraints = new Array();
-	final Array<PhysicsConstraintData> physicsConstraints = new Array();
+	final Array<EventData> events = new Array(true, 0, EventData[]::new);
+	final Array<Animation> animations = new Array(true, 0, Animation[]::new);
+	final Array<ConstraintData> constraints = new Array(true, 0, ConstraintData[]::new);
 	float x, y, width, height, referenceScale = 100;
 	@Null String version, hash;
 
@@ -70,11 +67,9 @@ public class SkeletonData {
 	 * multiple times. */
 	public @Null BoneData findBone (String boneName) {
 		if (boneName == null) throw new IllegalArgumentException("boneName cannot be null.");
-		Object[] bones = this.bones.items;
-		for (int i = 0, n = this.bones.size; i < n; i++) {
-			BoneData bone = (BoneData)bones[i];
-			if (bone.name.equals(boneName)) return bone;
-		}
+		BoneData[] bones = this.bones.items;
+		for (int i = 0, n = this.bones.size; i < n; i++)
+			if (bones[i].name.equals(boneName)) return bones[i];
 		return null;
 	}
 
@@ -89,11 +84,9 @@ public class SkeletonData {
 	 * multiple times. */
 	public @Null SlotData findSlot (String slotName) {
 		if (slotName == null) throw new IllegalArgumentException("slotName cannot be null.");
-		Object[] slots = this.slots.items;
-		for (int i = 0, n = this.slots.size; i < n; i++) {
-			SlotData slot = (SlotData)slots[i];
-			if (slot.name.equals(slotName)) return slot;
-		}
+		SlotData[] slots = this.slots.items;
+		for (int i = 0, n = this.slots.size; i < n; i++)
+			if (slots[i].name.equals(slotName)) return slots[i];
 		return null;
 	}
 
@@ -147,90 +140,43 @@ public class SkeletonData {
 		return animations;
 	}
 
+	/** Collects animations used by {@link SliderData slider constraints}.
+	 * <p>
+	 * Slider animations are designed to be applied by slider constraints rather than on their own. Applications that have a user
+	 * choose an animation may want to exclude them. */
+	public Array<Animation> findSliderAnimations (Array<Animation> animations) {
+		ConstraintData[] constraints = this.constraints.items;
+		for (int i = 0, n = this.constraints.size; i < n; i++)
+			if (constraints[i] instanceof SliderData data && data.animation != null) animations.add(data.animation);
+		return animations;
+	}
+
 	/** Finds an animation by comparing each animation's name. It is more efficient to cache the results of this method than to
 	 * call it multiple times. */
 	public @Null Animation findAnimation (String animationName) {
 		if (animationName == null) throw new IllegalArgumentException("animationName cannot be null.");
-		Object[] animations = this.animations.items;
-		for (int i = 0, n = this.animations.size; i < n; i++) {
-			Animation animation = (Animation)animations[i];
-			if (animation.name.equals(animationName)) return animation;
-		}
+		Animation[] animations = this.animations.items;
+		for (int i = 0, n = this.animations.size; i < n; i++)
+			if (animations[i].name.equals(animationName)) return animations[i];
 		return null;
 	}
 
-	// --- IK constraints
+	// --- Constraints.
 
-	/** The skeleton's IK constraints. */
-	public Array<IkConstraintData> getIkConstraints () {
-		return ikConstraints;
+	/** The skeleton's constraints. */
+	public Array<ConstraintData> getConstraints () {
+		return constraints;
 	}
 
-	/** Finds an IK constraint by comparing each IK constraint's name. It is more efficient to cache the results of this method
-	 * than to call it multiple times. */
-	public @Null IkConstraintData findIkConstraint (String constraintName) {
-		if (constraintName == null) throw new IllegalArgumentException("constraintName cannot be null.");
-		Object[] ikConstraints = this.ikConstraints.items;
-		for (int i = 0, n = this.ikConstraints.size; i < n; i++) {
-			IkConstraintData constraint = (IkConstraintData)ikConstraints[i];
-			if (constraint.name.equals(constraintName)) return constraint;
-		}
-		return null;
-	}
-
-	// --- Transform constraints
-
-	/** The skeleton's transform constraints. */
-	public Array<TransformConstraintData> getTransformConstraints () {
-		return transformConstraints;
-	}
-
-	/** Finds a transform constraint by comparing each transform constraint's name. It is more efficient to cache the results of
+	/** Finds a constraint of the specified type by comparing each constraints's name. It is more efficient to cache the results of
 	 * this method than to call it multiple times. */
-	public @Null TransformConstraintData findTransformConstraint (String constraintName) {
+	public @Null <T extends ConstraintData> T findConstraint (String constraintName, Class<T> type) {
 		if (constraintName == null) throw new IllegalArgumentException("constraintName cannot be null.");
-		Object[] transformConstraints = this.transformConstraints.items;
-		for (int i = 0, n = this.transformConstraints.size; i < n; i++) {
-			TransformConstraintData constraint = (TransformConstraintData)transformConstraints[i];
-			if (constraint.name.equals(constraintName)) return constraint;
-		}
-		return null;
-	}
-
-	// --- Path constraints
-
-	/** The skeleton's path constraints. */
-	public Array<PathConstraintData> getPathConstraints () {
-		return pathConstraints;
-	}
-
-	/** Finds a path constraint by comparing each path constraint's name. It is more efficient to cache the results of this method
-	 * than to call it multiple times. */
-	public @Null PathConstraintData findPathConstraint (String constraintName) {
-		if (constraintName == null) throw new IllegalArgumentException("constraintName cannot be null.");
-		Object[] pathConstraints = this.pathConstraints.items;
-		for (int i = 0, n = this.pathConstraints.size; i < n; i++) {
-			PathConstraintData constraint = (PathConstraintData)pathConstraints[i];
-			if (constraint.name.equals(constraintName)) return constraint;
-		}
-		return null;
-	}
-
-	// --- Physics constraints
-
-	/** The skeleton's physics constraints. */
-	public Array<PhysicsConstraintData> getPhysicsConstraints () {
-		return physicsConstraints;
-	}
-
-	/** Finds a physics constraint by comparing each physics constraint's name. It is more efficient to cache the results of this
-	 * method than to call it multiple times. */
-	public @Null PhysicsConstraintData findPhysicsConstraint (String constraintName) {
-		if (constraintName == null) throw new IllegalArgumentException("constraintName cannot be null.");
-		Object[] physicsConstraints = this.physicsConstraints.items;
-		for (int i = 0, n = this.physicsConstraints.size; i < n; i++) {
-			PhysicsConstraintData constraint = (PhysicsConstraintData)physicsConstraints[i];
-			if (constraint.name.equals(constraintName)) return constraint;
+		if (type == null) throw new IllegalArgumentException("type cannot be null.");
+		ConstraintData[] constraints = this.constraints.items;
+		for (int i = 0, n = this.constraints.size; i < n; i++) {
+			ConstraintData constraint = constraints[i];
+			if (type.isInstance(constraint) && constraint.name.equals(constraintName)) return (T)constraint;
 		}
 		return null;
 	}
@@ -311,7 +257,7 @@ public class SkeletonData {
 		this.hash = hash;
 	}
 
-	/** The path to the images directory as defined in Spine, or null if nonessential data was not exported. */
+	/** The path to the images folder as defined in Spine, or null if nonessential data was not exported. */
 	public @Null String getImagesPath () {
 		return imagesPath;
 	}
@@ -320,7 +266,7 @@ public class SkeletonData {
 		this.imagesPath = imagesPath;
 	}
 
-	/** The path to the audio directory as defined in Spine, or null if nonessential data was not exported. */
+	/** The path to the audio folder as defined in Spine, or null if nonessential data was not exported. */
 	public @Null String getAudioPath () {
 		return audioPath;
 	}

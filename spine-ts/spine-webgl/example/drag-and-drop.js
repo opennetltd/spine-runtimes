@@ -3,31 +3,24 @@ class App {
         this.skeleton = null;
         this.animationState = null;
         this.canvas = null;
-        this.pma = true;
     }
 
     loadAssets(canvas) {
         this.canvas = canvas;
 
         // Load assets of Spineboy.
-        canvas.assetManager.loadBinary("assets/spineboy-pro.skel");
-        canvas.assetManager.loadTextureAtlas("assets/spineboy-pma.atlas");
+        canvas.assetManager.loadBinary("/assets/spineboy-pro.skel");
+        canvas.assetManager.loadTextureAtlas("/assets/spineboy-pma.atlas");
     }
 
     initialize(canvas) {
         // Load the Spineboy skeleton
-        this.loadSkeleton("assets/spineboy-pro.skel", "assets/spineboy-pma.atlas", "run");
+        this.loadSkeleton("/assets/spineboy-pro.skel", "/assets/spineboy-pma.atlas", "run");
 
         // Setup listener for animation selection box
         let animationSelectBox = document.body.querySelector("#animations");
         animationSelectBox.onchange = () => {
             this.animationState.setAnimation(0, animationSelectBox.value, true);
-        }
-
-        // Setup listener for the PMA checkbox
-        let pmaCheckbox = document.body.querySelector("#pma");
-        pmaCheckbox.onchange = () => {
-            this.pma = pmaCheckbox.checked;
         }
 
         // Setup the drag and drop listener
@@ -163,7 +156,7 @@ class App {
         renderer.begin();
         renderer.line(-10000, 0, 10000, 0, spine.Color.RED);
         renderer.line(0, -10000, 0, 10000, spine.Color.GREEN);
-        renderer.drawSkeleton(this.skeleton, this.pma);
+        renderer.drawSkeleton(this.skeleton);
         renderer.end();
     }
 }

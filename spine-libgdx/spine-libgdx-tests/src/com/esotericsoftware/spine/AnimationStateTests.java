@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated February 20, 2024. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2024, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
- * https://esotericsoftware.com/spine-editor-license
+ * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,8 +23,8 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 package com.esotericsoftware.spine;
@@ -36,7 +36,6 @@ import com.badlogic.gdx.Files.FileType;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3FileHandle;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Array;
-import com.badlogic.gdx.utils.Null;
 import com.badlogic.gdx.utils.Pool;
 
 import com.esotericsoftware.spine.AnimationState.AnimationStateListener;
@@ -53,27 +52,27 @@ import com.esotericsoftware.spine.attachments.Sequence;
 /** Unit tests to ensure {@link AnimationState} is working as expected. */
 public class AnimationStateTests {
 	final SkeletonJson json = new SkeletonJson(new AttachmentLoader() {
-		public RegionAttachment newRegionAttachment (Skin skin, String name, String path, @Null Sequence sequence) {
+		public RegionAttachment newRegionAttachment (Skin skin, String placeholder, String name, String path, Sequence sequence) {
 			return null;
 		}
 
-		public MeshAttachment newMeshAttachment (Skin skin, String name, String path, @Null Sequence sequence) {
+		public MeshAttachment newMeshAttachment (Skin skin, String placeholder, String name, String path, Sequence sequence) {
 			return null;
 		}
 
-		public BoundingBoxAttachment newBoundingBoxAttachment (Skin skin, String name) {
+		public BoundingBoxAttachment newBoundingBoxAttachment (Skin skin, String placeholder, String name) {
 			return null;
 		}
 
-		public ClippingAttachment newClippingAttachment (Skin skin, String name) {
+		public ClippingAttachment newClippingAttachment (Skin skin, String placeholder, String name) {
 			return null;
 		}
 
-		public PathAttachment newPathAttachment (Skin skin, String name) {
+		public PathAttachment newPathAttachment (Skin skin, String placeholder, String name) {
 			return null;
 		}
 
-		public PointAttachment newPointAttachment (Skin skin, String name) {
+		public PointAttachment newPointAttachment (Skin skin, String placeholder, String name) {
 			return null;
 		}
 	});
@@ -584,11 +583,13 @@ public class AnimationStateTests {
 		setup("setAnimation twice", // 21
 			expect(0, "start", 0, 0), //
 			expect(0, "interrupt", 0, 0), //
-			expect(0, "end", 0, 0), //
-			expect(0, "dispose", 0, 0), //
 
 			expect(1, "start", 0, 0), //
 			expect(1, "event 0", 0, 0), //
+
+			expect(0, "end", 0, 0.1f), //
+			expect(0, "dispose", 0, 0.1f), //
+
 			expect(1, "event 14", 0.5f, 0.5f), //
 
 			note("First 2 setAnimation calls are done."),
@@ -597,8 +598,6 @@ public class AnimationStateTests {
 
 			expect(0, "start", 0, 0.8f), //
 			expect(0, "interrupt", 0, 0.8f), //
-			expect(0, "end", 0, 0.8f), //
-			expect(0, "dispose", 0, 0.8f), //
 
 			expect(2, "start", 0, 0.8f), //
 			expect(2, "event 0", 0.1f, 0.9f), //
@@ -606,18 +605,21 @@ public class AnimationStateTests {
 			expect(1, "end", 0.9f, 1), //
 			expect(1, "dispose", 0.9f, 1), //
 
+			expect(0, "end", 0.1f, 1), //
+			expect(0, "dispose", 0.1f, 1), //
+
 			expect(2, "event 14", 0.5f, 1.3f), //
 			expect(2, "event 30", 1, 1.8f), //
 			expect(2, "complete", 1, 1.8f), //
 			expect(2, "end", 1, 1.9f), //
 			expect(2, "dispose", 1, 1.9f) //
 		);
-		state.setAnimation(0, "events0", false); // First should be ignored.
+		state.setAnimation(0, "events0", false); // Kept as mixingFrom (not discarded, different animation).
 		state.setAnimation(0, "events1", false);
 		run(0.1f, 1000, new TestListener() {
 			public void frame (float time) {
 				if (MathUtils.isEqual(time, 0.8f)) {
-					state.setAnimation(0, "events0", false); // First should be ignored.
+					state.setAnimation(0, "events0", false); // Kept as mixingFrom (not discarded, different animation).
 					state.setAnimation(0, "events2", false).setTrackEnd(1);
 				}
 			}
@@ -626,8 +628,6 @@ public class AnimationStateTests {
 		setup("setAnimation twice with multiple mixing", // 22
 			expect(0, "start", 0, 0), //
 			expect(0, "interrupt", 0, 0), //
-			expect(0, "end", 0, 0), //
-			expect(0, "dispose", 0, 0), //
 
 			expect(1, "start", 0, 0), //
 			expect(1, "event 0", 0, 0), //
@@ -638,8 +638,6 @@ public class AnimationStateTests {
 
 			expect(0, "start", 0, 0.2f), //
 			expect(0, "interrupt", 0, 0.2f), //
-			expect(0, "end", 0, 0.2f), //
-			expect(0, "dispose", 0, 0.2f), //
 
 			expect(2, "start", 0, 0.2f), //
 			expect(2, "event 0", 0.1f, 0.3f), //
@@ -650,19 +648,26 @@ public class AnimationStateTests {
 
 			expect(1, "start", 0, 0.4f), //
 			expect(1, "interrupt", 0, 0.4f), //
-			expect(1, "end", 0, 0.4f), //
-			expect(1, "dispose", 0, 0.4f), //
 
 			expect(0, "start", 0, 0.4f), //
 			expect(0, "event 0", 0.1f, 0.5f), //
 
+			expect(0, "end", 0.6f, 0.7f), //
+			expect(0, "dispose", 0.6f, 0.7f), //
+
 			expect(1, "end", 0.8f, 0.9f), //
 			expect(1, "dispose", 0.8f, 0.9f), //
+
+			expect(0, "end", 0.6f, 0.9f), //
+			expect(0, "dispose", 0.6f, 0.9f), //
 
 			expect(0, "event 14", 0.5f, 0.9f), //
 
 			expect(2, "end", 0.8f, 1.1f), //
 			expect(2, "dispose", 0.8f, 1.1f), //
+
+			expect(1, "end", 0.6f, 1.1f), //
+			expect(1, "dispose", 0.6f, 1.1f), //
 
 			expect(0, "event 30", 1, 1.4f), //
 			expect(0, "complete", 1, 1.4f), //
@@ -670,16 +675,16 @@ public class AnimationStateTests {
 			expect(0, "dispose", 1, 1.5f) //
 		);
 		stateData.setDefaultMix(0.6f);
-		state.setAnimation(0, "events0", false); // First should be ignored.
+		state.setAnimation(0, "events0", false); // Kept as mixingFrom (not discarded, different animation).
 		state.setAnimation(0, "events1", false);
 		run(0.1f, 1000, new TestListener() {
 			public void frame (float time) {
 				if (MathUtils.isEqual(time, 0.2f)) {
-					state.setAnimation(0, "events0", false); // First should be ignored.
+					state.setAnimation(0, "events0", false); // Kept as mixingFrom (not discarded, different animation).
 					state.setAnimation(0, "events2", false);
 				}
 				if (MathUtils.isEqual(time, 0.4f)) {
-					state.setAnimation(0, "events1", false); // First should be ignored.
+					state.setAnimation(0, "events1", false); // Kept as mixingFrom (not discarded, different animation).
 					state.setAnimation(0, "events0", false).setTrackEnd(1);
 				}
 			}

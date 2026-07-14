@@ -1,0 +1,39 @@
+﻿{
+  "$schema": "../plugin.addon.schema.json",
+
+  "is-c3-addon": true,
+  "sdk-version": 2,
+  "min-construct-version": "r470",
+  "type": "plugin",
+  "name": "Spine Construct3",
+  "id": "EsotericSoftware_SpineConstruct3",
+  "version": "4.3.10",
+  "author": "Esoteric Software",
+  "website": "https://www.esotericsoftware.com",
+  "documentation": "https://www.esotericsoftware.com",
+  "description": "The official Spine runtime for Construct3.",
+  "editor-scripts": [
+    "plugin.js",
+    "type.js",
+    "instance.js",
+    "c3runtime/spine-construct3-lib.js"
+  ],
+  "file-list": [
+    "c3runtime/main.js",
+    "c3runtime/plugin.js",
+    "c3runtime/type.js",
+    "c3runtime/instance.js",
+    "c3runtime/conditions.js",
+    "c3runtime/actions.js",
+    "c3runtime/expressions.js",
+    "lang/en-US.json",
+    "lang/zh-CN.json",
+    "aces.json",
+    "addon.json",
+    "icon.svg",
+    "plugin.js",
+    "c3runtime/spine-construct3-lib.js",
+    "type.js",
+    "instance.js"
+  ]
+}

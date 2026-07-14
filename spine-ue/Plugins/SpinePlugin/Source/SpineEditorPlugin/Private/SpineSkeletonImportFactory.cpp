@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,8 +23,8 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 #include "SpineSkeletonImportFactory.h"
@@ -75,7 +75,8 @@ void LoadAtlas(const FString &Filename, const FString &TargetPath) {
 	AssetToolsModule.Get().ImportAssets(fileNames, TargetPath);
 }
 
-UObject *USpineSkeletonAssetFactory::FactoryCreateFile(UClass *InClass, UObject *InParent, FName InName, EObjectFlags Flags, const FString &Filename, const TCHAR *Parms, FFeedbackContext *Warn, bool &bOutOperationCanceled) {
+UObject *USpineSkeletonAssetFactory::FactoryCreateFile(UClass *InClass, UObject *InParent, FName InName, EObjectFlags Flags, const FString &Filename,
+													   const TCHAR *Parms, FFeedbackContext *Warn, bool &bOutOperationCanceled) {
 	USpineSkeletonDataAsset *asset = NewObject<USpineSkeletonDataAsset>(InParent, InClass, InName, Flags);
 	TArray<uint8> rawData;
 	if (!FFileHelper::LoadFileToArray(rawData, *Filename, 0)) {
@@ -94,8 +95,7 @@ bool USpineSkeletonAssetFactory::CanReimport(UObject *Obj, TArray<FString> &OutF
 	if (!asset) return false;
 
 	FString filename = asset->GetSkeletonDataFileName().ToString();
-	if (!filename.IsEmpty())
-		OutFilenames.Add(filename);
+	if (!filename.IsEmpty()) OutFilenames.Add(filename);
 
 	return true;
 }
@@ -103,8 +103,7 @@ bool USpineSkeletonAssetFactory::CanReimport(UObject *Obj, TArray<FString> &OutF
 void USpineSkeletonAssetFactory::SetReimportPaths(UObject *Obj, const TArray<FString> &NewReimportPaths) {
 	USpineSkeletonDataAsset *asset = Cast<USpineSkeletonDataAsset>(Obj);
 
-	if (asset && ensure(NewReimportPaths.Num() == 1))
-		asset->SetSkeletonDataFileName(FName(*NewReimportPaths[0]));
+	if (asset && ensure(NewReimportPaths.Num() == 1)) asset->SetSkeletonDataFileName(FName(*NewReimportPaths[0]));
 }
 
 EReimportResult::Type USpineSkeletonAssetFactory::Reimport(UObject *Obj) {
@@ -116,7 +115,8 @@ EReimportResult::Type USpineSkeletonAssetFactory::Reimport(UObject *Obj) {
 	const FString longPackagePath = FPackageName::GetLongPackagePath(asset->GetOutermost()->GetPathName());
 	LoadAtlas(*asset->GetSkeletonDataFileName().ToString(), longPackagePath);
 
-	if (Obj->GetOuter()) Obj->GetOuter()->MarkPackageDirty();
+	if (Obj->GetOuter())
+		Obj->GetOuter()->MarkPackageDirty();
 	else
 		Obj->MarkPackageDirty();
 

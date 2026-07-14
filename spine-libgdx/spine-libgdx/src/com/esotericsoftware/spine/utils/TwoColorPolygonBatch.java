@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated February 20, 2024. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2024, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
- * https://esotericsoftware.com/spine-editor-license
+ * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,8 +23,8 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 package com.esotericsoftware.spine.utils;
@@ -100,7 +100,7 @@ public class TwoColorPolygonBatch implements PolygonBatch {
 
 	/** Constructs a new batch with the specified max vertices and max triangles and the default shader. */
 	public TwoColorPolygonBatch (int maxVertices, int maxTriangles) {
-		this(maxTriangles, maxTriangles, null);
+		this(maxVertices, maxTriangles, null);
 	}
 
 	/** Constructs a new batch with the specified max vertices, max triangles, and shader. The shader will not be disposed
@@ -108,7 +108,7 @@ public class TwoColorPolygonBatch implements PolygonBatch {
 	public TwoColorPolygonBatch (int maxVertices, int maxTriangles, @Null ShaderProgram defaultShader) {
 		// 32767 is max vertex index.
 		if (maxVertices > 32767)
-			throw new IllegalArgumentException("Can't have more than 32767 vertices per batch: " + maxTriangles);
+			throw new IllegalArgumentException("Can't have more than 32767 vertices per batch: " + maxVertices);
 
 		Mesh.VertexDataType vertexDataType = Mesh.VertexDataType.VertexArray;
 		if (Gdx.gl30 != null) vertexDataType = VertexDataType.VertexBufferObjectWithVAO;
@@ -826,7 +826,7 @@ public class TwoColorPolygonBatch implements PolygonBatch {
 
 		final int vertexIndex = this.vertexIndex;
 		int triangleIndex = this.triangleIndex;
-		short vertex = (short)(vertexIndex / VERTEX_SIZE);
+		var vertex = (short)(vertexIndex / VERTEX_SIZE);
 		for (int n = triangleIndex + triangleCount; triangleIndex < n; triangleIndex += 6, vertex += 4) {
 			triangles[triangleIndex] = vertex;
 			triangles[triangleIndex + 1] = (short)(vertex + 1);
@@ -859,7 +859,7 @@ public class TwoColorPolygonBatch implements PolygonBatch {
 
 		final int vertexIndex = this.vertexIndex;
 		int triangleIndex = this.triangleIndex;
-		short vertex = (short)(vertexIndex / VERTEX_SIZE);
+		var vertex = (short)(vertexIndex / VERTEX_SIZE);
 		for (int n = triangleIndex + triangleCount; triangleIndex < n; triangleIndex += 6, vertex += 4) {
 			triangles[triangleIndex] = vertex;
 			triangles[triangleIndex + 1] = (short)(vertex + 1);
@@ -1527,8 +1527,8 @@ public class TwoColorPolygonBatch implements PolygonBatch {
 			+ "  gl_FragColor.rgb = ((texColor.a - 1.0) * u_pma + 1.0 - texColor.rgb) * v_dark.rgb + texColor.rgb * v_light.rgb;\n" //
 			+ "}";
 
-		ShaderProgram shader = new ShaderProgram(vertexShader, fragmentShader);
-		if (shader.isCompiled() == false) throw new IllegalArgumentException("Error compiling shader: " + shader.getLog());
+		var shader = new ShaderProgram(vertexShader, fragmentShader);
+		if (!shader.isCompiled()) throw new IllegalArgumentException("Error compiling shader: " + shader.getLog());
 		return shader;
 	}
 }

@@ -1,0 +1,1243 @@
+﻿{
+  "$schema": "../../plugin.lang.schema.json",
+  "languageTag": "zh-CN",
+  "fileDescription": "Spine插件的字符串资源。",
+  "text": {
+    "plugins": {
+      "esotericsoftware_spineconstruct3": {
+        "name": "Spine",
+        "description": "Spine运行时 for Construct3。",
+        "help-url": "https://www.construct.net",
+        "properties": {
+          "spine-skeleton-file": {
+            "name": "骨架",
+            "desc": "骨架文件"
+          },
+          "spine-atlas-file": {
+            "name": "图集",
+            "desc": "图集文件"
+          },
+          "spine-loader-scale": {
+            "name": "加载比例",
+            "desc": "加载比例"
+          },
+          "select-skin": {
+            "name": "选择皮肤",
+            "desc": "打开对话框从骨架中选择皮肤",
+            "link-text": "选择"
+          },
+          "select-animation": {
+            "name": "选择动画",
+            "desc": "打开对话框从骨架中选择动画",
+            "link-text": "选择"
+          },
+          "spine-animation": {
+            "name": "动画",
+            "desc": "动画"
+          },
+          "spine-skin": {
+            "name": "皮肤",
+            "desc": "皮肤"
+          },
+          "spine-bounds-provider-group": {
+            "name": "边界提供者",
+            "desc": "选择所需的边界提供者并填写相应的属性。"
+          },
+          "spine-bounds-provider": {
+            "name": "边界提供者",
+            "desc": "要使用的边界提供者。",
+            "items": {
+              "setup": "初始姿势边界",
+              "animation-skin": "动画/皮肤边界"
+            }
+          },
+          "spine-bounds-provider-move": {
+            "name": "位置边界",
+            "desc": "在调整边界大小和位置时保持骨架固定在一个位置。"
+          },
+          "spine-offset-scale-x": {
+            "name": "偏移缩放X",
+            "desc": "偏移缩放X"
+          },
+          "spine-offset-scale-y": {
+            "name": "偏移缩放Y",
+            "desc": "偏移缩放Y"
+          },
+          "spine-debug-skeleton": {
+            "name": "调试骨架",
+            "desc": "绘制骨架骨骼的调试可视化"
+          },
+          "spine-enable-collision": {
+            "name": "启用碰撞",
+            "desc": "通过创建精灵碰撞体启用碰撞检测"
+          },
+          "spine-bounds-offset-x": {
+            "name": "X偏移",
+            "desc": "X偏移"
+          },
+          "spine-bounds-offset-y": {
+            "name": "Y偏移",
+            "desc": "Y偏移"
+          },
+          "spine-bounds-offset-angle": {
+            "name": "偏移角度",
+            "desc": "偏移角度"
+          },
+          "set-bounds": {
+            "name": "重置边界",
+            "desc": "点击以使用当前配置重置边界，但保持当前缩放。",
+            "link-text": "重置"
+          }
+        },
+        "aceCategories": {
+          "custom": "自定义"
+        },
+        "conditions": {
+          "on-skeleton-loaded": {
+            "list-name": "骨架加载完成时",
+            "display-text": "骨架加载完成时",
+            "description": "当骨架加载完成时执行操作"
+          },
+          "on-animation-event": {
+            "list-name": "动画事件触发时",
+            "display-text": "当轨道{1}上的动画{2}触发{0}事件时",
+            "description": "当动画事件发生时触发。使用空字符串匹配任意事件/动画，或使用-1匹配任意轨道。",
+            "params": {
+              "event": {
+                "name": "事件名称",
+                "desc": "事件名称（start、dispose、event、interrupt、end、complete）。空字符串匹配任意事件。"
+              },
+              "animation": {
+                "name": "动画",
+                "desc": "动画名称。空字符串匹配任意动画。"
+              },
+              "track": {
+                "name": "轨道编号",
+                "desc": "轨道索引。使用-1匹配任意轨道。"
+              }
+            }
+          },
+          "is-mirrored": {
+            "list-name": "是否镜像",
+            "display-text": "是否镜像",
+            "description": "检查骨架是否水平镜像"
+          },
+          "is-flipped": {
+            "list-name": "是否翻转",
+            "display-text": "是否翻转",
+            "description": "检查骨架是否垂直翻转"
+          },
+          "is-skeleton-loaded": {
+            "list-name": "骨架是否已加载",
+            "display-text": "骨架是否已加载",
+            "description": "检查骨架是否已完成加载"
+          },
+          "is-playing": {
+            "list-name": "是否正在播放",
+            "display-text": "是否正在播放",
+            "description": "检查动画是否正在播放"
+          },
+          "has-collision-body": {
+            "list-name": "有碰撞体",
+            "display-text": "有碰撞体",
+            "description": "检查此Spine实例当前是否有生成的碰撞体。"
+          },
+          "is-inside-slot": {
+            "list-name": "点是否在插槽内",
+            "display-text": "点({0}, {1})是否在插槽{2}内",
+            "description": "检查世界坐标中的点是否在插槽的附件多边形内",
+            "params": {
+              "x": {
+                "name": "X",
+                "desc": "X世界坐标"
+              },
+              "y": {
+                "name": "Y",
+                "desc": "Y世界坐标"
+              },
+              "slot-name": {
+                "name": "插槽名称",
+                "desc": "要检查的插槽名称"
+              }
+            }
+          },
+          "is-inside-bone-radius": {
+            "list-name": "点是否在骨骼半径内",
+            "display-text": "点({0}, {1})是否在骨骼{2}的{3}像素范围内",
+            "description": "检查世界坐标中的点是否在骨骼位置的指定半径范围内",
+            "params": {
+              "x": {
+                "name": "X",
+                "desc": "X世界坐标"
+              },
+              "y": {
+                "name": "Y",
+                "desc": "Y世界坐标"
+              },
+              "bone-name": {
+                "name": "骨骼名称",
+                "desc": "要检查的骨骼名称"
+              },
+              "radius": {
+                "name": "半径",
+                "desc": "骨骼位置周围的半径（像素）"
+              }
+            }
+          },
+          "is-animation-playing": {
+            "list-name": "动画是否正在播放",
+            "display-text": "动画{0}是否在轨道{1}上播放",
+            "description": "检查动画是否正在播放。使用空字符串匹配任何动画，使用-1匹配所有轨道。",
+            "params": {
+              "animation-name": {
+                "name": "动画名称",
+                "desc": "动画名称。空字符串匹配任何动画。"
+              },
+              "track-index": {
+                "name": "轨道索引",
+                "desc": "轨道索引。使用-1检查所有轨道。"
+              }
+            }
+          }
+        },
+        "actions": {
+          "set-skin": {
+            "list-name": "设置皮肤",
+            "display-text": "设置皮肤 {0}",
+            "description": "设置皮肤",
+            "params": {
+              "skin-name": {
+                "name": "皮肤列表",
+                "desc": "用逗号分隔的要设置的皮肤列表。空字符串表示取消设置所有皮肤。"
+              }
+            }
+          },
+          "mirror": {
+            "list-name": "镜像",
+            "display-text": "设置镜像为 {0}",
+            "description": "水平镜像骨架",
+            "params": {
+              "is-mirrored": {
+                "name": "是否镜像",
+                "desc": "设为true时水平镜像骨架，设为false时正常显示。"
+              }
+            }
+          },
+          "flip": {
+            "list-name": "翻转",
+            "display-text": "设置翻转为 {0}",
+            "description": "垂直翻转骨架",
+            "params": {
+              "is-flipped": {
+                "name": "是否翻转",
+                "desc": "设为true时垂直翻转骨架，设为false时正常显示。"
+              }
+            }
+          },
+          "set-animation": {
+            "list-name": "设置动画",
+            "display-text": "在轨道{0}上设置动画{1} 循环{2} 叠加混合{3}",
+            "description": "设置动画",
+            "params": {
+              "track-index": {
+                "name": "轨道",
+                "desc": "轨道"
+              },
+              "animation": {
+                "name": "动画名称",
+                "desc": "动画名称"
+              },
+              "loop": {
+                "name": "循环",
+                "desc": "循环"
+              },
+              "additive": {
+                "name": "叠加混合",
+                "desc": "是否使用叠加混合（值叠加到姿势上而不是替换）",
+                "items": {
+                  "disabled": "禁用",
+                  "enabled": "启用"
+                }
+              }
+            }
+          },
+          "add-animation": {
+            "list-name": "添加动画",
+            "display-text": "在轨道{0}上添加动画{1} 循环{2} 延迟{3} 叠加混合{4}",
+            "description": "添加动画",
+            "params": {
+              "track-index": {
+                "name": "轨道",
+                "desc": "轨道"
+              },
+              "animation": {
+                "name": "动画名称",
+                "desc": "动画名称"
+              },
+              "loop": {
+                "name": "循环",
+                "desc": "循环"
+              },
+              "delay": {
+                "name": "延迟",
+                "desc": "延迟"
+              },
+              "additive": {
+                "name": "叠加混合",
+                "desc": "是否使用叠加混合（值叠加到姿势上而不是替换）",
+                "items": {
+                  "disabled": "禁用",
+                  "enabled": "启用"
+                }
+              }
+            }
+          },
+          "play": {
+            "list-name": "播放",
+            "display-text": "播放动画",
+            "description": "恢复或播放动画"
+          },
+          "stop": {
+            "list-name": "停止",
+            "display-text": "停止动画",
+            "description": "暂停或停止动画"
+          },
+          "set-empty-animation": {
+            "list-name": "设置空动画",
+            "display-text": "在轨道{0}上设置空动画，混合时长{1}",
+            "description": "在特定轨道上设置空动画",
+            "params": {
+              "track-index": {
+                "name": "轨道",
+                "desc": "轨道索引"
+              },
+              "mix-duration": {
+                "name": "混合时长",
+                "desc": "从当前动画混合到空动画的持续时间（秒）"
+              }
+            }
+          },
+          "add-empty-animation": {
+            "list-name": "添加空动画",
+            "display-text": "在轨道{0}上添加空动画，混合时长{1}，延迟{2}",
+            "description": "将空动画添加到特定轨道的动画队列中",
+            "params": {
+              "track-index": {
+                "name": "轨道",
+                "desc": "轨道索引"
+              },
+              "mix-duration": {
+                "name": "混合时长",
+                "desc": "从当前动画混合到空动画的持续时间（秒）"
+              },
+              "delay": {
+                "name": "延迟",
+                "desc": "动画开始前的延迟时间（秒）"
+              }
+            }
+          },
+          "set-attachment": {
+            "list-name": "设置附件",
+            "display-text": "将插槽{0}的附件设置为{1}",
+            "description": "更改特定插槽上的附件",
+            "params": {
+              "slot-name": {
+                "name": "插槽名称",
+                "desc": "插槽的名称"
+              },
+              "attachment-name": {
+                "name": "附件名称",
+                "desc": "要设置的附件名称"
+              }
+            }
+          },
+          "create-custom-skin": {
+            "list-name": "创建自定义皮肤",
+            "display-text": "创建自定义皮肤{0}",
+            "description": "创建一个可以组合多个皮肤的新自定义皮肤",
+            "params": {
+              "skin-name": {
+                "name": "皮肤名称",
+                "desc": "自定义皮肤的名称"
+              }
+            }
+          },
+          "add-custom-skin": {
+            "list-name": "添加到自定义皮肤",
+            "display-text": "将皮肤{1}添加到自定义皮肤{0}",
+            "description": "将现有皮肤添加到自定义皮肤",
+            "params": {
+              "custom-skin-name": {
+                "name": "自定义皮肤名称",
+                "desc": "要添加到的自定义皮肤名称"
+              },
+              "skin-to-add-name": {
+                "name": "要添加的皮肤",
+                "desc": "要添加的现有皮肤名称"
+              }
+            }
+          },
+          "set-custom-skin": {
+            "list-name": "设置自定义皮肤",
+            "display-text": "设置自定义皮肤{0}",
+            "description": "将自定义皮肤应用到骨架",
+            "params": {
+              "skin-name": {
+                "name": "皮肤名称",
+                "desc": "要应用的自定义皮肤名称"
+              }
+            }
+          },
+          "set-time-scale": {
+            "list-name": "设置时间缩放",
+            "display-text": "将轨道{0}的时间缩放设置为{1}",
+            "description": "设置特定轨道或整个动画状态的时间缩放。针对轨道时，时间缩放仅影响该轨道上的当前动画。使用-1设置全局动画状态时间缩放。设置为0可暂停。",
+            "params": {
+              "track-index": {
+                "name": "轨道",
+                "desc": "要设置时间缩放的轨道索引，或-1设置全局动画状态时间缩放。"
+              },
+              "time-scale": {
+                "name": "时间缩放",
+                "desc": "时间缩放倍数（1.0为正常速度，0为暂停）"
+              }
+            }
+          },
+          "set-animation-time": {
+            "list-name": "设置动画时间",
+            "display-text": "将轨道{0}的动画时间设置为{1}（{2}）",
+            "description": "设置轨道上动画的当前时间",
+            "params": {
+              "track-index": {
+                "name": "轨道",
+                "desc": "轨道索引"
+              },
+              "time": {
+                "name": "时间",
+                "desc": "时间值（秒或0.0-1.0的比例）"
+              },
+              "units": {
+                "name": "单位",
+                "desc": "时间单位",
+                "items": {
+                  "seconds": "秒（绝对时间）",
+                  "ratio": "比例（0.0到1.0）"
+                }
+              }
+            }
+          },
+          "set-animation-mix": {
+            "list-name": "设置动画混合",
+            "display-text": "设置从动画{0}到{1}的混合时长为{2}",
+            "description": "设置从一个动画过渡到另一个动画时的混合/淡入淡出时长",
+            "params": {
+              "from-name": {
+                "name": "起始动画",
+                "desc": "过渡起始的动画名称"
+              },
+              "to-name": {
+                "name": "目标动画",
+                "desc": "过渡目标的动画名称"
+              },
+              "duration": {
+                "name": "时长",
+                "desc": "混合时长（秒）"
+              }
+            }
+          },
+          "set-default-mix": {
+            "list-name": "设置默认混合",
+            "display-text": "设置默认混合时长为{0}",
+            "description": "设置动画过渡时使用的默认混合时长（当没有为特定动画对定义混合时长时使用）",
+            "params": {
+              "duration": {
+                "name": "时长",
+                "desc": "默认混合时长（秒）"
+              }
+            }
+          },
+          "set-physics-mode": {
+            "list-name": "设置物理模式",
+            "display-text": "设置物理模式为{0}",
+            "description": "设置物理模式以控制物理约束的更新和应用方式",
+            "params": {
+              "physics-mode": {
+                "name": "物理模式",
+                "desc": "物理模式",
+                "items": {
+                  "none": "无（物理不更新也不应用）",
+                  "reset": "重置（物理重置为当前姿势）",
+                  "update": "更新（物理更新并应用）",
+                  "pose": "姿势（应用物理姿势但不更新）"
+                }
+              }
+            }
+          },
+          "set-skeleton-color": {
+            "list-name": "设置骨架颜色",
+            "display-text": "设置骨架颜色为{0}",
+            "description": "设置整个骨架的颜色。接受十六进制颜色（#RRGGBB 或 #RRGGBBAA）或颜色名称。",
+            "params": {
+              "color": {
+                "name": "颜色",
+                "desc": "颜色值（十六进制如 #FF0000 或颜色名称）"
+              }
+            }
+          },
+          "set-track-alpha": {
+            "list-name": "设置轨道透明度",
+            "display-text": "在轨道{1}上设置透明度为{0}",
+            "description": "设置动画轨道的透明度/不透明度。用于混合不同轨道上的动画。",
+            "params": {
+              "alpha": {
+                "name": "透明度",
+                "desc": "透明度值（0.0 到 1.0，其中 0 为完全透明，1 为完全不透明）"
+              },
+              "track-index": {
+                "name": "轨道索引",
+                "desc": "要设置透明度的轨道索引"
+              }
+            }
+          },
+          "clear-track": {
+            "list-name": "清除轨道",
+            "display-text": "清除轨道{0}",
+            "description": "清除给定的轨道，如果为-1则清除所有轨道",
+            "params": {
+              "track-index": {
+                "name": "轨道索引",
+                "desc": "要清除的轨道索引。-1表示清除所有轨道。"
+              }
+            }
+          },
+          "set-slot-color": {
+            "list-name": "设置插槽颜色",
+            "display-text": "设置插槽{0}的颜色为{1}",
+            "description": "设置插槽的颜色。接受十六进制颜色（#RRGGBB 或 #RRGGBBAA）或颜色名称。",
+            "params": {
+              "slot-name": {
+                "name": "插槽名称",
+                "desc": "要修改的插槽名称"
+              },
+              "color": {
+                "name": "颜色",
+                "desc": "颜色值（十六进制如 #FF0000 或颜色名称）"
+              }
+            }
+          },
+          "reset-slot-colors": {
+            "list-name": "重置插槽颜色",
+            "display-text": "重置插槽{0}的颜色",
+            "description": "将插槽颜色重置为设置姿势值。留空插槽名称以重置所有插槽。",
+            "params": {
+              "slot-name": {
+                "name": "插槽名称",
+                "desc": "要重置的插槽名称。留空以重置所有插槽。"
+              }
+            }
+          },
+          "set-bone-pose": {
+            "list-name": "设置骨骼姿势",
+            "display-text": "设置骨骼{0}位置({3}, {4})，旋转{5}，缩放({6}, {7})，{1}模式，{2}",
+            "description": "设置骨骼姿势。一次：仅在当前帧应用。保持：每帧重新应用，与之前保持的值合并。使用释放骨骼保持操作停止保持。位置和旋转使用所选的坐标空间（游戏或本地）。缩放始终为本地值。",
+            "params": {
+              "bone-name": {
+                "name": "骨骼名称",
+                "desc": "要更新的骨骼名称"
+              },
+              "mode": {
+                "name": "模式",
+                "desc": "位置和旋转的坐标空间。本地：值直接作为骨骼本地姿势应用。游戏：值从游戏空间转换。",
+                "items": {
+                  "local": "本地",
+                  "game": "游戏"
+                }
+              },
+              "apply-mode": {
+                "name": "应用方式",
+                "desc": "一次：仅在当前帧应用姿势。保持：每帧重新应用姿势，直到释放。使用空字符串可让某个分量保持不变。",
+                "items": {
+                  "once": "一次",
+                  "hold": "保持"
+                }
+              },
+              "x": {
+                "name": "X",
+                "desc": "X位置。游戏模式下为游戏空间坐标，本地模式下为骨骼本地坐标。设为空字符串保持当前值。"
+              },
+              "y": {
+                "name": "Y",
+                "desc": "Y位置。游戏模式下为游戏空间坐标，本地模式下为骨骼本地坐标。设为空字符串保持当前值。"
+              },
+              "rotation": {
+                "name": "旋转",
+                "desc": "旋转角度（度）。游戏模式下为游戏空间角度，本地模式下为骨骼本地角度。设为空字符串保持当前值。"
+              },
+              "scaleX": {
+                "name": "缩放X",
+                "desc": "骨骼的本地缩放X。无论模式如何，始终作为本地缩放应用。设为空字符串保持当前值。"
+              },
+              "scaleY": {
+                "name": "缩放Y",
+                "desc": "骨骼的本地缩放Y。无论模式如何，始终作为本地缩放应用。设为空字符串保持当前值。"
+              }
+            }
+          },
+          "release-bone-hold": {
+            "list-name": "释放骨骼保持",
+            "display-text": "释放骨骼{0}的保持，重置为初始姿势：{1}",
+            "description": "释放已保持的骨骼姿势，允许动画重新控制该骨骼。可选择将骨骼重置为初始姿势。",
+            "params": {
+              "bone-name": {
+                "name": "骨骼名称",
+                "desc": "要释放的骨骼名称"
+              },
+              "reset-to-setup": {
+                "name": "重置为初始姿势",
+                "desc": "如果勾选，释放保持后将骨骼重置为初始姿势。"
+              }
+            }
+          },
+          "setup-pose": {
+            "list-name": "重置为初始姿势",
+            "display-text": "将{0}重置为初始姿势",
+            "description": "将骨骼和/或插槽重置为初始姿势值。",
+            "params": {
+              "target": {
+                "name": "目标",
+                "desc": "要重置为初始姿势的内容。",
+                "items": {
+                  "all": "全部（骨骼和插槽）",
+                  "bones": "骨骼",
+                  "slots": "插槽"
+                }
+              }
+            }
+          },
+          "setup-bone-slot-pose": {
+            "list-name": "重置骨骼/插槽为初始姿势",
+            "display-text": "将{0} {1}重置为初始姿势",
+            "description": "将指定的骨骼或插槽重置为初始姿势值。",
+            "params": {
+              "type": {
+                "name": "类型",
+                "desc": "要重置的目标类型。",
+                "items": {
+                  "bone": "骨骼",
+                  "slot": "插槽"
+                }
+              },
+              "name": {
+                "name": "名称",
+                "desc": "要重置的骨骼或插槽名称。"
+              }
+            }
+          },
+          "attach-instance-to-bone": {
+            "list-name": "将实例附加到骨骼",
+            "display-text": "将实例UID {0}附加到骨骼{1}，偏移({2}, {3}, {4}°)，缩放({5}, {6})",
+            "description": "使对象实例跟随骨架骨骼的位置、旋转和缩放。X/Y偏移会沿偏移角后的跟随器轴线，从骨骼原点移动跟随器原点。角度偏移会相对骨骼旋转来旋转实例和这些偏移轴。X/Y缩放偏移会在继承骨骼缩放后乘以最终大小，不影响偏移位置。",
+            "params": {
+              "uid": {
+                "name": "UID",
+                "desc": "要附加的对象实例的UID（使用类似Sprite.UID的表达式）"
+              },
+              "bone-name": {
+                "name": "骨骼名称",
+                "desc": "要跟随的骨骼名称"
+              },
+              "offset-x": {
+                "name": "X偏移",
+                "desc": "沿偏移角后的跟随器X轴移动跟随器原点。不会乘以骨骼缩放或缩放偏移。"
+              },
+              "offset-y": {
+                "name": "Y偏移",
+                "desc": "沿偏移角后的跟随器Y轴移动跟随器原点。不会乘以骨骼缩放或缩放偏移。"
+              },
+              "offset-angle": {
+                "name": "角度偏移",
+                "desc": "相对骨骼旋转的角度（度）。会旋转实例和X/Y偏移轴；非均匀缩放不会改变这个角度。"
+              },
+              "offset-scale-x": {
+                "name": "X缩放偏移",
+                "desc": "继承骨骼缩放后应用到最终宽度的额外倍数。不影响X/Y偏移。"
+              },
+              "offset-scale-y": {
+                "name": "Y缩放偏移",
+                "desc": "继承骨骼缩放后应用到最终高度的额外倍数。不影响X/Y偏移。"
+              }
+            }
+          },
+          "attach-object-to-bone": {
+            "list-name": "将对象附加到骨骼",
+            "display-text": "将{0}附加到骨骼{1}，偏移({2}, {3}, {4}°)，缩放({5}, {6})",
+            "description": "使选中的对象实例跟随骨架骨骼的位置、旋转和缩放。X/Y偏移会沿偏移角后的跟随器轴线，从骨骼原点移动每个跟随器原点。角度偏移会相对骨骼旋转来旋转实例和这些偏移轴。X/Y缩放偏移会在继承骨骼缩放后乘以最终大小，不影响偏移位置。",
+            "params": {
+              "object": {
+                "name": "对象",
+                "desc": "要附加的对象类型（选中的实例将被附加）"
+              },
+              "bone-name": {
+                "name": "骨骼名称",
+                "desc": "要跟随的骨骼名称"
+              },
+              "offset-x": {
+                "name": "X偏移",
+                "desc": "沿偏移角后的跟随器X轴移动每个跟随器原点。不会乘以骨骼缩放或缩放偏移。"
+              },
+              "offset-y": {
+                "name": "Y偏移",
+                "desc": "沿偏移角后的跟随器Y轴移动每个跟随器原点。不会乘以骨骼缩放或缩放偏移。"
+              },
+              "offset-angle": {
+                "name": "角度偏移",
+                "desc": "相对骨骼旋转的角度（度）。会旋转实例和X/Y偏移轴；非均匀缩放不会改变这个角度。"
+              },
+              "offset-scale-x": {
+                "name": "X缩放偏移",
+                "desc": "继承骨骼缩放后应用到最终宽度的额外倍数。不影响X/Y偏移。"
+              },
+              "offset-scale-y": {
+                "name": "Y缩放偏移",
+                "desc": "继承骨骼缩放后应用到最终高度的额外倍数。不影响X/Y偏移。"
+              }
+            }
+          },
+          "detach-object-from-bone": {
+            "list-name": "将对象从骨骼分离",
+            "display-text": "将{0}从骨骼{1}分离",
+            "description": "停止选中的对象实例跟随骨骼。实例将保持在其当前位置。",
+            "params": {
+              "object": {
+                "name": "对象",
+                "desc": "要分离的对象类型（选中的实例将被分离）"
+              },
+              "bone-name": {
+                "name": "骨骼名称",
+                "desc": "要分离的骨骼名称"
+              }
+            }
+          },
+          "detach-all-from-bone": {
+            "list-name": "将所有实例从骨骼分离",
+            "display-text": "将所有实例从骨骼{0}分离",
+            "description": "停止所有对象实例跟随骨骼。实例将保持在其当前位置。",
+            "params": {
+              "bone-name": {
+                "name": "骨骼名称",
+                "desc": "要分离的骨骼名称"
+              }
+            }
+          },
+          "add-handle": {
+            "list-name": "添加控制柄",
+            "display-text": "为{0} {1}添加交互控制柄，半径{2}（调试：{3}）",
+            "description": "为骨骼或插槽添加可以用鼠标拖动的交互控制柄。半径决定可点击区域的大小。",
+            "params": {
+              "type": {
+                "name": "类型",
+                "desc": "要添加的控制柄类型",
+                "items": {
+                  "bone": "骨骼（拖动骨骼位置）",
+                  "slot": "插槽（拖动插槽附件位置）"
+                }
+              },
+              "name": {
+                "name": "名称",
+                "desc": "要添加控制柄的骨骼或插槽名称"
+              },
+              "radius": {
+                "name": "半径",
+                "desc": "可点击区域的半径（像素）"
+              },
+              "debug": {
+                "name": "调试",
+                "desc": "是否显示控制柄的调试可视化"
+              }
+            }
+          },
+          "remove-handle": {
+            "list-name": "移除控制柄",
+            "display-text": "从{0} {1}移除控制柄",
+            "description": "从骨骼或插槽移除交互控制柄。",
+            "params": {
+              "type": {
+                "name": "类型",
+                "desc": "要移除的控制柄类型",
+                "items": {
+                  "bone": "骨骼",
+                  "slot": "插槽"
+                }
+              },
+              "name": {
+                "name": "名称",
+                "desc": "要移除控制柄的骨骼或插槽名称"
+              }
+            }
+          },
+          "set-collision-bounding-box": {
+            "list-name": "设置碰撞边界框",
+            "display-text": "将碰撞体设置为插槽{0}上的边界框{1}",
+            "description": "使用Spine边界框附件每帧更新内部Sprite碰撞体网格。调用此动作时会应用一次该附件。",
+            "params": {
+              "slot-name": {
+                "name": "插槽名称",
+                "desc": "包含边界框附件的插槽名称"
+              },
+              "attachment-name": {
+                "name": "附件名称",
+                "desc": "用于碰撞体的边界框附件名称"
+              }
+            }
+          },
+          "clear-collision-bounding-box": {
+            "list-name": "清除碰撞边界框",
+            "display-text": "清除碰撞边界框",
+            "description": "停止使用Spine边界框附件作为碰撞体，并返回对象的矩形碰撞体。"
+          },
+          "set-collision-bounding-box-debug": {
+            "list-name": "设置碰撞边界框调试",
+            "display-text": "将碰撞边界框调试设置为{0}",
+            "description": "绘制当前碰撞边界框网格轮廓以便调试。",
+            "params": {
+              "enabled": {
+                "name": "启用",
+                "desc": "是否绘制碰撞边界框网格轮廓"
+              }
+            }
+          },
+          "set-collision-body-drives-object": {
+            "list-name": "设置碰撞体驱动对象",
+            "display-text": "将碰撞体驱动对象设置为{0}",
+            "description": "启用时，生成的Sprite碰撞体的移动会移动Spine对象。适用于将移动行为添加到碰撞体。",
+            "params": {
+              "enabled": {
+                "name": "启用",
+                "desc": "生成的碰撞体是否应驱动Spine对象的位置"
+              }
+            }
+          },
+          "set-runtime-asset-cache-retained-when-unused": {
+            "list-name": "设置运行时资源缓存未使用时保留",
+            "display-text": "将{1}的运行时资源缓存未使用时保留设置为{0}",
+            "description": "控制当没有实时实例使用缓存的Spine运行时资源时是否保留它们。这可以避免切换布局时重新加载造成的闪烁。",
+            "params": {
+              "enabled": {
+                "name": "启用",
+                "desc": "是否保留未使用的Spine运行时资源缓存"
+              },
+              "scope": {
+                "name": "范围",
+                "desc": "应用于此Spine对象类型的资源或所有Spine对象",
+                "items": {
+                  "this-object-type": "此对象类型",
+                  "all-spine-objects": "所有Spine对象"
+                }
+              }
+            }
+          },
+          "release-cached-spine-assets": {
+            "list-name": "释放缓存的Spine资源",
+            "display-text": "释放此对象类型缓存的Spine资源",
+            "description": "停止保留此对象类型缓存的Spine运行时资源，并在没有实时实例使用它们时释放。"
+          },
+          "release-all-cached-spine-assets": {
+            "list-name": "释放所有缓存的Spine资源",
+            "display-text": "释放所有缓存的Spine资源",
+            "description": "释放所有当前没有被实时实例使用的Spine运行时资源。"
+          },
+          "set-bounds": {
+            "list-name": "设置边界",
+            "display-text": "设置边界为({0}, {1}, {2}, {3})",
+            "description": "在Spine世界坐标中设置游戏对象的边界。骨架的视觉大小保持不变（只有边界区域改变）。骨架保持在相同位置渲染。",
+            "params": {
+              "x": {
+                "name": "X",
+                "desc": "边界在Spine世界坐标中的X偏移"
+              },
+              "y": {
+                "name": "Y",
+                "desc": "边界在Spine世界坐标中的Y偏移"
+              },
+              "width": {
+                "name": "宽度",
+                "desc": "边界在Spine世界坐标中的宽度"
+              },
+              "height": {
+                "name": "高度",
+                "desc": "边界在Spine世界坐标中的高度"
+              }
+            }
+          },
+          "set-bounds-for-skin-animation": {
+            "list-name": "根据皮肤/动画设置边界",
+            "display-text": "根据皮肤{0}和动画{1}设置边界",
+            "description": "根据指定的皮肤和动画计算并设置边界。使用独立的骨架通过遍历动画帧来计算边界框。骨架的视觉大小保持不变。",
+            "params": {
+              "skins": {
+                "name": "皮肤",
+                "desc": "逗号分隔的皮肤名称列表。留空以使用默认皮肤。"
+              },
+              "animation": {
+                "name": "动画",
+                "desc": "用于计算边界的动画名称。留空以使用初始姿势。"
+              }
+            }
+          },
+          "set-bounds-for-setup-pose": {
+            "list-name": "根据初始姿势设置边界",
+            "display-text": "根据初始姿势设置边界",
+            "description": "根据骨架的初始姿势计算并设置边界。骨架的视觉大小保持不变。"
+          }
+        },
+        "expressions": {
+          "slot-attachment": {
+            "description": "获取插槽上的附件名称。如果没有附件则返回空字符串。",
+            "translated-name": "SlotAttachment",
+            "params": {
+              "slot-name": {
+                "name": "插槽名称",
+                "desc": "插槽的名称"
+              }
+            }
+          },
+          "slot-attachment-placeholder": {
+            "description": "获取插槽上附件的皮肤占位符名称，如果使用默认皮肤则返回附件名称。如果没有附件则返回空字符串。",
+            "translated-name": "SlotAttachmentPlaceholder",
+            "params": {
+              "slot-name": {
+                "name": "插槽名称",
+                "desc": "插槽的名称"
+              }
+            }
+          },
+          "bone-x": {
+            "description": "获取骨骼的世界X位置。",
+            "translated-name": "BoneX",
+            "params": {
+              "bone-name": {
+                "name": "骨骼名称",
+                "desc": "骨骼的名称"
+              }
+            }
+          },
+          "bone-y": {
+            "description": "获取骨骼的世界Y位置。",
+            "translated-name": "BoneY",
+            "params": {
+              "bone-name": {
+                "name": "骨骼名称",
+                "desc": "骨骼的名称"
+              }
+            }
+          },
+          "bone-rotation": {
+            "description": "获取骨骼的世界旋转角度。",
+            "translated-name": "BoneRotation",
+            "params": {
+              "bone-name": {
+                "name": "骨骼名称",
+                "desc": "骨骼的名称"
+              }
+            }
+          },
+          "bone-length": {
+            "description": "获取骨骼的长度。",
+            "translated-name": "BoneLength",
+            "params": {
+              "bone-name": {
+                "name": "骨骼名称",
+                "desc": "骨骼的名称"
+              }
+            }
+          },
+          "bone-world-x": {
+            "description": "获取骨骼的C3世界X位置。",
+            "translated-name": "BoneWorldX",
+            "params": {
+              "bone-name": {
+                "name": "骨骼名称",
+                "desc": "骨骼的名称"
+              }
+            }
+          },
+          "bone-world-y": {
+            "description": "获取骨骼的C3世界Y位置。",
+            "translated-name": "BoneWorldY",
+            "params": {
+              "bone-name": {
+                "name": "骨骼名称",
+                "desc": "骨骼的名称"
+              }
+            }
+          },
+          "bone-local-x": {
+            "description": "获取骨骼相对于父骨骼的本地X位移（Spine单位）。",
+            "translated-name": "BoneLocalX",
+            "params": { "bone-name": { "name": "骨骼名称", "desc": "骨骼的名称" } }
+          },
+          "bone-local-y": {
+            "description": "获取骨骼相对于父骨骼的本地Y位移（Spine单位）。",
+            "translated-name": "BoneLocalY",
+            "params": { "bone-name": { "name": "骨骼名称", "desc": "骨骼的名称" } }
+          },
+          "bone-local-rotation": {
+            "description": "获取骨骼的本地旋转角度（度）。",
+            "translated-name": "BoneLocalRotation",
+            "params": { "bone-name": { "name": "骨骼名称", "desc": "骨骼的名称" } }
+          },
+          "bone-local-scale-x": {
+            "description": "获取骨骼的本地X缩放。",
+            "translated-name": "BoneLocalScaleX",
+            "params": { "bone-name": { "name": "骨骼名称", "desc": "骨骼的名称" } }
+          },
+          "bone-local-scale-y": {
+            "description": "获取骨骼的本地Y缩放。",
+            "translated-name": "BoneLocalScaleY",
+            "params": { "bone-name": { "name": "骨骼名称", "desc": "骨骼的名称" } }
+          },
+          "bone-local-shear-x": {
+            "description": "获取骨骼的本地X剪切角度（度）。",
+            "translated-name": "BoneLocalShearX",
+            "params": { "bone-name": { "name": "骨骼名称", "desc": "骨骼的名称" } }
+          },
+          "bone-local-shear-y": {
+            "description": "获取骨骼的本地Y剪切角度（度）。",
+            "translated-name": "BoneLocalShearY",
+            "params": { "bone-name": { "name": "骨骼名称", "desc": "骨骼的名称" } }
+          },
+          "current-skin": {
+            "description": "获取当前皮肤名称。如果有多个皮肤处于活动状态，返回逗号分隔的名称。",
+            "translated-name": "CurrentSkin"
+          },
+          "animations": {
+            "description": "获取所有动画名称，以换行分隔。",
+            "translated-name": "Animations"
+          },
+          "animations-count": {
+            "description": "获取动画数量。",
+            "translated-name": "AnimationsCount"
+          },
+          "animation-name": {
+            "description": "获取指定索引处的动画名称。如果索引无效，则返回空字符串。",
+            "translated-name": "AnimationName",
+            "params": {
+              "index": {
+                "name": "索引",
+                "desc": "从0开始的动画索引"
+              }
+            }
+          },
+          "current-animation": {
+            "description": "获取特定轨道上当前播放的动画名称。",
+            "translated-name": "CurrentAnimation",
+            "params": {
+              "track-index": {
+                "name": "轨道索引",
+                "desc": "轨道的索引"
+              }
+            }
+          },
+          "get-event-data": {
+            "description": "获取最后触发的动画事件的数据。通常在'动画事件触发时'条件中使用。有效字段: \"float\", \"int\", \"string\", \"balance\", \"volume\", \"audiopath\", \"event\", \"track\", \"animation\"。",
+            "translated-name": "GetEventData",
+            "params": {
+              "field": {
+                "name": "\"float\"|\"int\"|\"string\"|\"balance\"|\"volume\"|\"audiopath\"|\"event\"|\"track\"|\"animation\"",
+                "desc": "要检索的事件数据字段"
+              }
+            }
+          },
+          "time-scale": {
+            "description": "获取特定轨道或全局动画状态的时间缩放。使用-1获取全局动画状态时间缩放。",
+            "translated-name": "TimeScale",
+            "params": {
+              "track-index": {
+                "name": "轨道",
+                "desc": "轨道索引，或-1获取全局动画状态时间缩放。"
+              }
+            }
+          },
+          "loop": {
+            "description": "获取轨道上当前动画是否设置为循环（1 = 循环，0 = 不循环）。",
+            "translated-name": "Loop",
+            "params": {
+              "track-index": {
+                "name": "轨道",
+                "desc": "轨道索引。"
+              }
+            }
+          },
+          "current-animation-start": {
+            "description": "获取指定轨道上当前动画的开始时间。",
+            "translated-name": "CurrentAnimationStart",
+            "params": {
+              "track-index": {
+                "name": "轨道索引",
+                "desc": "轨道索引"
+              }
+            }
+          },
+          "current-animation-end": {
+            "description": "获取指定轨道上当前动画的结束时间。",
+            "translated-name": "CurrentAnimationEnd",
+            "params": {
+              "track-index": {
+                "name": "轨道索引",
+                "desc": "轨道索引"
+              }
+            }
+          },
+          "current-animation-last": {
+            "description": "获取指定轨道上当前动画的最后应用时间。",
+            "translated-name": "CurrentAnimationLast",
+            "params": {
+              "track-index": {
+                "name": "轨道索引",
+                "desc": "轨道索引"
+              }
+            }
+          },
+          "bounds-x": {
+            "description": "获取当前边界的X偏移。",
+            "translated-name": "BoundsX"
+          },
+          "bounds-y": {
+            "description": "获取当前边界的Y偏移。",
+            "translated-name": "BoundsY"
+          },
+          "bounds-width": {
+            "description": "获取当前边界的宽度。",
+            "translated-name": "BoundsWidth"
+          },
+          "bounds-height": {
+            "description": "获取当前边界的高度。",
+            "translated-name": "BoundsHeight"
+          },
+          "collision-body-uid": {
+            "description": "获取此Spine实例生成的碰撞体UID；如果没有则返回-1。可与碰撞体对象的按比较选取条件一起使用，以配置碰撞体上的行为。",
+            "translated-name": "CollisionBodyUID"
+          },
+          "bounding-box-point-count": {
+            "description": "获取Spine边界框附件多边形中的点数。",
+            "translated-name": "BoundingBoxPointCount",
+            "params": {
+              "slot-name": { "name": "插槽名称", "desc": "插槽名称" },
+              "attachment-name": { "name": "附件名称", "desc": "边界框附件名称" }
+            }
+          },
+          "bounding-box-point-x": {
+            "description": "获取边界框多边形点的游戏X坐标。",
+            "translated-name": "BoundingBoxPointX",
+            "params": {
+              "slot-name": { "name": "插槽名称", "desc": "插槽名称" },
+              "attachment-name": { "name": "附件名称", "desc": "边界框附件名称" },
+              "index": { "name": "索引", "desc": "从0开始的点索引" }
+            }
+          },
+          "bounding-box-point-y": {
+            "description": "获取边界框多边形点的游戏Y坐标。",
+            "translated-name": "BoundingBoxPointY",
+            "params": {
+              "slot-name": { "name": "插槽名称", "desc": "插槽名称" },
+              "attachment-name": { "name": "附件名称", "desc": "边界框附件名称" },
+              "index": { "name": "索引", "desc": "从0开始的点索引" }
+            }
+          },
+          "bounding-box-center-x": {
+            "description": "获取边界框AABB中心的游戏X坐标。",
+            "translated-name": "BoundingBoxCenterX",
+            "params": {
+              "slot-name": { "name": "插槽名称", "desc": "插槽名称" },
+              "attachment-name": { "name": "附件名称", "desc": "边界框附件名称" }
+            }
+          },
+          "bounding-box-center-y": {
+            "description": "获取边界框AABB中心的游戏Y坐标。",
+            "translated-name": "BoundingBoxCenterY",
+            "params": {
+              "slot-name": { "name": "插槽名称", "desc": "插槽名称" },
+              "attachment-name": { "name": "附件名称", "desc": "边界框附件名称" }
+            }
+          },
+          "bounding-box-left": {
+            "description": "获取边界框多边形的左侧/最小游戏X坐标。",
+            "translated-name": "BoundingBoxLeft",
+            "params": {
+              "slot-name": { "name": "插槽名称", "desc": "插槽名称" },
+              "attachment-name": { "name": "附件名称", "desc": "边界框附件名称" }
+            }
+          },
+          "bounding-box-top": {
+            "description": "获取边界框多边形的顶部/最小游戏Y坐标。",
+            "translated-name": "BoundingBoxTop",
+            "params": {
+              "slot-name": { "name": "插槽名称", "desc": "插槽名称" },
+              "attachment-name": { "name": "附件名称", "desc": "边界框附件名称" }
+            }
+          },
+          "bounding-box-right": {
+            "description": "获取边界框多边形的右侧/最大游戏X坐标。",
+            "translated-name": "BoundingBoxRight",
+            "params": {
+              "slot-name": { "name": "插槽名称", "desc": "插槽名称" },
+              "attachment-name": { "name": "附件名称", "desc": "边界框附件名称" }
+            }
+          },
+          "bounding-box-bottom": {
+            "description": "获取边界框多边形的底部/最大游戏Y坐标。",
+            "translated-name": "BoundingBoxBottom",
+            "params": {
+              "slot-name": { "name": "插槽名称", "desc": "插槽名称" },
+              "attachment-name": { "name": "附件名称", "desc": "边界框附件名称" }
+            }
+          },
+          "bounding-box-polygon-json": {
+            "description": "以游戏坐标中的扁平JSON数组获取边界框多边形：[x0,y0,x1,y1,...]。",
+            "translated-name": "BoundingBoxPolygonJson",
+            "params": {
+              "slot-name": { "name": "插槽名称", "desc": "插槽名称" },
+              "attachment-name": { "name": "附件名称", "desc": "边界框附件名称" }
+            }
+          }
+        },
+        "custom_ui": {
+          "spine-enable-collision": {
+            "title": "删除精灵对象类型",
+            "message": "这是{0}的最后一个实例。您可以删除{0}或仅禁用精灵碰撞体。删除精灵碰撞体将移除事件表中所有相关的ACE（如果有）。您想如何继续？",
+            "buttons": {
+              "0": "仅禁用",
+              "1": "禁用并删除{0}"
+            }
+          },
+          "skeleton-not-loaded": {
+            "title": "错误",
+            "message": "骨架未加载。请确保已设置图集和骨架文件。"
+          },
+          "no-animations": {
+            "title": "无动画",
+            "message": "在骨架中未找到动画。"
+          },
+          "no-skins": {
+            "title": "无皮肤",
+            "message": "在骨架中未找到皮肤。"
+          },
+          "select-animation": {
+            "title": "选择动画"
+          },
+          "select-skins": {
+            "title": "选择皮肤"
+          },
+          "invalid-skins": {
+            "title": "无效皮肤",
+            "message": "以下皮肤在骨架中不存在：{0}。\n\n它们已被删除。请使用\"选择皮肤\"按钮从现有皮肤中选择。"
+          },
+          "invalid-animation": {
+            "title": "无效动画",
+            "message": "动画\"{0}\"在骨架中不存在。\n\n它已被删除。请使用\"选择动画\"按钮从现有动画中选择。"
+          }
+        }
+      }
+    }
+  }
+}

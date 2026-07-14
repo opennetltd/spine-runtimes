@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,8 +23,8 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 #pragma once
@@ -34,6 +34,7 @@
 #if VERSION_MAJOR > 3
 #ifdef SPINE_GODOT_EXTENSION
 #include <godot_cpp/classes/editor_import_plugin.hpp>
+#include <godot_cpp/classes/v_box_container.hpp>
 #else
 #include "editor/import/editor_import_plugin.h"
 #endif
@@ -44,8 +45,13 @@
 #include <godot_cpp/classes/editor_property.hpp>
 #else
 #include "editor/editor_node.h"
+#if (VERSION_MAJOR >= 4 && VERSION_MINOR >= 5)
+#include "editor/inspector/editor_properties.h"
+#include "editor/inspector/editor_properties_array_dict.h"
+#else
 #include "editor/editor_properties.h"
 #include "editor/editor_properties_array_dict.h"
+#endif
 #endif
 
 class SpineAtlasResourceImportPlugin : public EditorImportPlugin {
@@ -53,11 +59,15 @@ class SpineAtlasResourceImportPlugin : public EditorImportPlugin {
 
 public:
 #ifdef SPINE_GODOT_EXTENSION
-	static void _bind_methods(){};
+	static void _bind_methods() {};
 
-	String _get_importer_name() const override { return "spine.atlas"; }
+	String _get_importer_name() const override {
+		return "spine.atlas";
+	}
 
-	String _get_visible_name() const override { return "Spine Runtime Atlas"; }
+	String _get_visible_name() const override {
+		return "Spine Runtime Atlas";
+	}
 
 	PackedStringArray _get_recognized_extensions() const override {
 		PackedStringArray extensions;
@@ -65,57 +75,100 @@ public:
 		return extensions;
 	}
 
-	String _get_preset_name(int idx) const override { return idx == 0 ? "Default" : "Unknown"; }
+	String _get_preset_name(int idx) const override {
+		return idx == 0 ? "Default" : "Unknown";
+	}
 
-	int _get_preset_count() const override { return 1; }
+	int _get_preset_count() const override {
+		return 1;
+	}
 
-	String _get_save_extension() const override { return "spatlas"; }
+	String _get_save_extension() const override {
+		return "spatlas";
+	}
 
-	String _get_resource_type() const override { return "SpineAtlasResource"; }
+	String _get_resource_type() const override {
+		return "SpineAtlasResource";
+	}
 #else
-	String get_importer_name() const override { return "spine.atlas"; }
+	String get_importer_name() const override {
+		return "spine.atlas";
+	}
 
-	String get_visible_name() const override { return "Spine Runtime Atlas"; }
+	String get_visible_name() const override {
+		return "Spine Runtime Atlas";
+	}
 
-	void get_recognized_extensions(List<String> *extensions) const override { extensions->push_back("atlas"); }
+	void get_recognized_extensions(List<String> *extensions) const override {
+		extensions->push_back("atlas");
+	}
 
-	String get_preset_name(int idx) const override { return idx == 0 ? "Default" : "Unknown"; }
+	String get_preset_name(int idx) const override {
+		return idx == 0 ? "Default" : "Unknown";
+	}
 
-	int get_preset_count() const override { return 1; }
+	int get_preset_count() const override {
+		return 1;
+	}
 
-	String get_save_extension() const override { return "spatlas"; }
+	String get_save_extension() const override {
+		return "spatlas";
+	}
 
-	String get_resource_type() const override { return "SpineAtlasResource"; }
+	String get_resource_type() const override {
+		return "SpineAtlasResource";
+	}
 #endif
 
 #if VERSION_MAJOR > 3
 #ifdef SPINE_GODOT_EXTENSION
-	virtual int _get_import_order() const override { return IMPORT_ORDER_DEFAULT; }
+	virtual int _get_import_order() const override {
+		return IMPORT_ORDER_DEFAULT;
+	}
 
-	virtual float _get_priority() const override { return 1; }
+	virtual float _get_priority() const override {
+		return 1;
+	}
 
 	TypedArray<Dictionary> _get_import_options(const String &p_path, int32_t p_preset_index) const override;
 
-	virtual bool _get_option_visibility(const String &p_path, const StringName &p_option_name, const Dictionary &p_options) const override { return true; };
+	virtual bool _get_option_visibility(const String &p_path, const StringName &p_option_name, const Dictionary &p_options) const override {
+		return true;
+	};
 
-	virtual Error _import(const String &p_source_file, const String &p_save_path, const Dictionary &p_options, const TypedArray<String> &p_platform_variants, const TypedArray<String> &p_gen_files) const override;
+	virtual Error _import(const String &p_source_file, const String &p_save_path, const Dictionary &p_options,
+						  const TypedArray<String> &p_platform_variants, const TypedArray<String> &p_gen_files) const override;
 #else
-	int get_import_order() const override { return IMPORT_ORDER_DEFAULT; }
+	int get_import_order() const override {
+		return IMPORT_ORDER_DEFAULT;
+	}
 
-	float get_priority() const override { return 1; }
+	float get_priority() const override {
+		return 1;
+	}
 
 	void get_import_options(const String &path, List<ImportOption> *options, int preset) const override;
 
-	virtual bool get_option_visibility(const String &path, const String &option, const HashMap<StringName, Variant> &options) const override { return true; }
-
-	Error import(const String &source_file, const String &save_path, const HashMap<StringName, Variant> &options, List<String> *platform_variants, List<String> *gen_files, Variant *metadata) override;
+	virtual bool get_option_visibility(const String &path, const String &option, const HashMap<StringName, Variant> &options) const override {
+		return true;
+	}
+#if VERSION_MINOR > 3
+	Error import(ResourceUID::ID p_source_id, const String &source_file, const String &save_path, const HashMap<StringName, Variant> &options,
+				 List<String> *r_platform_variants, List<String> *r_gen_files, Variant *r_metadata = nullptr) override;
+#else
+	Error import(const String &source_file, const String &save_path, const HashMap<StringName, Variant> &options, List<String> *platform_variants,
+				 List<String> *gen_files, Variant *metadata) override;
+#endif
 #endif
 #else
 	void get_import_options(List<ImportOption> *options, int preset) const override;
 
-	bool get_option_visibility(const String &option, const Map<StringName, Variant> &options) const override { return true; }
+	bool get_option_visibility(const String &option, const Map<StringName, Variant> &options) const override {
+		return true;
+	}
 
-	Error import(const String &source_file, const String &save_path, const Map<StringName, Variant> &options, List<String> *platform_variants, List<String> *gen_files, Variant *metadata) override;
+	Error import(const String &source_file, const String &save_path, const Map<StringName, Variant> &options, List<String> *platform_variants,
+				 List<String> *gen_files, Variant *metadata) override;
 #endif
 };
 
@@ -124,11 +177,15 @@ class SpineJsonResourceImportPlugin : public EditorImportPlugin {
 
 public:
 #ifdef SPINE_GODOT_EXTENSION
-	static void _bind_methods(){};
+	static void _bind_methods() {};
 
-	String _get_importer_name() const override { return "spine.json"; }
+	String _get_importer_name() const override {
+		return "spine.json";
+	}
 
-	String _get_visible_name() const override { return "Spine Skeleton Json"; }
+	String _get_visible_name() const override {
+		return "Spine Skeleton Json";
+	}
 
 	PackedStringArray _get_recognized_extensions() const override {
 		PackedStringArray extensions;
@@ -136,60 +193,106 @@ public:
 		return extensions;
 	}
 
-	String _get_preset_name(int idx) const override { return idx == 0 ? "Default" : "Unknown"; }
+	String _get_preset_name(int idx) const override {
+		return idx == 0 ? "Default" : "Unknown";
+	}
 
-	int _get_preset_count() const override { return 1; }
+	int _get_preset_count() const override {
+		return 1;
+	}
 
-	String _get_save_extension() const override { return "spjson"; }
+	String _get_save_extension() const override {
+		return "spjson";
+	}
 
-	String _get_resource_type() const override { return "SpineSkeletonFileResource"; }
+	String _get_resource_type() const override {
+		return "SpineSkeletonFileResource";
+	}
 #else
-	String get_importer_name() const override { return "spine.json"; }
+	String get_importer_name() const override {
+		return "spine.json";
+	}
 
-	String get_visible_name() const override { return "Spine Skeleton Json"; }
+	String get_visible_name() const override {
+		return "Spine Skeleton Json";
+	}
 
-	void get_recognized_extensions(List<String> *extensions) const override { extensions->push_back("spine-json"); }
+	void get_recognized_extensions(List<String> *extensions) const override {
+		extensions->push_back("spine-json");
+	}
 
-	String get_preset_name(int idx) const override { return idx == 0 ? "Default" : "Unknown"; }
+	String get_preset_name(int idx) const override {
+		return idx == 0 ? "Default" : "Unknown";
+	}
 
-	int get_preset_count() const override { return 1; }
+	int get_preset_count() const override {
+		return 1;
+	}
 
-	String get_save_extension() const override { return "spjson"; }
+	String get_save_extension() const override {
+		return "spjson";
+	}
 
-	String get_resource_type() const override { return "SpineSkeletonFileResource"; }
+	String get_resource_type() const override {
+		return "SpineSkeletonFileResource";
+	}
 #endif
 
 #if VERSION_MAJOR > 3
 #ifdef SPINE_GODOT_EXTENSION
-	int _get_import_order() const override { return IMPORT_ORDER_DEFAULT; }
+	int _get_import_order() const override {
+		return IMPORT_ORDER_DEFAULT;
+	}
 
-	float _get_priority() const override { return 1; }
+	float _get_priority() const override {
+		return 1;
+	}
 
 	TypedArray<Dictionary> _get_import_options(const String &p_path, int32_t p_preset_index) const override {
 		TypedArray<Dictionary> options;
 		return options;
 	}
 
-	virtual bool _get_option_visibility(const String &p_path, const StringName &p_option_name, const Dictionary &p_options) const override { return true; };
+	virtual bool _get_option_visibility(const String &p_path, const StringName &p_option_name, const Dictionary &p_options) const override {
+		return true;
+	};
 
-	virtual Error _import(const String &p_source_file, const String &p_save_path, const Dictionary &p_options, const TypedArray<String> &p_platform_variants, const TypedArray<String> &p_gen_files) const override;
+	virtual Error _import(const String &p_source_file, const String &p_save_path, const Dictionary &p_options,
+						  const TypedArray<String> &p_platform_variants, const TypedArray<String> &p_gen_files) const override;
 #else
-	int get_import_order() const override { return IMPORT_ORDER_DEFAULT; }
+	int get_import_order() const override {
+		return IMPORT_ORDER_DEFAULT;
+	}
 
-	float get_priority() const override { return 1; }
+	float get_priority() const override {
+		return 1;
+	}
 
-	void get_import_options(const String &path, List<ImportOption> *options, int preset) const override {}
+	void get_import_options(const String &path, List<ImportOption> *options, int preset) const override {
+	}
 
-	bool get_option_visibility(const String &path, const String &option, const HashMap<StringName, Variant> &options) const override { return true; }
+	bool get_option_visibility(const String &path, const String &option, const HashMap<StringName, Variant> &options) const override {
+		return true;
+	}
 
-	Error import(const String &source_file, const String &save_path, const HashMap<StringName, Variant> &options, List<String> *platform_variants, List<String> *gen_files, Variant *metadata) override;
+#if VERSION_MINOR > 3
+	Error import(ResourceUID::ID p_source_id, const String &p_source_file, const String &p_save_path, const HashMap<StringName, Variant> &p_options,
+				 List<String> *r_platform_variants, List<String> *r_gen_files, Variant *r_metadata = nullptr) override;
+#else
+	Error import(const String &source_file, const String &save_path, const HashMap<StringName, Variant> &options, List<String> *platform_variants,
+				 List<String> *gen_files, Variant *metadata) override;
+#endif
 #endif
 #else
-	void get_import_options(List<ImportOption> *options, int preset) const override {}
+	void get_import_options(List<ImportOption> *options, int preset) const override {
+	}
 
-	bool get_option_visibility(const String &option, const Map<StringName, Variant> &options) const override { return true; }
+	bool get_option_visibility(const String &option, const Map<StringName, Variant> &options) const override {
+		return true;
+	}
 
-	Error import(const String &source_file, const String &save_path, const Map<StringName, Variant> &options, List<String> *platform_variants, List<String> *gen_files, Variant *metadata) override;
+	Error import(const String &source_file, const String &save_path, const Map<StringName, Variant> &options, List<String> *platform_variants,
+				 List<String> *gen_files, Variant *metadata) override;
 #endif
 };
 
@@ -198,11 +301,15 @@ class SpineBinaryResourceImportPlugin : public EditorImportPlugin {
 
 public:
 #ifdef SPINE_GODOT_EXTENSION
-	static void _bind_methods(){};
+	static void _bind_methods() {};
 
-	String _get_importer_name() const override { return "spine.skel"; }
+	String _get_importer_name() const override {
+		return "spine.skel";
+	}
 
-	String _get_visible_name() const override { return "Spine Skeleton Binary"; }
+	String _get_visible_name() const override {
+		return "Spine Skeleton Binary";
+	}
 
 	PackedStringArray _get_recognized_extensions() const override {
 		PackedStringArray extensions;
@@ -210,77 +317,142 @@ public:
 		return extensions;
 	}
 
-	String _get_preset_name(int idx) const override { return idx == 0 ? "Default" : "Unknown"; }
+	String _get_preset_name(int idx) const override {
+		return idx == 0 ? "Default" : "Unknown";
+	}
 
-	int _get_preset_count() const override { return 1; }
+	int _get_preset_count() const override {
+		return 1;
+	}
 
-	String _get_save_extension() const override { return "spskel"; }
+	String _get_save_extension() const override {
+		return "spskel";
+	}
 
-	String _get_resource_type() const override { return "SpineSkeletonFileResource"; }
+	String _get_resource_type() const override {
+		return "SpineSkeletonFileResource";
+	}
 #else
-	String get_importer_name() const override { return "spine.skel"; }
+	String get_importer_name() const override {
+		return "spine.skel";
+	}
 
-	String get_visible_name() const override { return "Spine Skeleton Binary"; }
+	String get_visible_name() const override {
+		return "Spine Skeleton Binary";
+	}
 
-	void get_recognized_extensions(List<String> *extensions) const override { extensions->push_back("skel"); }
+	void get_recognized_extensions(List<String> *extensions) const override {
+		extensions->push_back("skel");
+	}
 
-	String get_preset_name(int idx) const override { return idx == 0 ? "Default" : "Unknown"; }
+	String get_preset_name(int idx) const override {
+		return idx == 0 ? "Default" : "Unknown";
+	}
 
-	int get_preset_count() const override { return 1; }
+	int get_preset_count() const override {
+		return 1;
+	}
 
-	String get_save_extension() const override { return "spskel"; }
+	String get_save_extension() const override {
+		return "spskel";
+	}
 
-	String get_resource_type() const override { return "SpineSkeletonFileResource"; }
+	String get_resource_type() const override {
+		return "SpineSkeletonFileResource";
+	}
 #endif
 
 #if VERSION_MAJOR > 3
 #ifdef SPINE_GODOT_EXTENSION
-	int _get_import_order() const override { return IMPORT_ORDER_DEFAULT; }
+	int _get_import_order() const override {
+		return IMPORT_ORDER_DEFAULT;
+	}
 
-	float _get_priority() const override { return 1; }
+	float _get_priority() const override {
+		return 1;
+	}
 
 	TypedArray<Dictionary> _get_import_options(const String &p_path, int32_t p_preset_index) const override {
 		TypedArray<Dictionary> options;
 		return options;
 	}
 
-	virtual bool _get_option_visibility(const String &p_path, const StringName &p_option_name, const Dictionary &p_options) const override { return true; };
+	virtual bool _get_option_visibility(const String &p_path, const StringName &p_option_name, const Dictionary &p_options) const override {
+		return true;
+	};
 
-	virtual Error _import(const String &p_source_file, const String &p_save_path, const Dictionary &p_options, const TypedArray<String> &p_platform_variants, const TypedArray<String> &p_gen_files) const override;
+	virtual Error _import(const String &p_source_file, const String &p_save_path, const Dictionary &p_options,
+						  const TypedArray<String> &p_platform_variants, const TypedArray<String> &p_gen_files) const override;
 #else
-	int get_import_order() const override { return IMPORT_ORDER_DEFAULT; }
+	int get_import_order() const override {
+		return IMPORT_ORDER_DEFAULT;
+	}
 
-	float get_priority() const override { return 1; }
+	float get_priority() const override {
+		return 1;
+	}
 
-	void get_import_options(const String &path, List<ImportOption> *options, int preset) const override {}
+	void get_import_options(const String &path, List<ImportOption> *options, int preset) const override {
+	}
 
-	bool get_option_visibility(const String &path, const String &option, const HashMap<StringName, Variant> &options) const override { return true; }
-
-	Error import(const String &source_file, const String &save_path, const HashMap<StringName, Variant> &options, List<String> *platform_variants, List<String> *gen_files, Variant *metadata) override;
+	bool get_option_visibility(const String &path, const String &option, const HashMap<StringName, Variant> &options) const override {
+		return true;
+	}
+#if VERSION_MINOR > 3
+	Error import(ResourceUID::ID p_source_id, const String &p_source_file, const String &p_save_path, const HashMap<StringName, Variant> &p_options,
+				 List<String> *r_platform_variants, List<String> *r_gen_files, Variant *r_metadata = nullptr) override;
+#else
+	Error import(const String &source_file, const String &save_path, const HashMap<StringName, Variant> &options, List<String> *platform_variants,
+				 List<String> *gen_files, Variant *metadata) override;
+#endif
 #endif
 #else
-	void get_import_options(List<ImportOption> *options, int preset) const override {}
+	void get_import_options(List<ImportOption> *options, int preset) const override {
+	}
 
-	bool get_option_visibility(const String &option, const Map<StringName, Variant> &options) const override { return true; }
+	bool get_option_visibility(const String &option, const Map<StringName, Variant> &options) const override {
+		return true;
+	}
 
-	Error import(const String &source_file, const String &save_path, const Map<StringName, Variant> &options, List<String> *platform_variants, List<String> *gen_files, Variant *metadata) override;
+	Error import(const String &source_file, const String &save_path, const Map<StringName, Variant> &options, List<String> *platform_variants,
+				 List<String> *gen_files, Variant *metadata) override;
 #endif
 };
 
 class SpineEditorPlugin : public EditorPlugin {
 	GDCLASS(SpineEditorPlugin, EditorPlugin)
 
-	static void _bind_methods() {}
+	static void _bind_methods() {
+	}
+
+#ifdef SPINE_GODOT_EXTENSION
+	Ref<EditorImportPlugin> atlas_import_plugin;
+	Ref<EditorImportPlugin> json_import_plugin;
+	Ref<EditorImportPlugin> binary_import_plugin;
+	Ref<EditorInspectorPlugin> skeleton_data_inspector_plugin;
+#endif
 
 public:
 #ifdef SPINE_GODOT_EXTENSION
 	explicit SpineEditorPlugin();
 
-	String _get_plugin_name() const override { return "SpineEditorPlugin"; }
+	String _get_plugin_name() const override {
+		return "SpineEditorPlugin";
+	}
+
+	void _notification(int p_what);
 #else
 	explicit SpineEditorPlugin(EditorNode *node);
 
-	String get_name() const override { return "SpineEditorPlugin"; }
+#if VERSION_MAJOR > 3 && VERSION_MINOR > 3
+	String get_plugin_name() const override {
+		return "SpineEditorPlugin";
+	}
+#else
+	String get_name() const override {
+		return "SpineEditorPlugin";
+	}
+#endif
 #endif
 };
 
@@ -289,14 +461,17 @@ class SpineSkeletonDataResourceInspectorPlugin : public EditorInspectorPlugin {
 
 public:
 #ifdef SPINE_GODOT_EXTENSION
-	static void _bind_methods() {}
+	static void _bind_methods() {
+	}
 
 	bool _can_handle(Object *p_object) const override;
-	bool _parse_property(Object *object, Variant::Type type, const String &path, PropertyHint hint, const String &hint_text, const BitField<PropertyUsageFlags> p_usage, bool wide) override;
+	bool _parse_property(Object *object, Variant::Type type, const String &path, PropertyHint hint, const String &hint_text,
+						 const BitField<PropertyUsageFlags> p_usage, bool wide) override;
 #else
 	bool can_handle(Object *object) override;
 #if VERSION_MAJOR > 3
-	bool parse_property(Object *object, Variant::Type type, const String &path, PropertyHint hint, const String &hint_text, const BitField<PropertyUsageFlags> p_usage, bool wide) override;
+	bool parse_property(Object *object, Variant::Type type, const String &path, PropertyHint hint, const String &hint_text,
+						const BitField<PropertyUsageFlags> p_usage, bool wide) override;
 #else
 	bool parse_property(Object *object, Variant::Type type, const String &path, PropertyHint hint, const String &hint_text, int usage) override;
 #endif
@@ -322,7 +497,9 @@ class SpineEditorPropertyAnimationMixes : public EditorProperty {
 
 public:
 	SpineEditorPropertyAnimationMixes();
-	void setup(const Ref<SpineSkeletonDataResource> &_skeleton_data) { this->skeleton_data = _skeleton_data; };
+	void setup(const Ref<SpineSkeletonDataResource> &_skeleton_data) {
+		this->skeleton_data = _skeleton_data;
+	};
 	void update_property() override;
 };
 
@@ -342,6 +519,27 @@ public:
 	SpineEditorPropertyAnimationMix();
 	void setup(SpineEditorPropertyAnimationMixes *mixes_property, const Ref<SpineSkeletonDataResource> &skeleton_data, int index);
 	void update_property() override;
+};
+#else
+class SpineEditorPropertyAnimationMixes : public EditorProperty {
+	GDCLASS(SpineEditorPropertyAnimationMixes, EditorProperty)
+
+	Ref<SpineSkeletonDataResource> skeleton_data;
+	VBoxContainer *container;
+	bool updating;
+
+	static void _bind_methods();
+	void rebuild_ui();
+	void add_mix();
+	void delete_mix(int idx);
+	void on_from_changed(int option_idx, int mix_idx);
+	void on_to_changed(int option_idx, int mix_idx);
+	void on_mix_value_changed(float value, int mix_idx);
+
+public:
+	SpineEditorPropertyAnimationMixes();
+	void setup(const Ref<SpineSkeletonDataResource> &_skeleton_data);
+	void _update_property() override;
 };
 #endif
 

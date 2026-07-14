@@ -1,6 +1,8 @@
 @echo off
 rmdir Plugins\SpinePlugin\Source\SpinePlugin\Public\spine-cpp /s /q
-xcopy /E /I ..\spine-cpp\spine-cpp Plugins\SpinePlugin\Source\SpinePlugin\Public\spine-cpp  || goto error
+mkdir Plugins\SpinePlugin\Source\SpinePlugin\Public\spine-cpp
+xcopy /E /I ..\spine-cpp\include Plugins\SpinePlugin\Source\SpinePlugin\Public\spine-cpp\include  || goto error
+xcopy /E /I ..\spine-cpp\src Plugins\SpinePlugin\Source\SpinePlugin\Public\spine-cpp\src  || goto error
 goto done
 
 :error

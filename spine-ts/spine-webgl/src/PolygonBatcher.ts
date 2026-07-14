@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,21 +23,19 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
-import { BlendMode, Disposable } from "@esotericsoftware/spine-core";
-import { GLTexture } from "./GLTexture.js";
-import { Mesh, Position2Attribute, ColorAttribute, TexCoordAttribute, Color2Attribute } from "./Mesh.js";
-import { Shader } from "./Shader.js";
+import type { BlendMode, Disposable } from "@esotericsoftware/spine-core";
+import type { GLTexture } from "./GLTexture.js";
+import { Color2Attribute, ColorAttribute, Mesh, Position2Attribute, TexCoordAttribute } from "./Mesh.js";
+import type { Shader } from "./Shader.js";
 import { ManagedWebGLRenderingContext } from "./WebGL.js";
 
 const GL_ONE = 1;
 const GL_ONE_MINUS_SRC_COLOR = 0x0301;
-const GL_SRC_ALPHA = 0x0302;
 const GL_ONE_MINUS_SRC_ALPHA = 0x0303;
-const GL_ONE_MINUS_DST_ALPHA = 0x0305;
 const GL_DST_COLOR = 0x0306;
 
 export class PolygonBatcher implements Disposable {
@@ -58,13 +56,13 @@ export class PolygonBatcher implements Disposable {
 	private cullWasEnabled = false;
 
 	constructor (context: ManagedWebGLRenderingContext | WebGLRenderingContext, twoColorTint: boolean = true, maxVertices: number = 10920) {
-		if (maxVertices > 10920) throw new Error("Can't have more than 10920 triangles per batch: " + maxVertices);
+		if (maxVertices > 10920) throw new Error(`Can't have more than 10920 triangles per batch: ${maxVertices}`);
 		this.context = context instanceof ManagedWebGLRenderingContext ? context : new ManagedWebGLRenderingContext(context);
-		let attributes = twoColorTint ?
+		const attributes = twoColorTint ?
 			[new Position2Attribute(), new ColorAttribute(), new TexCoordAttribute(), new Color2Attribute()] :
 			[new Position2Attribute(), new ColorAttribute(), new TexCoordAttribute()];
 		this.mesh = new Mesh(context, attributes, maxVertices, maxVertices * 3);
-		let gl = this.context.gl;
+		const gl = this.context.gl;
 		this.srcColorBlend = gl.SRC_ALPHA;
 		this.srcAlphaBlend = gl.ONE;
 		this.dstBlend = gl.ONE_MINUS_SRC_ALPHA;
@@ -77,7 +75,7 @@ export class PolygonBatcher implements Disposable {
 		this.lastTexture = null;
 		this.isDrawing = true;
 
-		let gl = this.context.gl;
+		const gl = this.context.gl;
 		gl.enable(gl.BLEND);
 		gl.blendFuncSeparate(this.srcColorBlend, this.dstBlend, this.srcAlphaBlend, this.dstBlend);
 
@@ -87,32 +85,32 @@ export class PolygonBatcher implements Disposable {
 		}
 	}
 
-	private static blendModesGL: { srcRgb: number, srcRgbPma: number, dstRgb: number, srcAlpha: number }[] = [
-		{ srcRgb: GL_SRC_ALPHA, srcRgbPma: GL_ONE, dstRgb: GL_ONE_MINUS_SRC_ALPHA, srcAlpha: GL_ONE },
-		{ srcRgb: GL_SRC_ALPHA, srcRgbPma: GL_ONE, dstRgb: GL_ONE, srcAlpha: GL_ONE },
-		{ srcRgb: GL_DST_COLOR, srcRgbPma: GL_DST_COLOR, dstRgb: GL_ONE_MINUS_SRC_ALPHA, srcAlpha: GL_ONE },
-		{ srcRgb: GL_ONE, srcRgbPma: GL_ONE, dstRgb: GL_ONE_MINUS_SRC_COLOR, srcAlpha: GL_ONE }
+	private static blendModesGL: { srcRgbPma: number, dstRgb: number, srcAlpha: number }[] = [
+		{ srcRgbPma: GL_ONE, dstRgb: GL_ONE_MINUS_SRC_ALPHA, srcAlpha: GL_ONE },
+		{ srcRgbPma: GL_ONE, dstRgb: GL_ONE, srcAlpha: GL_ONE },
+		{ srcRgbPma: GL_DST_COLOR, dstRgb: GL_ONE_MINUS_SRC_ALPHA, srcAlpha: GL_ONE },
+		{ srcRgbPma: GL_ONE, dstRgb: GL_ONE_MINUS_SRC_COLOR, srcAlpha: GL_ONE }
 	]
 
-	setBlendMode (blendMode: BlendMode, premultipliedAlpha: boolean) {
+	setBlendMode (blendMode: BlendMode) {
 		const blendModeGL = PolygonBatcher.blendModesGL[blendMode];
-		const srcColorBlend = premultipliedAlpha ? blendModeGL.srcRgbPma : blendModeGL.srcRgb;
+		const srcColorBlend = blendModeGL.srcRgbPma;
 		const srcAlphaBlend = blendModeGL.srcAlpha;
 		const dstBlend = blendModeGL.dstRgb;
 
-		if (this.srcColorBlend == srcColorBlend && this.srcAlphaBlend == srcAlphaBlend && this.dstBlend == dstBlend) return;
+		if (this.srcColorBlend === srcColorBlend && this.srcAlphaBlend === srcAlphaBlend && this.dstBlend === dstBlend) return;
 		this.srcColorBlend = srcColorBlend;
 		this.srcAlphaBlend = srcAlphaBlend;
 		this.dstBlend = dstBlend;
 		if (this.isDrawing) {
 			this.flush();
 		}
-		let gl = this.context.gl;
+		const gl = this.context.gl;
 		gl.blendFuncSeparate(srcColorBlend, dstBlend, srcAlphaBlend, dstBlend);
 	}
 
 	draw (texture: GLTexture, vertices: ArrayLike<number>, indices: Array<number>) {
-		if (texture != this.lastTexture) {
+		if (texture !== this.lastTexture) {
 			this.flush();
 			this.lastTexture = texture;
 		} else if (this.verticesLength + vertices.length > this.mesh.getVertices().length ||
@@ -120,12 +118,12 @@ export class PolygonBatcher implements Disposable {
 			this.flush();
 		}
 
-		let indexStart = this.mesh.numVertices();
+		const indexStart = this.mesh.numVertices();
 		this.mesh.getVertices().set(vertices, this.verticesLength);
 		this.verticesLength += vertices.length;
 		this.mesh.setVerticesLength(this.verticesLength)
 
-		let indicesArray = this.mesh.getIndices();
+		const indicesArray = this.mesh.getIndices();
 		for (let i = this.indicesLength, j = 0; j < indices.length; i++, j++)
 			indicesArray[i] = indices[j] + indexStart;
 		this.indicesLength += indices.length;
@@ -133,7 +131,7 @@ export class PolygonBatcher implements Disposable {
 	}
 
 	flush () {
-		if (this.verticesLength == 0) return;
+		if (this.verticesLength === 0) return;
 		if (!this.lastTexture) throw new Error("No texture set.");
 		if (!this.shader) throw new Error("No shader set.");
 		this.lastTexture.bind();
@@ -154,7 +152,7 @@ export class PolygonBatcher implements Disposable {
 		this.lastTexture = null;
 		this.isDrawing = false;
 
-		let gl = this.context.gl;
+		const gl = this.context.gl;
 		gl.disable(gl.BLEND);
 		if (PolygonBatcher.disableCulling) {
 			if (this.cullWasEnabled) gl.enable(gl.CULL_FACE);
@@ -166,7 +164,7 @@ export class PolygonBatcher implements Disposable {
 	}
 
 	static getAndResetGlobalDrawCalls () {
-		let result = PolygonBatcher.globalDrawCalls;
+		const result = PolygonBatcher.globalDrawCalls;
 		PolygonBatcher.globalDrawCalls = 0;
 		return result;
 	}

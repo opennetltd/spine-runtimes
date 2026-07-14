@@ -1,10 +1,8 @@
 # spine-flutter
 
-The spine-flutter runtime provides functionality to load, manipulate and render [Spine](https://esotericsoftware.com) skeletal animation data using [Flutter](https://flutter.dev/). spine-flutter is based on [spine-cpp](../spine-cpp) and supports desktop and mobile Flutter deployment targets. spine-flutter does not support Flutter's web deployment target.
+The spine-flutter runtime provides functionality to load, manipulate and render [Spine](https://esotericsoftware.com) skeletal animation data using [Flutter](https://flutter.dev/). spine-flutter is based on [spine-c](../spine-c) and supports desktop, mobile, and web Flutter deployment targets.
 
 # See the [spine-flutter documentation](https://esotericsoftware.com/spine-flutter) for in-depth information.
-
-The `spine_flutter` package name was previously used to publish the [Spine Flutter Runtime in plain Dart](https://github.com/jtakakura/spine_flutter/) by Junji Takakura. Junji has kindly transferred the package name to us and is now publishing his Dart-only Spine Flutter Runtime under the package name [spine_flutter_dart](https://pub.dev/packages/spine_flutter_dart).
 
 ## Licensing
 
@@ -18,16 +16,12 @@ For the official legal terms governing the Spine Runtimes, please read the [Spin
 
 ## Spine version
 
-spine-flutter works with data exported from Spine 4.2.xx.
+spine-flutter works with data exported from Spine 4.3.xx.
 
 spine-flutter supports all Spine features, except two-color tinting and the screen blend mode.
 
 ## Supported platforms
-The spine-flutter runtime works on desktop, mobile and web. Web deployment requires canvaskit, which will add about 2mb of dependencies to your web deployment. You can compile your app for web with Canvaskit like this:
-
-```
-flutter build web --web-renderer canvaskit
-```
+The spine-flutter runtime works on desktop, mobile and web.
 
 ## Setup
 To add `spine_flutter` to your Flutter project, add the following dependency to your `pubspec.yaml` file:
@@ -35,43 +29,68 @@ To add `spine_flutter` to your Flutter project, add the following dependency to 
 ```yaml
 dependencies:
   ...
-  spine_flutter: ^4.2.11
+  # See https://pub.dev/packages/spine_flutter for the latest version
+  spine_flutter: ^4.3.0
 ```
 
-In your `main()`, add these two lines in the beginning to initialize the Spine Flutter runtime:
+In your `main()`, add this line in the beginning to initialize the Spine Flutter runtime:
 
 ```dart
-void main() {
-    WidgetsFlutterBinding.ensureInitialized();
+void main() async {
     await initSpineFlutter(enableMemoryDebugging: false);
     ...
 }
 ```
 
 ## Example
-If you have pulled the `spine_flutter` package from [pub.dev](https://pub.dev) directly, you can run the example in the `example/` folder as is:
-
-```bash
-cd path/to/downloaded/spine_flutter
-cd example
-flutter run
-```
-
-Otherwise you can run the example like this:
+You can run the example like this:
 
 1. install the [Flutter SDK](https://docs.flutter.dev/get-started/install), then run `flutter doctor` which will instruct you what other dependencies to install.
 2. Clone this repository `git clone https://github.com/esotericsoftware/spine-runtimes`
 3. Run `setup.sh` in the `spine-flutter/` folder. On Windows, you can use [Git Bash](https://gitforwindows.org/) included in Git for Window to run the `setup.sh` Bash script.
 
-You can then open `spine-flutter` in an IDE or editor of your choice that supports Flutter, like [IntelliJ IDEA/Android Studio](https://docs.flutter.dev/get-started/editor?tab=androidstudio) or [Visual Studio Code](https://docs.flutter.dev/get-started/editor?tab=vscode) to inspect and run the example. 
+You can then open `spine-flutter` in an IDE or editor of your choice that supports Flutter, like [IntelliJ IDEA/Android Studio](https://docs.flutter.dev/get-started/editor?tab=androidstudio) or [Visual Studio Code](https://docs.flutter.dev/get-started/editor?tab=vscode) to inspect and run the example.
 
 Alternatively, you can run the example from the [command line](https://docs.flutter.dev/get-started/test-drive?tab=terminal).
 
 ## Development
+Run `./setup.sh` to copy over the spine-cpp and spine-c sources. This step needs to be executed every time spine-cpp or spine-c changes.
+
 If all you modify are the Dart sources of the plugin, then the development setup is the same as the setup described under "Example" above.
 
-If you need to work on the `dart:ffi` bindings for `spine-cpp`, you will also need to install [Emscripten](https://emscripten.org/docs/getting_started/downloads.html).
+If you need to update or modify the bindings generated from spine-c, run `./generate-bindings.sh`. If you regenerate the bindings, you must also compile the WASM binaries via `./compile-wasm.sh`.
 
-To generate the bindings based on the `src/spine_flutter.h` header, run `dart run ffigen --config ffigen.yaml`. After the bindings have been generated, you must replace the line `import 'dart:ffi' as ffi;` with `import 'ffi_proxy.dart' as ffi;` in the file `src/spine_flutter_bindings_generated.dart`. Otherwise the bindings will not compile for the web.
+The `./tests` folder contains headless tests that exercise the bindings to [spine-c](../spine-c).
 
-If you made changes to `spine-cpp` or the source files in `src/`, you must run `compile-wasm.sh`. This will compile `spine-cpp` and the bindings for the Web and place updated versions of `libspine_flutter.js` and `libspine_flutter.wasm` in the `lib/assets/` folder. For web builds, the `initSpineFlutterFFI()` function in `lib/init_web.dart` will load these files from the package's asset bundle.
+## Releasing
+
+`spine-flutter` is released to [pub.dev](https://pub.dev/packages/spine_flutter) using GitHub Actions and pub.dev automated publishing. The pub.dev package is configured to trust tags from `EsotericSoftware/spine-runtimes` matching `spine-flutter-{{version}}`.
+
+1. Set the release version in `spine-flutter/pubspec.yaml`:
+
+```yaml
+version: 4.3.4
+```
+
+2. Add a matching entry to `spine-flutter/CHANGELOG.md`.
+
+3. Commit and push the release version:
+
+```bash
+git add spine-flutter/pubspec.yaml spine-flutter/CHANGELOG.md
+git commit -m "[flutter] Release spine-flutter 4.3.4"
+git push origin 4.3
+```
+
+4. Tag that commit and push the tag:
+
+```bash
+git tag spine-flutter-4.3.4
+git push origin spine-flutter-4.3.4
+```
+
+The tag triggers the GitHub Actions release workflow. It verifies the tag version, runs `./generate-bindings.sh` to copy native sources and compile WebAssembly, runs the spine-flutter tests, verifies generated source files are committed, then publishes to pub.dev from the same workspace so the copied native sources are included in the package.
+
+5. Check the workflow result and pub.dev.
+
+If publishing fails before upload, fix the issue and push a new release version. Versions uploaded to pub.dev cannot be overwritten.

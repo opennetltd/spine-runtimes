@@ -1,16 +1,16 @@
-/** ****************************************************************************
+/******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,12 +23,12 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
-import { Container, Graphics, Text } from 'pixi.js';
-import { Spine } from './Spine.js';
+
+import type { AnimationStateListener } from '@esotericsoftware/spine-core';
 import {
 	ClippingAttachment,
 	MeshAttachment,
@@ -36,8 +36,8 @@ import {
 	RegionAttachment,
 	SkeletonBounds
 } from '@esotericsoftware/spine-core';
-
-import type { AnimationStateListener } from '@esotericsoftware/spine-core';
+import { Container, Graphics, Text } from 'pixi.js';
+import type { Spine } from './Spine.js';
 
 /**
  * Make a class that extends from this interface to create your own debug renderer.
@@ -171,12 +171,12 @@ export class SpineDebugRenderer implements ISpineDebugRenderer {
 		debugDisplayObjects.parentDebugContainer.addChild(debugDisplayObjects.pathsLine);
 		debugDisplayObjects.parentDebugContainer.addChild(debugDisplayObjects.eventText);
 
-		(debugDisplayObjects.parentDebugContainer as any).zIndex = 9999999;
+		debugDisplayObjects.parentDebugContainer.zIndex = 9999999;
 
 		// Disable screen reader and mouse input on debug objects.
-		(debugDisplayObjects.parentDebugContainer as any).accessibleChildren = false;
-		(debugDisplayObjects.parentDebugContainer as any).eventMode = 'none';
-		(debugDisplayObjects.parentDebugContainer as any).interactiveChildren = false;
+		debugDisplayObjects.parentDebugContainer.accessibleChildren = false;
+		debugDisplayObjects.parentDebugContainer.eventMode = 'none';
+		debugDisplayObjects.parentDebugContainer.interactiveChildren = false;
 
 		spine.addChild(debugDisplayObjects.parentDebugContainer);
 
@@ -259,10 +259,11 @@ export class SpineDebugRenderer implements ISpineDebugRenderer {
 		for (let i = 0, len = bones.length; i < len; i++) {
 			const bone = bones[i];
 			const boneLen = bone.data.length;
-			const starX = skeletonX + bone.worldX;
-			const starY = skeletonY + bone.worldY;
-			const endX = skeletonX + (boneLen * bone.a) + bone.worldX;
-			const endY = skeletonY + (boneLen * bone.b) + bone.worldY;
+			const applied = bone.appliedPose;
+			const starX = skeletonX + applied.worldX;
+			const starY = skeletonY + applied.worldY;
+			const endX = skeletonX + (boneLen * applied.a) + applied.worldX;
+			const endY = skeletonY + (boneLen * applied.b) + applied.worldY;
 
 			if (bone.data.name === 'root' || bone.data.parent === null) {
 				continue;
@@ -359,18 +360,20 @@ export class SpineDebugRenderer implements ISpineDebugRenderer {
 
 		for (let i = 0, len = slots.length; i < len; i++) {
 			const slot = slots[i];
-			const attachment = slot.getAttachment();
+
+			if (!slot.bone.active) {
+				continue;
+			}
+
+			const attachment = slot.appliedPose.attachment;
 
 			if (attachment === null || !(attachment instanceof RegionAttachment)) {
 				continue;
 			}
 
-			const regionAttachment = attachment;
-
 			const vertices = new Float32Array(8);
 
-			regionAttachment.computeWorldVertices(slot, vertices, 0, 2);
-
+			attachment.computeWorldVertices(slot, attachment.getOffsets(slot.appliedPose), vertices, 0, 2);
 			debugDisplayObjects.regionAttachmentsShape.poly(Array.from(vertices.slice(0, 8)));
 		}
 
@@ -390,7 +393,7 @@ export class SpineDebugRenderer implements ISpineDebugRenderer {
 			if (!slot.bone.active) {
 				continue;
 			}
-			const attachment = slot.getAttachment();
+			const attachment = slot.appliedPose.attachment;
 
 			if (attachment === null || !(attachment instanceof MeshAttachment)) {
 				continue;
@@ -402,7 +405,7 @@ export class SpineDebugRenderer implements ISpineDebugRenderer {
 			const triangles = meshAttachment.triangles;
 			let hullLength = meshAttachment.hullLength;
 
-			meshAttachment.computeWorldVertices(slot, 0, meshAttachment.worldVerticesLength, vertices, 0, 2);
+			meshAttachment.computeWorldVertices(skeleton, slot, 0, meshAttachment.worldVerticesLength, vertices, 0, 2);
 			// draw the skinned mesh (triangle)
 			if (this.drawMeshTriangles) {
 				for (let i = 0, len = triangles.length; i < len; i += 3) {
@@ -450,7 +453,7 @@ export class SpineDebugRenderer implements ISpineDebugRenderer {
 			if (!slot.bone.active) {
 				continue;
 			}
-			const attachment = slot.getAttachment();
+			const attachment = slot.appliedPose.attachment;
 
 			if (attachment === null || !(attachment instanceof ClippingAttachment)) {
 				continue;
@@ -461,7 +464,7 @@ export class SpineDebugRenderer implements ISpineDebugRenderer {
 			const nn = clippingAttachment.worldVerticesLength;
 			const world = new Float32Array(nn);
 
-			clippingAttachment.computeWorldVertices(slot, 0, nn, world, 0, 2);
+			clippingAttachment.computeWorldVertices(skeleton, slot, 0, nn, world, 0, 2);
 			debugDisplayObjects.clippingPolygon.poly(Array.from(world));
 		}
 
@@ -535,7 +538,7 @@ export class SpineDebugRenderer implements ISpineDebugRenderer {
 			if (!slot.bone.active) {
 				continue;
 			}
-			const attachment = slot.getAttachment();
+			const attachment = slot.appliedPose.attachment;
 
 			if (attachment === null || !(attachment instanceof PathAttachment)) {
 				continue;
@@ -545,7 +548,7 @@ export class SpineDebugRenderer implements ISpineDebugRenderer {
 			let nn = pathAttachment.worldVerticesLength;
 			const world = new Float32Array(nn);
 
-			pathAttachment.computeWorldVertices(slot, 0, nn, world, 0, 2);
+			pathAttachment.computeWorldVertices(skeleton, slot, 0, nn, world, 0, 2);
 			let x1 = world[2];
 			let y1 = world[3];
 			let x2 = 0;

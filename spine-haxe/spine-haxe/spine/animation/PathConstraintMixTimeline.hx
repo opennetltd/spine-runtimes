@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,8 +23,8 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *****************************************************************************/
 
 package spine.animation;
@@ -33,24 +33,34 @@ import spine.Event;
 import spine.PathConstraint;
 import spine.Skeleton;
 
-class PathConstraintMixTimeline extends CurveTimeline {
+/** Changes a path constraint's PathConstraint.mixRotate, PathConstraint.mixX, and
+ * PathConstraint.mixY. */
+class PathConstraintMixTimeline extends CurveTimeline implements ConstraintTimeline {
 	private static inline var ENTRIES:Int = 4;
 	private static inline var ROTATE:Int = 1;
 	private static inline var X:Int = 2;
 	private static inline var Y:Int = 3;
 
-	/** The index of the path constraint in {@link Skeleton#getPathConstraints()} when this timeline is applied. */
+	/** The index of the path constraint in spine.Skeleton.pathConstraints that will be changed when this timeline is
+	 * applied. */
 	public var constraintIndex:Int = 0;
 
-	public function new(frameCount:Int, bezierCount:Int, pathConstraintIndex:Int) {
-		super(frameCount, bezierCount, [Property.pathConstraintMix + "|" + pathConstraintIndex]);
-		this.constraintIndex = pathConstraintIndex;
+	public function new(frameCount:Int, bezierCount:Int, constraintIndex:Int) {
+		super(frameCount, bezierCount, Property.pathConstraintMix + "|" + constraintIndex);
+		this.constraintIndex = constraintIndex;
 	}
 
 	public override function getFrameEntries():Int {
 		return ENTRIES;
 	}
 
+	public function getConstraintIndex() {
+		return constraintIndex;
+	}
+
+	/** Sets the time and color for the specified frame.
+	 * @param frame Between 0 and frameCount, inclusive.
+	 * @param time The frame time in seconds. */
 	public function setFrame(frame:Int, time:Float, mixRotate:Float, mixX:Float, mixY:Float):Void {
 		frame <<= 2;
 		frames[frame] = time;
@@ -59,24 +69,22 @@ class PathConstraintMixTimeline extends CurveTimeline {
 		frames[frame + Y] = mixY;
 	}
 
-	public override function apply(skeleton:Skeleton, lastTime:Float, time:Float, events:Array<Event>, alpha:Float, blend:MixBlend,
-			direction:MixDirection):Void {
-		var constraint:PathConstraint = skeleton.pathConstraints[constraintIndex];
+	public function apply(skeleton:Skeleton, lastTime:Float, time:Float, events:Array<Event>, alpha:Float, from:MixFrom, add:Bool, out:Bool, appliedPose:Bool) {
+		var constraint = cast(skeleton.constraints[constraintIndex], PathConstraint);
 		if (!constraint.active)
 			return;
+		var pose = appliedPose ? constraint.appliedPose : constraint.pose;
 
-		var data:PathConstraintData;
 		if (time < frames[0]) {
-			data = constraint.data;
-			switch (blend) {
-				case MixBlend.setup:
-					constraint.mixRotate = data.mixRotate;
-					constraint.mixX = data.mixX;
-					constraint.mixY = data.mixY;
-				case MixBlend.first:
-					constraint.mixRotate += (data.mixRotate - constraint.mixRotate) * alpha;
-					constraint.mixX += (data.mixX - constraint.mixX) * alpha;
-					constraint.mixY += (data.mixY - constraint.mixY) * alpha;
+			var setup = constraint.data.setupPose;
+			if (from == MixFrom.setup) {
+				pose.mixRotate = setup.mixRotate;
+				pose.mixX = setup.mixX;
+				pose.mixY = setup.mixY;
+			} else if (from == MixFrom.first) {
+				pose.mixRotate += (setup.mixRotate - pose.mixRotate) * alpha;
+				pose.mixX += (setup.mixX - pose.mixX) * alpha;
+				pose.mixY += (setup.mixY - pose.mixY) * alpha;
 			}
 			return;
 		}
@@ -104,15 +112,15 @@ class PathConstraintMixTimeline extends CurveTimeline {
 				y = getBezierValue(time, i, Y, curveType + CurveTimeline.BEZIER_SIZE * 2 - CurveTimeline.BEZIER);
 		}
 
-		if (blend == MixBlend.setup) {
-			data = constraint.data;
-			constraint.mixRotate = data.mixRotate + (rotate - data.mixRotate) * alpha;
-			constraint.mixX = data.mixX + (x - data.mixX) * alpha;
-			constraint.mixY = data.mixY + (y - data.mixY) * alpha;
+		var base = from == MixFrom.setup ? constraint.data.setupPose : pose;
+		if (add) {
+			pose.mixRotate = base.mixRotate + rotate * alpha;
+			pose.mixX = base.mixX + x * alpha;
+			pose.mixY = base.mixY + y * alpha;
 		} else {
-			constraint.mixRotate += (rotate - constraint.mixRotate) * alpha;
-			constraint.mixX += (x - constraint.mixX) * alpha;
-			constraint.mixY += (y - constraint.mixY) * alpha;
+			pose.mixRotate = base.mixRotate + (rotate - base.mixRotate) * alpha;
+			pose.mixX = base.mixX + (x - base.mixX) * alpha;
+			pose.mixY = base.mixY + (y - base.mixY) * alpha;
 		}
 	}
 }

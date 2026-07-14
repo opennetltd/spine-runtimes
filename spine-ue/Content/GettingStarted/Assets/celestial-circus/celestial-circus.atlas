@@ -1,169 +1,148 @@
 celestial-circus.png
-size:984,1032
-filter:Linear,Linear
-scale:0.4
+	size: 2048, 1024
+	filter: Linear, Linear
+	scale: 0.4
 arm-back-down
-bounds:774,7,38,82
-rotate:90
+	bounds: 204, 297, 38, 82
 arm-back-up
-bounds:819,437,83,116
-rotate:90
+	bounds: 2, 92, 83, 116
 arm-front-down
-bounds:863,49,36,78
+	bounds: 88, 318, 36, 78
 arm-front-up
-bounds:784,47,77,116
+	bounds: 733, 76, 77, 116
 bench
-bounds:798,668,189,48
-rotate:90
+	bounds: 409, 131, 189, 48
 body-bottom
-bounds:724,165,154,124
-rotate:90
+	bounds: 562, 260, 154, 124
 body-top
-bounds:819,522,126,132
-offsets:0,0,126,133
+	bounds: 433, 203, 126, 132
+	offsets: 0, 0, 126, 133
 chest
-bounds:848,656,104,93
-rotate:90
+	bounds: 847, 468, 104, 93
 cloud-back
-bounds:520,154,202,165
+	bounds: 643, 416, 202, 165
 cloud-front
-bounds:492,411,325,196
+	bounds: 624, 582, 325, 196
+	rotate: 180
 collar
-bounds:935,108,47,26
+	bounds: 175, 752, 47, 26
 ear
-bounds:462,789,20,28
-rotate:90
+	bounds: 293, 750, 20, 28
 eye-back-shadow
-bounds:947,522,14,10
-rotate:90
+	bounds: 474, 768, 14, 10
 eye-front-shadow
-bounds:819,411,24,14
-rotate:90
+	bounds: 642, 764, 24, 14
 eye-reflex-back
-bounds:774,55,8,7
+	bounds: 1012, 771, 8, 7
 eye-reflex-front
-bounds:841,321,10,7
-rotate:90
+	bounds: 668, 763, 10, 7
 eye-white-back
-bounds:214,322,13,16
-rotate:90
+	bounds: 353, 762, 13, 16
 eye-white-front
-bounds:348,2,22,17
-rotate:90
+	bounds: 556, 761, 22, 17
 eyelashes-down-back
-bounds:214,314,11,6
+	bounds: 995, 764, 11, 6
 eyelashes-down-front
-bounds:943,721,15,6
-rotate:90
+	bounds: 995, 772, 15, 6
 eyelashes-top-back
-bounds:816,656,18,10
+	bounds: 877, 768, 18, 10
 eyelashes-top-front
-bounds:798,636,30,16
-rotate:90
+	bounds: 851, 762, 30, 16
 face
-bounds:841,333,91,102
-offsets:2,0,93,102
+	bounds: 87, 64, 91, 102
+	offsets: 2, 0, 93, 102
 feathers-back
-bounds:444,811,46,46
+	bounds: 596, 416, 46, 46
 feathers-front
-bounds:767,323,72,86
+	bounds: 101, 460, 72, 86
 fringe-middle-back
-bounds:929,54,33,52
+	bounds: 103, 502, 33, 52
 fringe-middle-front
-bounds:575,2,60,50
-rotate:90
+	bounds: 899, 103, 60, 50
 fringe-side-back
-bounds:848,763,27,94
+	bounds: 413, 505, 27, 94
 fringe-side-front
-bounds:901,34,26,93
+	bounds: 14, 557, 26, 93
 glove-bottom-back
-bounds:941,403,51,41
-rotate:90
+	bounds: 589, 737, 51, 41
 glove-bottom-front
-bounds:935,136,47,48
+	bounds: 126, 730, 47, 48
 hair-back-1
-bounds:214,6,132,306
+	bounds: 572, 170, 132, 306
+	rotate: 270
 hair-back-2
-bounds:438,27,80,285
+	bounds: 163, 2, 80, 285
 hair-back-3
-bounds:879,762,70,268
+	bounds: 952, 37, 70, 268
 hair-back-4
-bounds:520,64,88,262
-rotate:90
+	bounds: 14, 326, 88, 262
 hair-back-5
-bounds:486,321,88,279
-rotate:90
+	bounds: 934, 517, 88, 279
+	rotate: 90
 hair-back-6
-bounds:348,26,88,286
+	bounds: 353, 63, 88, 286
+	rotate: 180
 hair-hat-shadow
-bounds:850,186,89,41
-offsets:1,0,90,41
+	bounds: 903, 737, 90, 41
 hand-back
-bounds:627,2,60,47
-rotate:90
+	bounds: 409, 82, 60, 47
 hand-front
-bounds:520,2,53,60
+	bounds: 99, 398, 53, 60
 hat-back
-bounds:937,456,64,45
-rotate:90
+	bounds: 951, 690, 64, 45
 hat-front
-bounds:676,6,96,56
+	bounds: 376, 722, 96, 56
 head-back
-bounds:850,229,102,86
-rotate:90
+	bounds: 600, 82, 102, 86
 jabot
-bounds:863,129,70,55
+	bounds: 240, 78, 70, 55
 leg-back
-bounds:2,2,210,333
+	bounds: 812, 130, 210, 333
 leg-front
-bounds:232,462,258,320
+	bounds: 14, 210, 258, 320
 logo-brooch
-bounds:444,784,16,25
+	bounds: 335, 753, 16, 25
 mouth
-bounds:943,738,22,6
-rotate:90
+	bounds: 668, 772, 22, 6
 neck
-bounds:938,278,39,56
+	bounds: 515, 73, 39, 56
 nose
-bounds:943,712,6,7
+	bounds: 895, 765, 6, 7
 nose-highlight
-bounds:486,456,4,4
+	bounds: 28, 774, 4, 4
 nose-shadow
-bounds:724,155,7,8
+	bounds: 580, 770, 7, 8
 pupil-back
-bounds:972,228,10,14
+	bounds: 244, 764, 10, 14
 pupil-front
-bounds:964,94,12,18
-rotate:90
+	bounds: 14, 760, 12, 18
 rope-back
-bounds:951,538,10,492
+	bounds: 2, 286, 10, 492
 rope-front
-bounds:951,538,10,492
+	bounds: 2, 286, 10, 492
 rope-front-bottom
-bounds:934,336,42,65
+	bounds: 471, 64, 42, 65
 skirt
-bounds:2,784,440,246
+	bounds: 14, 532, 440, 246
 sock-bow
-bounds:938,244,33,32
+	bounds: 258, 746, 33, 32
 spine-logo-body
-bounds:938,229,13,32
-rotate:90
+	bounds: 320, 746, 13, 32
 star-big
-bounds:963,1007,17,23
-offsets:1,0,18,24
+	bounds: 224, 754, 18, 24
 star-medium
-bounds:774,47,6,8
-rotate:90
+	bounds: 368, 770, 6, 8
 star-small
-bounds:462,784,3,4
-rotate:90
+	bounds: 34, 774, 3, 4
 underskirt
-bounds:2,337,445,228
-rotate:90
+	bounds: 414, 333, 445, 228
+	rotate: 270
 underskirt-back
-bounds:444,859,433,171
+	bounds: 243, 125, 433, 171
+	rotate: 90
 wing-back
-bounds:232,314,146,252
-rotate:90
+	bounds: 876, 576, 146, 252
+	rotate: 90
 wing-front
-bounds:492,609,304,248
+	bounds: 718, 285, 304, 248
+	rotate: 180

@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,8 +23,8 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 #include "SpineSkeletonAnimationComponent.h"
@@ -35,11 +35,12 @@
 using namespace spine;
 
 void UTrackEntry::SetTrackEntry(TrackEntry *trackEntry) {
+	if (entry) entry->setRendererObject(nullptr);
 	this->entry = trackEntry;
 	if (entry) entry->setRendererObject((void *) this);
 }
 
-void callback(AnimationState *state, spine::EventType type, TrackEntry *entry, Event *event) {
+void callback(AnimationState *state, spine::EventType type, TrackEntry *entry, Event *event, void *userData) {
 	USpineSkeletonAnimationComponent *component = (USpineSkeletonAnimationComponent *) state->getRendererObject();
 
 	if (entry->getRendererObject()) {
@@ -80,6 +81,11 @@ USpineSkeletonAnimationComponent::USpineSkeletonAnimationComponent() {
 
 void USpineSkeletonAnimationComponent::BeginPlay() {
 	Super::BeginPlay();
+	for (UTrackEntry *entry : trackEntries) {
+		if (entry && entry->GetTrackEntry()) {
+			entry->GetTrackEntry()->setRendererObject(nullptr);
+		}
+	}
 	trackEntries.Empty();
 }
 
@@ -99,14 +105,16 @@ void USpineSkeletonAnimationComponent::InternalTick(float DeltaTime, bool CallDe
 	if (state && bAutoPlaying) {
 		if (Preview) {
 			if (lastPreviewAnimation != PreviewAnimation) {
-				if (PreviewAnimation != "") SetAnimation(0, PreviewAnimation, true);
+				if (PreviewAnimation != "")
+					SetAnimation(0, PreviewAnimation, true);
 				else
 					SetEmptyAnimation(0, 0);
 				lastPreviewAnimation = PreviewAnimation;
 			}
 
 			if (lastPreviewSkin != PreviewSkin) {
-				if (PreviewSkin != "") SetSkin(PreviewSkin);
+				if (PreviewSkin != "")
+					SetSkin(PreviewSkin);
 				else
 					SetSkin("default");
 				lastPreviewSkin = PreviewSkin;
@@ -132,7 +140,7 @@ void USpineSkeletonAnimationComponent::CheckState() {
 			if (lastSpineAtlas != atlas) {
 				needsUpdate = true;
 			}
-			if (skeleton && skeleton->getData() != SkeletonData->GetSkeletonData(atlas)) {
+			if (skeleton && &skeleton->getData() != SkeletonData->GetSkeletonData(atlas)) {
 				needsUpdate = true;
 			}
 		}
@@ -144,11 +152,11 @@ void USpineSkeletonAnimationComponent::CheckState() {
 		if (Atlas && SkeletonData) {
 			spine::SkeletonData *data = SkeletonData->GetSkeletonData(Atlas->GetAtlas());
 			if (data) {
-				skeleton = new (__FILE__, __LINE__) Skeleton(data);
+				skeleton = new (__FILE__, __LINE__) Skeleton(*data);
 				AnimationStateData *stateData = SkeletonData->GetAnimationStateData(Atlas->GetAtlas());
-				state = new (__FILE__, __LINE__) AnimationState(stateData);
+				state = new (__FILE__, __LINE__) AnimationState(*stateData);
 				state->setRendererObject((void *) this);
-				state->setListener(callback);
+				state->setListener(callback, nullptr);
 				trackEntries.Empty();
 			}
 		}
@@ -185,10 +193,10 @@ void USpineSkeletonAnimationComponent::SetAutoPlay(bool bInAutoPlays) {
 void USpineSkeletonAnimationComponent::SetPlaybackTime(float InPlaybackTime, bool bCallDelegates) {
 	CheckState();
 
-	if (state && state->getCurrent(0)) {
-		spine::Animation *CurrentAnimation = state->getCurrent(0)->getAnimation();
-		const float CurrentTime = state->getCurrent(0)->getTrackTime();
-		InPlaybackTime = FMath::Clamp(InPlaybackTime, 0.0f, CurrentAnimation->getDuration());
+	if (state && state->getTrack(0)) {
+		spine::Animation &CurrentAnimation = state->getTrack(0)->getAnimation();
+		const float CurrentTime = state->getTrack(0)->getTrackTime();
+		InPlaybackTime = FMath::Clamp(InPlaybackTime, 0.0f, CurrentAnimation.getDuration());
 		const float DeltaTime = InPlaybackTime - CurrentTime;
 		state->update(DeltaTime);
 		state->apply(*skeleton);
@@ -197,6 +205,7 @@ void USpineSkeletonAnimationComponent::SetPlaybackTime(float InPlaybackTime, boo
 		if (bCallDelegates) {
 			BeforeUpdateWorldTransform.Broadcast(this);
 		}
+		skeleton->update(physicsTimeScale * DeltaTime);
 		skeleton->updateWorldTransform(Physics_Update);
 		if (bCallDelegates) {
 			AfterUpdateWorldTransform.Broadcast(this);
@@ -217,12 +226,12 @@ float USpineSkeletonAnimationComponent::GetTimeScale() {
 
 UTrackEntry *USpineSkeletonAnimationComponent::SetAnimation(int trackIndex, FString animationName, bool loop) {
 	CheckState();
-	if (state && skeleton->getData()->findAnimation(TCHAR_TO_UTF8(*animationName))) {
+	if (state && skeleton->getData().findAnimation(TCHAR_TO_UTF8(*animationName))) {
 		state->disableQueue();
-		TrackEntry *entry = state->setAnimation(trackIndex, TCHAR_TO_UTF8(*animationName), loop);
+		TrackEntry &entry = state->setAnimation(trackIndex, TCHAR_TO_UTF8(*animationName), loop);
 		state->enableQueue();
 		UTrackEntry *uEntry = NewObject<UTrackEntry>();
-		uEntry->SetTrackEntry(entry);
+		uEntry->SetTrackEntry(&entry);
 		trackEntries.Add(uEntry);
 		return uEntry;
 	} else
@@ -231,12 +240,12 @@ UTrackEntry *USpineSkeletonAnimationComponent::SetAnimation(int trackIndex, FStr
 
 UTrackEntry *USpineSkeletonAnimationComponent::AddAnimation(int trackIndex, FString animationName, bool loop, float delay) {
 	CheckState();
-	if (state && skeleton->getData()->findAnimation(TCHAR_TO_UTF8(*animationName))) {
+	if (state && skeleton->getData().findAnimation(TCHAR_TO_UTF8(*animationName))) {
 		state->disableQueue();
-		TrackEntry *entry = state->addAnimation(trackIndex, TCHAR_TO_UTF8(*animationName), loop, delay);
+		TrackEntry &entry = state->addAnimation(trackIndex, TCHAR_TO_UTF8(*animationName), loop, delay);
 		state->enableQueue();
 		UTrackEntry *uEntry = NewObject<UTrackEntry>();
-		uEntry->SetTrackEntry(entry);
+		uEntry->SetTrackEntry(&entry);
 		trackEntries.Add(uEntry);
 		return uEntry;
 	} else
@@ -246,9 +255,9 @@ UTrackEntry *USpineSkeletonAnimationComponent::AddAnimation(int trackIndex, FStr
 UTrackEntry *USpineSkeletonAnimationComponent::SetEmptyAnimation(int trackIndex, float mixDuration) {
 	CheckState();
 	if (state) {
-		TrackEntry *entry = state->setEmptyAnimation(trackIndex, mixDuration);
+		TrackEntry &entry = state->setEmptyAnimation(trackIndex, mixDuration);
 		UTrackEntry *uEntry = NewObject<UTrackEntry>();
-		uEntry->SetTrackEntry(entry);
+		uEntry->SetTrackEntry(&entry);
 		trackEntries.Add(uEntry);
 		return uEntry;
 	} else
@@ -258,19 +267,19 @@ UTrackEntry *USpineSkeletonAnimationComponent::SetEmptyAnimation(int trackIndex,
 UTrackEntry *USpineSkeletonAnimationComponent::AddEmptyAnimation(int trackIndex, float mixDuration, float delay) {
 	CheckState();
 	if (state) {
-		TrackEntry *entry = state->addEmptyAnimation(trackIndex, mixDuration, delay);
+		TrackEntry &entry = state->addEmptyAnimation(trackIndex, mixDuration, delay);
 		UTrackEntry *uEntry = NewObject<UTrackEntry>();
-		uEntry->SetTrackEntry(entry);
+		uEntry->SetTrackEntry(&entry);
 		trackEntries.Add(uEntry);
 		return uEntry;
 	} else
 		return NewObject<UTrackEntry>();
 }
 
-UTrackEntry *USpineSkeletonAnimationComponent::GetCurrent(int trackIndex) {
+UTrackEntry *USpineSkeletonAnimationComponent::GetTrack(int trackIndex) {
 	CheckState();
-	if (state && state->getCurrent(trackIndex)) {
-		TrackEntry *entry = state->getCurrent(trackIndex);
+	if (state && state->getTrack(trackIndex)) {
+		TrackEntry *entry = state->getTrack(trackIndex);
 		if (entry->getRendererObject()) {
 			return (UTrackEntry *) entry->getRendererObject();
 		} else {

@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,44 +23,31 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 #include "SpineIkConstraint.h"
+#include "SpineIkConstraintPose.h"
 #include "SpineBone.h"
 #include "SpineCommon.h"
 #include "SpineSprite.h"
 
 void SpineIkConstraint::_bind_methods() {
-	ClassDB::bind_method(D_METHOD("update"), &SpineIkConstraint::update);
-	ClassDB::bind_method(D_METHOD("get_order"), &SpineIkConstraint::get_order);
+	ClassDB::bind_method(D_METHOD("update", "skeleton"), &SpineIkConstraint::update);
 	ClassDB::bind_method(D_METHOD("get_data"), &SpineIkConstraint::get_data);
 	ClassDB::bind_method(D_METHOD("get_bones"), &SpineIkConstraint::get_bones);
 	ClassDB::bind_method(D_METHOD("get_target"), &SpineIkConstraint::get_target);
 	ClassDB::bind_method(D_METHOD("set_target", "v"), &SpineIkConstraint::set_target);
-	ClassDB::bind_method(D_METHOD("get_bend_direction"), &SpineIkConstraint::get_bend_direction);
-	ClassDB::bind_method(D_METHOD("set_bend_direction", "v"), &SpineIkConstraint::set_bend_direction);
-	ClassDB::bind_method(D_METHOD("get_compress"), &SpineIkConstraint::get_compress);
-	ClassDB::bind_method(D_METHOD("set_compress", "v"), &SpineIkConstraint::set_compress);
-	ClassDB::bind_method(D_METHOD("get_stretch"), &SpineIkConstraint::get_stretch);
-	ClassDB::bind_method(D_METHOD("set_stretch", "v"), &SpineIkConstraint::set_stretch);
-	ClassDB::bind_method(D_METHOD("get_mix"), &SpineIkConstraint::get_mix);
-	ClassDB::bind_method(D_METHOD("set_mix", "v"), &SpineIkConstraint::set_mix);
-	ClassDB::bind_method(D_METHOD("get_softness"), &SpineIkConstraint::get_softness);
-	ClassDB::bind_method(D_METHOD("set_softness", "v"), &SpineIkConstraint::set_softness);
+	ClassDB::bind_method(D_METHOD("get_pose"), &SpineIkConstraint::get_pose);
+	ClassDB::bind_method(D_METHOD("get_applied_pose"), &SpineIkConstraint::get_applied_pose);
 	ClassDB::bind_method(D_METHOD("is_active"), &SpineIkConstraint::is_active);
 	ClassDB::bind_method(D_METHOD("set_active", "v"), &SpineIkConstraint::set_active);
 }
 
-void SpineIkConstraint::update() {
+void SpineIkConstraint::update(Ref<SpineSkeleton> skeleton) {
 	SPINE_CHECK(get_spine_object(), )
-	get_spine_object()->update(spine::Physics_Update);
-}
-
-int SpineIkConstraint::get_order() {
-	SPINE_CHECK(get_spine_object(), 0)
-	return get_spine_object()->getOrder();
+	get_spine_object()->update(*skeleton->get_spine_object(), spine::Physics_Update);
 }
 
 Ref<SpineIkConstraintData> SpineIkConstraint::get_data() {
@@ -78,7 +65,7 @@ Array SpineIkConstraint::get_bones() {
 	result.resize((int) bones.size());
 	for (int i = 0; i < bones.size(); ++i) {
 		auto bone = bones[i];
-		Ref<SpineBone> bone_ref(memnew(SpineBone));
+		Ref<SpineBonePose> bone_ref(memnew(SpineBonePose));
 		bone_ref->set_spine_object(get_spine_owner(), bone);
 		result[i] = bone_ref;
 	}
@@ -87,7 +74,7 @@ Array SpineIkConstraint::get_bones() {
 
 Ref<SpineBone> SpineIkConstraint::get_target() {
 	SPINE_CHECK(get_spine_object(), nullptr)
-	auto target = get_spine_object()->getTarget();
+	auto target = &get_spine_object()->getTarget();
 	if (!target) return nullptr;
 	Ref<SpineBone> target_ref(memnew(SpineBone));
 	target_ref->set_spine_object(get_spine_owner(), target);
@@ -96,56 +83,25 @@ Ref<SpineBone> SpineIkConstraint::get_target() {
 
 void SpineIkConstraint::set_target(Ref<SpineBone> v) {
 	SPINE_CHECK(get_spine_object(), )
-	get_spine_object()->setTarget(v.is_valid() && v->get_spine_object() ? v->get_spine_object() : nullptr);
+	if (v.is_valid() && v->get_spine_object()) {
+		get_spine_object()->setTarget(*v->get_spine_object());
+	}
 }
 
-int SpineIkConstraint::get_bend_direction() {
-	SPINE_CHECK(get_spine_object(), 0)
-	return get_spine_object()->getBendDirection();
+Ref<SpineIkConstraintPose> SpineIkConstraint::get_pose() {
+	SPINE_CHECK(get_spine_object(), nullptr)
+	auto &pose = get_spine_object()->getPose();
+	Ref<SpineIkConstraintPose> pose_ref(memnew(SpineIkConstraintPose));
+	pose_ref->set_spine_object(get_spine_owner(), &pose);
+	return pose_ref;
 }
 
-void SpineIkConstraint::set_bend_direction(int v) {
-	SPINE_CHECK(get_spine_object(), )
-	get_spine_object()->setBendDirection(v);
-}
-
-bool SpineIkConstraint::get_compress() {
-	SPINE_CHECK(get_spine_object(), false)
-	return get_spine_object()->getCompress();
-}
-
-void SpineIkConstraint::set_compress(bool v) {
-	SPINE_CHECK(get_spine_object(), )
-	get_spine_object()->setCompress(v);
-}
-
-bool SpineIkConstraint::get_stretch() {
-	SPINE_CHECK(get_spine_object(), false)
-	return get_spine_object()->getStretch();
-}
-
-void SpineIkConstraint::set_stretch(bool v) {
-	SPINE_CHECK(get_spine_object(), )
-	get_spine_object()->setStretch(v);
-}
-
-float SpineIkConstraint::get_mix() {
-	SPINE_CHECK(get_spine_object(), 0)
-	return get_spine_object()->getMix();
-}
-void SpineIkConstraint::set_mix(float v) {
-	SPINE_CHECK(get_spine_object(), )
-	get_spine_object()->setMix(v);
-}
-
-float SpineIkConstraint::get_softness() {
-	SPINE_CHECK(get_spine_object(), 0)
-	return get_spine_object()->getSoftness();
-}
-
-void SpineIkConstraint::set_softness(float v) {
-	SPINE_CHECK(get_spine_object(), )
-	get_spine_object()->setSoftness(v);
+Ref<SpineIkConstraintPose> SpineIkConstraint::get_applied_pose() {
+	SPINE_CHECK(get_spine_object(), nullptr)
+	auto &pose = get_spine_object()->getAppliedPose();
+	Ref<SpineIkConstraintPose> pose_ref(memnew(SpineIkConstraintPose));
+	pose_ref->set_spine_object(get_spine_owner(), &pose);
+	return pose_ref;
 }
 
 bool SpineIkConstraint::is_active() {

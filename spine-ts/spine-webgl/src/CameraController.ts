@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,17 +23,17 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
+import type { OrthoCamera } from "./Camera.js";
 import { Input } from "./Input.js";
-import { OrthoCamera } from "./Camera.js";
 import { Vector3 } from "./Vector3.js";
 
 export class CameraController {
 	constructor (public canvas: HTMLElement, public camera: OrthoCamera) {
-		let cameraX = 0, cameraY = 0, cameraZoom = 0;
+		let cameraX = 0, cameraY = 0;
 		let mouseX = 0, mouseY = 0;
 		let lastX = 0, lastY = 0;
 		let initialZoom = 0;
@@ -47,39 +47,39 @@ export class CameraController {
 				initialZoom = camera.zoom;
 			},
 			dragged: (x: number, y: number) => {
-				let deltaX = x - mouseX;
-				let deltaY = y - mouseY;
-				let originWorld = camera.screenToWorld(new Vector3(0, 0), canvas.clientWidth, canvas.clientHeight);
-				let deltaWorld = camera.screenToWorld(new Vector3(deltaX, deltaY), canvas.clientWidth, canvas.clientHeight).sub(originWorld);
+				const deltaX = x - mouseX;
+				const deltaY = y - mouseY;
+				const originWorld = camera.screenToWorld(new Vector3(0, 0), canvas.clientWidth, canvas.clientHeight);
+				const deltaWorld = camera.screenToWorld(new Vector3(deltaX, deltaY), canvas.clientWidth, canvas.clientHeight).sub(originWorld);
 				camera.position.set(cameraX - deltaWorld.x, cameraY - deltaWorld.y, 0);
 				camera.update();
 				lastX = x;
 				lastY = y;
 			},
 			wheel: (delta: number) => {
-				let zoomAmount = delta / 200 * camera.zoom;
-				let newZoom = camera.zoom + zoomAmount;
+				const zoomAmount = delta / 200 * camera.zoom;
+				const newZoom = camera.zoom + zoomAmount;
 				if (newZoom > 0) {
 					let x = 0, y = 0;
 					if (delta < 0) {
 						x = lastX; y = lastY;
 					} else {
-						let viewCenter = new Vector3(canvas.clientWidth / 2 + 15, canvas.clientHeight / 2);
-						let mouseToCenterX = lastX - viewCenter.x;
-						let mouseToCenterY = canvas.clientHeight - 1 - lastY - viewCenter.y;
+						const viewCenter = new Vector3(canvas.clientWidth / 2 + 15, canvas.clientHeight / 2);
+						const mouseToCenterX = lastX - viewCenter.x;
+						const mouseToCenterY = canvas.clientHeight - 1 - lastY - viewCenter.y;
 						x = viewCenter.x - mouseToCenterX;
 						y = canvas.clientHeight - 1 - viewCenter.y + mouseToCenterY;
 					}
-					let oldDistance = camera.screenToWorld(new Vector3(x, y), canvas.clientWidth, canvas.clientHeight);
+					const oldDistance = camera.screenToWorld(new Vector3(x, y), canvas.clientWidth, canvas.clientHeight);
 					camera.zoom = newZoom;
 					camera.update();
-					let newDistance = camera.screenToWorld(new Vector3(x, y), canvas.clientWidth, canvas.clientHeight);
+					const newDistance = camera.screenToWorld(new Vector3(x, y), canvas.clientWidth, canvas.clientHeight);
 					camera.position.add(oldDistance.sub(newDistance));
 					camera.update();
 				}
 			},
 			zoom: (initialDistance, distance) => {
-				let newZoom = initialDistance / distance;
+				const newZoom = initialDistance / distance;
 				camera.zoom = initialZoom * newZoom;
 			},
 			up: (x: number, y: number) => {

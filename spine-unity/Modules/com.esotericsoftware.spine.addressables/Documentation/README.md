@@ -1,8 +1,12 @@
-## Spine Addressables Extensions [Experimental]
+## Spine Addressables Extensions
 
-This experimental plugin provides integration of Addressables on-demand texture loading for the spine-unity runtime. Please be sure to test this package first and create backups of your project before using.
+The Spine Addressables plugin provides integration of on-demand texture loading for the spine-unity runtime by using Addressables.
 
-The Spine Addressables Extension module covers all necessary steps to automatically replace your textures with low-resolution placeholder textures and loading the high-resolution textures upon request. The textures are automatically replaced with the low-resolution texture when building your game executable via a pre-build step (and reset to the high-resolution textures afterwards in the post-build step). There is no additional coding required.
+This module covers all necessary steps to automatically replace your textures with low-resolution placeholder textures and loading the high-resolution textures upon request. The textures are automatically replaced with the low-resolution texture when building your game executable via a pre-build step (and reset to the high-resolution textures afterwards in the post-build step). There is no additional coding required.
+
+## Installation
+
+The Spine Addressables Extensions package `com.esotericsoftware.spine.addressables` depends on the Spine On-Demand Loading Extension package `com.esotericsoftware.spine.on-demand-loading`. Please install the On-Demand Loading package before installing the Addressables package.
 
 ### Usage
 

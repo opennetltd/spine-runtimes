@@ -1,0 +1,69 @@
+/******************************************************************************
+ * Spine Runtimes License Agreement
+ * Last updated April 5, 2025. Replaces all prior versions.
+ *
+ * Copyright (c) 2013-2025, Esoteric Software LLC
+ *
+ * Integration of the Spine Runtimes into software or otherwise creating
+ * derivative works of the Spine Runtimes is permitted under the terms and
+ * conditions of Section 2 of the Spine Editor License Agreement:
+ * http://esotericsoftware.com/spine-editor-license
+ *
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
+ * "Products"), provided that each user of the Products must obtain their own
+ * Spine Editor license and redistribution of the Products in any form must
+ * include this license and copyright notice.
+ *
+ * THE SPINE RUNTIMES ARE PROVIDED BY ESOTERIC SOFTWARE LLC "AS IS" AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL ESOTERIC SOFTWARE LLC BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
+ * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *****************************************************************************/
+
+import type { SDKInstanceClass as SpineC3Instance } from "./instance.ts";
+
+const C3 = globalThis.C3;
+
+C3.Plugins.EsotericSoftware_SpineConstruct3.Cnds =
+{
+	OnSkeletonLoaded (this: SpineC3Instance) {
+		return true;
+	},
+	OnAnimationEvent (this: SpineC3Instance, event: string, track: number, animation: string) {
+		const eventMatches = event === "" || this.triggeredEventName === event;
+		const trackMatches = track === -1 || this.triggeredEventTrack === track;
+		const animationMatches = animation === "" || this.triggeredEventAnimation === animation;
+		return eventMatches && trackMatches && animationMatches;
+	},
+	IsMirrored (this: SpineC3Instance) {
+		return this.width < 0;
+	},
+	IsFlipped (this: SpineC3Instance) {
+		return this.height < 0;
+	},
+	IsSkeletonLoaded (this: SpineC3Instance) {
+		return this.skeletonLoaded;
+	},
+	IsPlaying (this: SpineC3Instance) {
+		return this.isPlaying;
+	},
+	HasCollisionBody (this: SpineC3Instance) {
+		return this.hasCollisionBody();
+	},
+	IsInsideSlot (this: SpineC3Instance, x: number, y: number, slotName: string) {
+		return this.isInsideSlot(x, y, slotName);
+	},
+	IsInsideBoneRadius (this: SpineC3Instance, x: number, y: number, boneName: string, radius: number) {
+		return this.isInsideBone(x, y, boneName, radius);
+	},
+	IsAnimationPlaying (this: SpineC3Instance, animationName: string, trackIndex: number) {
+		return this.isAnimationPlaying(animationName, trackIndex);
+	},
+};

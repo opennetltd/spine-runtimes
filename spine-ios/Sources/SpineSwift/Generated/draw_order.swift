@@ -1,0 +1,72 @@
+//
+// Spine Runtimes License Agreement
+// Last updated April 5, 2025. Replaces all prior versions.
+//
+// Copyright (c) 2013-2025, Esoteric Software LLC
+//
+// Integration of the Spine Runtimes into software or otherwise creating
+// derivative works of the Spine Runtimes is permitted under the terms and
+// conditions of Section 2 of the Spine Editor License Agreement:
+// http://esotericsoftware.com/spine-editor-license
+//
+// Otherwise, it is permitted to integrate the Spine Runtimes into software
+// or otherwise create derivative works of the Spine Runtimes (collectively,
+// "Products"), provided that each user of the Products must obtain their own
+// Spine Editor license and redistribution of the Products in any form must
+// include this license and copyright notice.
+//
+// THE SPINE RUNTIMES ARE PROVIDED BY ESOTERIC SOFTWARE LLC "AS IS" AND ANY
+// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL ESOTERIC SOFTWARE LLC BE LIABLE FOR ANY
+// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
+// BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
+// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+// THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//
+
+// AUTO GENERATED FILE, DO NOT EDIT.
+
+import Foundation
+import SpineC
+
+/// Stores the skeleton's draw order, which is the order that each slot's attachment is rendered.
+@objc(SpineDrawOrder)
+@objcMembers
+public class DrawOrder: NSObject {
+    public let _ptr: UnsafeMutableRawPointer
+
+    public init(fromPointer ptr: spine_draw_order) {
+        self._ptr = UnsafeMutableRawPointer(ptr)
+        super.init()
+    }
+
+    public convenience init(_ setupPose: ArraySlot) {
+        let ptr = spine_draw_order_create(setupPose._ptr.assumingMemoryBound(to: spine_array_slot_wrapper.self))
+        self.init(fromPointer: ptr!)
+    }
+
+    /// The unconstrained draw order, set by animations and application code.
+    public var pose: ArraySlot {
+        let result = spine_draw_order_get_pose(_ptr.assumingMemoryBound(to: spine_draw_order_wrapper.self))
+        return ArraySlot(fromPointer: result!)
+    }
+
+    /// The constrained draw order for rendering. If no constraints modify the draw order, this is
+    /// the same as getPose(). Otherwise it is a copy of getPose() modified by constraints.
+    public var appliedPose: ArraySlot {
+        let result = spine_draw_order_get_applied_pose(_ptr.assumingMemoryBound(to: spine_draw_order_wrapper.self))
+        return ArraySlot(fromPointer: result!)
+    }
+
+    /// Sets the unconstrained draw order to the setup pose order.
+    public func setupPose() {
+        spine_draw_order_setup_pose(_ptr.assumingMemoryBound(to: spine_draw_order_wrapper.self))
+    }
+
+    public func dispose() {
+        spine_draw_order_dispose(_ptr.assumingMemoryBound(to: spine_draw_order_wrapper.self))
+    }
+}

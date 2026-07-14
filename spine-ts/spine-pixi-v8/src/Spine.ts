@@ -1,16 +1,16 @@
-/** ****************************************************************************
+/******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,32 +23,16 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
-import {
-	Assets,
-	Bounds,
-	Cache,
-	Container,
-	ContainerOptions,
-	DEG_TO_RAD,
-	DestroyOptions,
-	fastCopy,
-	Graphics,
-	PointData,
-	Texture,
-	Ticker,
-	ViewContainer,
-} from 'pixi.js';
-import { ISpineDebugRenderer } from './SpineDebugRenderer.js';
 import {
 	AnimationState,
 	AnimationStateData,
 	AtlasAttachmentLoader,
-	Attachment,
-	Bone,
+	type Attachment,
+	type Bone,
 	ClippingAttachment,
 	Color,
 	MeshAttachment,
@@ -61,11 +45,27 @@ import {
 	SkeletonClipping,
 	SkeletonData,
 	SkeletonJson,
-	Slot,
+	Skin,
+	type Slot,
 	type TextureAtlas,
-	TrackEntry,
+	type TrackEntry,
 	Vector2,
 } from '@esotericsoftware/spine-core';
+import {
+	Assets,
+	type Bounds,
+	Cache,
+	Container,
+	type ContainerOptions,
+	type DestroyOptions,
+	Graphics,
+	type PointData,
+	Texture,
+	Ticker,
+	ViewContainer,
+} from 'pixi.js';
+import type { ISpineDebugRenderer } from './SpineDebugRenderer.js';
+import type { SpineTexture } from './SpineTexture.js';
 
 /**
  * Options to create a {@link Spine} using {@link Spine.from}.
@@ -89,6 +89,15 @@ export interface SpineFromOptions {
 	 * If `undefined`, use the dark tint renderer if at least one slot has tint black
 	 */
 	darkTint?: boolean;
+
+	/** The bounds provider to use. If undefined the bounds will be dynamic, calculated when requested and based on the current frame. */
+	boundsProvider?: SpineBoundsProvider,
+
+	/** Set {@link AtlasAttachmentLoader.allowMissingRegions} property on the AtlasAttachmentLoader. */
+	allowMissingRegions?: boolean;
+
+	/** The ticker to use when {@link autoUpdate} is `true`. Defaults to {@link Ticker.shared}. */
+	ticker?: Ticker,
 };
 
 const vectorAux = new Vector2();
@@ -96,6 +105,138 @@ const vectorAux = new Vector2();
 Skeleton.yDown = true;
 
 const clipper = new SkeletonClipping();
+
+/** A bounds provider calculates the bounding box for a skeleton, which is then assigned as the size of the SpineGameObject. */
+export interface SpineBoundsProvider {
+	/** Returns the bounding box for the skeleton, in skeleton space. */
+	calculateBounds (gameObject: Spine): {
+		x: number;
+		y: number;
+		width: number;
+		height: number;
+	};
+}
+
+/** A bounds provider that provides a fixed size given by the user. */
+export class AABBRectangleBoundsProvider implements SpineBoundsProvider {
+	constructor (
+		private x: number,
+		private y: number,
+		private width: number,
+		private height: number,
+	) { }
+	calculateBounds () {
+		return { x: this.x, y: this.y, width: this.width, height: this.height };
+	}
+}
+
+/** A bounds provider that calculates the bounding box from the setup pose. */
+export class SetupPoseBoundsProvider implements SpineBoundsProvider {
+	/**
+	 * @param clipping If true, clipping attachments are used to compute the bounds. False, by default.
+	 */
+	constructor (
+		private clipping = false,
+	) { }
+
+	calculateBounds (gameObject: Spine) {
+		if (!gameObject.skeleton) return { x: 0, y: 0, width: 0, height: 0 };
+		// Make a copy of animation state and skeleton as this might be called while
+		// the skeleton in the GameObject has already been heavily modified. We can not
+		// reconstruct that state.
+		const skeleton = new Skeleton(gameObject.skeleton.data);
+		skeleton.setupPose();
+		skeleton.updateWorldTransform(Physics.update);
+		const bounds = skeleton.getBoundsRect(this.clipping ? new SkeletonClipping() : undefined);
+		return bounds.width === Number.NEGATIVE_INFINITY
+			? { x: 0, y: 0, width: 0, height: 0 }
+			: bounds;
+	}
+}
+
+/** A bounds provider that calculates the bounding box by taking the maximumg bounding box for a combination of skins and specific animation. */
+export class SkinsAndAnimationBoundsProvider
+	implements SpineBoundsProvider {
+	/**
+	 * @param animation The animation to use for calculating the bounds. If null, the setup pose is used.
+	 * @param skins The skins to use for calculating the bounds. If empty, the default skin is used.
+	 * @param timeStep The time step to use for calculating the bounds. A smaller time step means more precision, but slower calculation.
+	 * @param clipping If true, clipping attachments are used to compute the bounds. False, by default.
+	 */
+	constructor (
+		private animation: string | null,
+		private skins: string[] = [],
+		private timeStep: number = 0.05,
+		private clipping = false,
+	) { }
+
+	calculateBounds (gameObject: Spine): {
+		x: number;
+		y: number;
+		width: number;
+		height: number;
+	} {
+		if (!gameObject.skeleton || !gameObject.state)
+			return { x: 0, y: 0, width: 0, height: 0 };
+		// Make a copy of animation state and skeleton as this might be called while
+		// the skeleton in the GameObject has already been heavily modified. We can not
+		// reconstruct that state.
+		const animationState = new AnimationState(gameObject.state.data);
+		const skeleton = new Skeleton(gameObject.skeleton.data);
+		const clipper = this.clipping ? new SkeletonClipping() : undefined;
+		const data = skeleton.data;
+		if (this.skins.length > 0) {
+			const customSkin = new Skin("custom-skin");
+			for (const skinName of this.skins) {
+				const skin = data.findSkin(skinName);
+				if (skin == null) continue;
+				customSkin.addSkin(skin);
+			}
+			skeleton.setSkin(customSkin);
+		}
+		skeleton.setupPose();
+
+		const animation = this.animation != null ? data.findAnimation(this.animation) : null;
+
+		if (animation == null) {
+			skeleton.updateWorldTransform(Physics.update);
+			const bounds = skeleton.getBoundsRect(clipper);
+			return bounds.width === Number.NEGATIVE_INFINITY
+				? { x: 0, y: 0, width: 0, height: 0 }
+				: bounds;
+		} else {
+			let minX = Number.POSITIVE_INFINITY,
+				minY = Number.POSITIVE_INFINITY,
+				maxX = Number.NEGATIVE_INFINITY,
+				maxY = Number.NEGATIVE_INFINITY;
+			animationState.clearTracks();
+			animationState.setAnimation(0, animation, false);
+			const steps = Math.max(animation.duration / this.timeStep, 1.0);
+			for (let i = 0; i < steps; i++) {
+				const delta = i > 0 ? this.timeStep : 0;
+				animationState.update(delta);
+				animationState.apply(skeleton);
+				skeleton.update(delta);
+				skeleton.updateWorldTransform(Physics.update);
+
+				const bounds = skeleton.getBoundsRect(clipper);
+				minX = Math.min(minX, bounds.x);
+				minY = Math.min(minY, bounds.y);
+				maxX = Math.max(maxX, bounds.x + bounds.width);
+				maxY = Math.max(maxY, bounds.y + bounds.height);
+			}
+			const bounds = {
+				x: minX,
+				y: minY,
+				width: maxX - minX,
+				height: maxY - minY,
+			};
+			return bounds.width === Number.NEGATIVE_INFINITY
+				? { x: 0, y: 0, width: 0, height: 0 }
+				: bounds;
+		}
+	}
+}
 
 export interface SpineOptions extends ContainerOptions {
 	/** the {@link SkeletonData} used to instantiate the skeleton */
@@ -106,6 +247,12 @@ export interface SpineOptions extends ContainerOptions {
 
 	/**  See {@link SpineFromOptions.darkTint}. */
 	darkTint?: boolean;
+
+	/**  See {@link SpineFromOptions.boundsProvider}. */
+	boundsProvider?: SpineBoundsProvider,
+
+	/** See {@link SpineFromOptions.ticker}. */
+	ticker?: Ticker,
 }
 
 /**
@@ -120,6 +267,14 @@ export interface SpineEvents {
 	start: [trackEntry: TrackEntry];
 }
 
+export interface ClippedData {
+	vertices: Float32Array;
+	uvs: Float32Array;
+	indices: Uint16Array;
+	vertexCount: number;
+	indicesCount: number;
+}
+
 export interface AttachmentCacheData {
 	id: string;
 	clipped: boolean;
@@ -131,13 +286,7 @@ export interface AttachmentCacheData {
 	darkTint: boolean;
 	skipRender: boolean;
 	texture: Texture;
-	clippedData?: {
-		vertices: Float32Array;
-		uvs: Float32Array;
-		indices: Uint16Array;
-		vertexCount: number;
-		indicesCount: number;
-	};
+	clippedData?: ClippedData;
 }
 
 interface SlotsToClipping {
@@ -147,11 +296,20 @@ interface SlotsToClipping {
 	vertices: Array<number>,
 };
 
+export interface SpineSlotObject {
+	slot: Slot,
+	container: Container,
+	followAttachmentTimeline: boolean,
+	followSlotColor: boolean,
+	wasRenderable: boolean,
+}
+
 const maskPool = new Pool<Graphics>(() => new Graphics);
 
 /**
  * The class to instantiate a {@link Spine} game object in Pixi.
- * The static method {@link Spine.from} should be used to instantiate a Spine game object.
+ * Create and customize the default configuration using the static method {@link Spine.createOptions},
+ * then pass it to the constructor.
  */
 export class Spine extends ViewContainer {
 	// Pixi properties
@@ -173,7 +331,7 @@ export class Spine extends ViewContainer {
 	private darkTint = false;
 	private _debug?: ISpineDebugRenderer | undefined = undefined;
 
-	readonly _slotsObject: Record<string, { slot: Slot, container: Container } | null> = Object.create(null);
+	readonly _slotsObject: Record<string, SpineSlotObject | null> = Object.create(null);
 	private clippingSlotToPixiMasks: Record<string, SlotsToClipping> = Object.create(null);
 
 	private getSlotFromRef (slotRef: number | string | Slot): Slot {
@@ -192,6 +350,8 @@ export class Spine extends ViewContainer {
 	public spineTexturesDirty = true;
 
 	private _lastAttachments: Attachment[] = [];
+	private _lastRenderableCacheIds: string[] = [];
+	private _lastClippingAttachmentIds: string[] = [];
 
 	private _stateChanged = true;
 	private attachmentCacheData: Record<string, AttachmentCacheData>[] = [];
@@ -213,59 +373,220 @@ export class Spine extends ViewContainer {
 		this._debug = value;
 	}
 
-	private _autoUpdate = true;
+	private _autoUpdate = false;
+	private _ticker: Ticker = Ticker.shared;
 
 	public get autoUpdate (): boolean {
 		return this._autoUpdate;
 	}
-	/** When `true`, the Spine AnimationState and the Skeleton will be automatically updated using the {@link Ticker.shared} instance. */
+	/** When `true`, the Spine AnimationState and the Skeleton will be automatically updated using the {@link ticker}. */
 	public set autoUpdate (value: boolean) {
-		if (value) {
-			Ticker.shared.add(this.internalUpdate, this);
-		} else {
-			Ticker.shared.remove(this.internalUpdate, this);
+		if (value && !this._autoUpdate) {
+			this._ticker.add(this.internalUpdate, this);
+		} else if (!value && this._autoUpdate) {
+			this._ticker.remove(this.internalUpdate, this);
 		}
 
 		this._autoUpdate = value;
 	}
 
-	private hasNeverUpdated = true;
-	constructor (options: SpineOptions | SkeletonData) {
-		if (options instanceof SkeletonData) {
-			options = {
-				skeletonData: options,
-			};
+	/** The ticker to use when {@link autoUpdate} is `true`. Defaults to {@link Ticker.shared}. */
+	public get ticker (): Ticker {
+		return this._ticker;
+	}
+	/** Sets the ticker to use when {@link autoUpdate} is `true`. If `autoUpdate` is already `true`, the update callback will be moved from the old ticker to the new one. */
+	public set ticker (value: Ticker) {
+		value = value ?? Ticker.shared;
+		if (this._ticker === value) return;
+
+		if (this._autoUpdate) {
+			this._ticker.remove(this.internalUpdate, this);
+			value.add(this.internalUpdate, this);
 		}
 
-		super();
+		this._ticker = value;
+	}
 
-		const skeletonData = options instanceof SkeletonData ? options : options.skeletonData;
+	private _boundsProvider?: SpineBoundsProvider;
+	/** The bounds provider to use. If undefined the bounds will be dynamic, calculated when requested and based on the current frame. */
+	public get boundsProvider (): SpineBoundsProvider | undefined {
+		return this._boundsProvider;
+	}
+	public set boundsProvider (value: SpineBoundsProvider | undefined) {
+		this._boundsProvider = value;
+		if (value) {
+			this._boundsDirty = false;
+		}
+		this.updateBounds();
+	}
 
+	private hasNeverUpdated = true;
+
+	private _physicsPositionInheritanceFactorX = 1;
+	private _physicsPositionInheritanceFactorY = 1;
+	private _physicsRotationInheritanceFactor = 1;
+	private hasLastPhysicsTransform = false;
+	private lastPhysicsX = 0;
+	private lastPhysicsY = 0;
+	private lastPhysicsRotation = 0;
+	private readonly currentPhysicsPosition = { x: 0, y: 0 };
+	private readonly lastPhysicsPosition = { x: 0, y: 0 };
+
+	/** Scales how much horizontal translation of this Pixi container is inherited by skeleton physics constraints. */
+	public get physicsPositionInheritanceFactorX (): number {
+		return this._physicsPositionInheritanceFactorX;
+	}
+
+	/** Scales how much vertical translation of this Pixi container is inherited by skeleton physics constraints. */
+	public get physicsPositionInheritanceFactorY (): number {
+		return this._physicsPositionInheritanceFactorY;
+	}
+
+	/**
+	 * Sets how much translation of this Pixi container is inherited by skeleton physics constraints.
+	 * The default is (1, 1), which applies container translation normally. Use (0, 0)
+	 * to prevent container translation from affecting physics constraints.
+	 */
+	public setPhysicsPositionInheritanceFactor (x: number, y: number): void {
+		const wasDisabled = this._physicsPositionInheritanceFactorX === 0 && this._physicsPositionInheritanceFactorY === 0;
+		const isEnabled = x !== 0 || y !== 0;
+
+		this._physicsPositionInheritanceFactorX = x;
+		this._physicsPositionInheritanceFactorY = y;
+		if (wasDisabled && isEnabled) this.resetPhysicsPosition();
+	}
+
+	/**
+	 * Scales how much rotation of this Pixi container is inherited by skeleton physics constraints.
+	 * The default is `1`, which applies container rotation normally. Use `0` to prevent container
+	 * rotation from affecting physics constraints.
+	 */
+	public get physicsRotationInheritanceFactor (): number {
+		return this._physicsRotationInheritanceFactor;
+	}
+
+	public set physicsRotationInheritanceFactor (value: number) {
+		const wasDisabled = this._physicsRotationInheritanceFactor === 0;
+		this._physicsRotationInheritanceFactor = value;
+		if (wasDisabled && value !== 0) this.resetPhysicsRotation();
+	}
+
+	constructor (options: SkeletonData | SpineOptions | SpineFromOptions) {
+		super({});
+
+		if (options instanceof SkeletonData)
+			options = { skeletonData: options };
+		else if ("skeleton" in options)
+			options = new.target.createOptions(options);
+
+		this.allowChildren = true;
+
+		const { autoUpdate, boundsProvider, darkTint, skeletonData, ticker } = options;
 		this.skeleton = new Skeleton(skeletonData);
 		this.state = new AnimationState(new AnimationStateData(skeletonData));
-		this.autoUpdate = options?.autoUpdate ?? true;
+		if (ticker) this._ticker = ticker;
+		this.autoUpdate = autoUpdate ?? true;
+		this._boundsProvider = boundsProvider;
 
 		// dark tint can be enabled by options, otherwise is enable if at least one slot has tint black
-		this.darkTint = options?.darkTint === undefined
-			? this.skeleton.slots.some(slot => !!slot.data.darkColor)
-			: options?.darkTint;
+		this.darkTint = darkTint === undefined
+			? this.skeleton.slots.some(slot => !!slot.data.setupPose.darkColor)
+			: darkTint;
 
 		const slots = this.skeleton.slots;
-
-		for (let i = 0; i < slots.length; i++) {
+		for (let i = 0; i < slots.length; i++)
 			this.attachmentCacheData[i] = Object.create(null);
-		}
 	}
 
 	/** If {@link Spine.autoUpdate} is `false`, this method allows to update the AnimationState and the Skeleton with the given delta. */
 	public update (dt: number): void {
-		this.internalUpdate(0, dt);
+		this.internalUpdate(undefined, dt);
 	}
 
-	protected internalUpdate (_deltaFrame: any, deltaSeconds?: number): void {
-		// Because reasons, pixi uses deltaFrames at 60fps.
-		// We ignore the default deltaFrames and use the deltaSeconds from pixi ticker.
-		this._updateAndApplyState(deltaSeconds ?? Ticker.shared.deltaMS / 1000);
+	protected internalUpdate (ticker?: Ticker, deltaSeconds?: number): void {
+		this._updateAndApplyState(deltaSeconds ?? this._ticker.deltaMS / 1000);
+	}
+
+	/** Resets the position used for calculating inherited physics translation. */
+	public resetPhysicsPosition (): void {
+		const transform = this.worldTransform;
+		this.lastPhysicsX = transform.tx;
+		this.lastPhysicsY = transform.ty;
+		if (!this.hasLastPhysicsTransform) this.lastPhysicsRotation = this.getPhysicsRotation();
+		this.hasLastPhysicsTransform = true;
+	}
+
+	/** Resets the rotation used for calculating inherited physics rotation. */
+	public resetPhysicsRotation (): void {
+		const transform = this.worldTransform;
+		this.lastPhysicsRotation = this.getPhysicsRotation();
+		if (!this.hasLastPhysicsTransform) {
+			this.lastPhysicsX = transform.tx;
+			this.lastPhysicsY = transform.ty;
+		}
+		this.hasLastPhysicsTransform = true;
+	}
+
+	/** Resets the transform used for calculating inherited physics translation and rotation. */
+	public resetPhysicsTransform (): void {
+		this.resetPhysicsPosition();
+		this.resetPhysicsRotation();
+	}
+
+	private applyTransformMovementToPhysics (): void {
+		const { tx, ty } = this.worldTransform;
+		const currentRotation = this.getPhysicsRotation();
+
+		if (this.hasLastPhysicsTransform) {
+			this.applyPositionMovementToPhysics(tx, ty);
+			this.applyRotationMovementToPhysics(currentRotation);
+		}
+
+		this.setLastPhysicsTransform(tx, ty, currentRotation);
+	}
+
+	private applyPositionMovementToPhysics (currentX: number, currentY: number): void {
+		if (this._physicsPositionInheritanceFactorX === 0 && this._physicsPositionInheritanceFactorY === 0) return;
+
+		const currentPosition = this.currentPhysicsPosition;
+		currentPosition.x = currentX;
+		currentPosition.y = currentY;
+		this.pixiWorldCoordinatesToSkeleton(currentPosition);
+
+		const lastPosition = this.lastPhysicsPosition;
+		lastPosition.x = this.lastPhysicsX;
+		lastPosition.y = this.lastPhysicsY;
+		this.pixiWorldCoordinatesToSkeleton(lastPosition);
+
+		this.skeleton.physicsTranslate(
+			(currentPosition.x - lastPosition.x) * this._physicsPositionInheritanceFactorX,
+			(currentPosition.y - lastPosition.y) * this._physicsPositionInheritanceFactorY
+		);
+	}
+
+	private applyRotationMovementToPhysics (currentRotation: number): void {
+		const rotationFactor = this._physicsRotationInheritanceFactor;
+		if (rotationFactor === 0) return;
+
+		this.skeleton.physicsRotate(0, 0, this.getRotationDelta(currentRotation, this.lastPhysicsRotation) * rotationFactor);
+	}
+
+	private setLastPhysicsTransform (x: number, y: number, rotation: number): void {
+		this.lastPhysicsX = x;
+		this.lastPhysicsY = y;
+		this.lastPhysicsRotation = rotation;
+		this.hasLastPhysicsTransform = true;
+	}
+
+	private getPhysicsRotation (): number {
+		const transform = this.worldTransform;
+		return Math.atan2(transform.b, transform.a) * 180 / Math.PI;
+	}
+
+	private getRotationDelta (current: number, previous: number): number {
+		let delta = current - previous;
+		delta = (delta + 180) % 360 - 180;
+		return delta < -180 ? delta + 360 : delta;
 	}
 
 	override get bounds () {
@@ -292,15 +613,15 @@ export class Spine extends ViewContainer {
 		if (!bone) throw Error(`Cant set bone position, bone ${String(boneAux)} not found`);
 		vectorAux.set(position.x, position.y);
 
+		const applied = bone.appliedPose;
 		if (bone.parent) {
-			const aux = bone.parent.worldToLocal(vectorAux);
+			const aux = bone.parent.appliedPose.worldToLocal(vectorAux);
 
-			bone.x = aux.x;
-			bone.y = -aux.y;
-		}
-		else {
-			bone.x = vectorAux.x;
-			bone.y = vectorAux.y;
+			applied.x = aux.x;
+			applied.y = -aux.y;
+		} else {
+			applied.x = vectorAux.x;
+			applied.y = vectorAux.y;
 		}
 	}
 
@@ -327,8 +648,8 @@ export class Spine extends ViewContainer {
 			outPos = { x: 0, y: 0 };
 		}
 
-		outPos.x = bone.worldX;
-		outPos.y = bone.worldY;
+		outPos.x = bone.appliedPose.worldX;
+		outPos.y = bone.appliedPose.worldY;
 
 		return outPos;
 	}
@@ -348,6 +669,7 @@ export class Spine extends ViewContainer {
 		const { skeleton } = this;
 
 		this.state.apply(skeleton);
+		this.applyTransformMovementToPhysics();
 
 		this.beforeUpdateWorldTransforms(this);
 		skeleton.updateWorldTransform(Physics.update);
@@ -356,8 +678,6 @@ export class Spine extends ViewContainer {
 		this.updateSlotObjects();
 
 		this._stateChanged = true;
-
-		this._boundsDirty = true;
 
 		this.onViewUpdate();
 	}
@@ -378,113 +698,165 @@ export class Spine extends ViewContainer {
 
 	private validateAttachments () {
 
-		const currentDrawOrder = this.skeleton.drawOrder;
+		const currentDrawOrder = this.skeleton.drawOrder.appliedPose;
 
 		const lastAttachments = this._lastAttachments;
+		const lastRenderableCacheIds = this._lastRenderableCacheIds;
+		const lastClippingAttachmentIds = this._lastClippingAttachmentIds;
 
-		let index = 0;
+		let attachmentIndex = 0;
+		let renderableIndex = 0;
+		let clippingIndex = 0;
 
 		let spineAttachmentsDirty = false;
 
 		for (let i = 0; i < currentDrawOrder.length; i++) {
 			const slot = currentDrawOrder[i];
-			const attachment = slot.getAttachment();
+			if (!slot.bone.active) continue;
+
+			const attachment = slot.appliedPose.attachment;
 
 			if (attachment) {
-				if (attachment !== lastAttachments[index]) {
+				if (attachment !== lastAttachments[attachmentIndex]) {
 					spineAttachmentsDirty = true;
-					lastAttachments[index] = attachment;
+					lastAttachments[attachmentIndex] = attachment;
 				}
 
-				index++;
+				attachmentIndex++;
+			}
+
+			if (attachment instanceof RegionAttachment || attachment instanceof MeshAttachment) {
+				const cacheId = this.getRenderableCacheId(slot, attachment);
+				if (cacheId !== lastRenderableCacheIds[renderableIndex]) {
+					spineAttachmentsDirty = true;
+					lastRenderableCacheIds[renderableIndex] = cacheId;
+				}
+				renderableIndex++;
+			}
+			else if (attachment instanceof ClippingAttachment) {
+				const clippingId = `${slot.data.index}-${attachment.name}-${attachment.endSlot?.index ?? -1}`;
+				if (clippingId !== lastClippingAttachmentIds[clippingIndex]) {
+					spineAttachmentsDirty = true;
+					lastClippingAttachmentIds[clippingIndex] = clippingId;
+				}
+				clippingIndex++;
 			}
 		}
 
-		if (index !== lastAttachments.length) {
+		if (attachmentIndex !== lastAttachments.length) {
 			spineAttachmentsDirty = true;
-			lastAttachments.length = index;
+			lastAttachments.length = attachmentIndex;
+		}
+		if (renderableIndex !== lastRenderableCacheIds.length) {
+			spineAttachmentsDirty = true;
+			lastRenderableCacheIds.length = renderableIndex;
+		}
+		if (clippingIndex !== lastClippingAttachmentIds.length) {
+			spineAttachmentsDirty = true;
+			lastClippingAttachmentIds.length = clippingIndex;
 		}
 
 		this.spineAttachmentsDirty ||= spineAttachmentsDirty;
 	}
 
-	private updateAndSetPixiMask (slot: Slot, last: boolean) {
-		// assign/create the currentClippingSlot
-		const attachment = slot.attachment;
-		if (attachment && attachment instanceof ClippingAttachment) {
-			const clip = (this.clippingSlotToPixiMasks[slot.data.name] ||= { slot, vertices: new Array<number>() });
-			clip.maskComputed = false;
-			this.currentClippingSlot = this.clippingSlotToPixiMasks[slot.data.name];
-			return;
-		}
+	private currentClippingSlot: SlotsToClipping | undefined;
+	private updateAndSetPixiMask (slot: Slot) {
+		const pose = slot.appliedPose;
+		const attachment = pose.attachment;
+		const slotObject = this._slotsObject[slot.data.name];
+		const currentClippingSlot = this.currentClippingSlot;
 
-		// assign the currentClippingSlot mask to the slot object
-		let currentClippingSlot = this.currentClippingSlot;
-		let slotObject = this._slotsObject[slot.data.name];
-		if (currentClippingSlot && slotObject) {
-			let slotClipping = currentClippingSlot.slot;
-			let clippingAttachment = slotClipping.attachment as ClippingAttachment;
+		if (currentClippingSlot && slot.bone.active && slotObject?.wasRenderable) {
+			const slotClipping = currentClippingSlot.slot;
+			const clippingAttachment = slotClipping.appliedPose.attachment as ClippingAttachment;
 
-			// create the pixi mask, only the first time and if the clipped slot is the first one clipped by this currentClippingSlot
-			let mask = currentClippingSlot.mask as Graphics;
-			if (!mask) {
-				mask = maskPool.obtain();
-				currentClippingSlot.mask = mask;
-				this.addChild(mask);
+			if (slotClipping.bone.active && clippingAttachment instanceof ClippingAttachment) {
+				let mask = currentClippingSlot.mask;
+				if (!mask) {
+					mask = maskPool.obtain();
+					currentClippingSlot.mask = mask;
+					this.addChild(mask);
+				}
+
+				if (!currentClippingSlot.maskComputed) {
+					currentClippingSlot.maskComputed = true;
+					const worldVerticesLength = clippingAttachment.worldVerticesLength;
+					const vertices = currentClippingSlot.vertices;
+					clippingAttachment.computeWorldVertices(this.skeleton, slotClipping, 0, worldVerticesLength, vertices, 0, 2);
+					mask.clear().poly(vertices).stroke({ width: 0 }).fill({ alpha: .25 });
+				}
+				slotObject.container.mask = mask;
 			}
-
-			// compute the pixi mask polygon, if the clipped slot is the first one clipped by this currentClippingSlot
-			if (!currentClippingSlot.maskComputed) {
-				currentClippingSlot.maskComputed = true;
-				const worldVerticesLength = clippingAttachment.worldVerticesLength;
-				const vertices = currentClippingSlot.vertices;
-				clippingAttachment.computeWorldVertices(slotClipping, 0, worldVerticesLength, vertices, 0, 2);
-				mask.clear().poly(vertices).stroke({ width: 0 }).fill({ alpha: .25 });
-			}
-			slotObject.container.mask = mask;
 		} else if (slotObject?.container.mask) {
-			// remove the mask, if slot object has a mask, but currentClippingSlot is undefined
 			slotObject.container.mask = null;
 		}
 
-		// if current slot is the ending one of the currentClippingSlot mask, set currentClippingSlot to undefined
-		if (currentClippingSlot && (currentClippingSlot.slot.attachment as ClippingAttachment).endSlot == slot.data) {
-			this.currentClippingSlot = undefined;
-		}
+		this.closeCurrentPixiMaskIfEndingAt(slot);
 
-		// clean up unused masks
-		if (last) {
-			for (const key in this.clippingSlotToPixiMasks) {
-				const clippingSlotToPixiMask = this.clippingSlotToPixiMasks[key];
-				if ((!(clippingSlotToPixiMask.slot.attachment instanceof ClippingAttachment) || !clippingSlotToPixiMask.maskComputed) && clippingSlotToPixiMask.mask) {
-					this.removeChild(clippingSlotToPixiMask.mask);
-					maskPool.free(clippingSlotToPixiMask.mask);
-					clippingSlotToPixiMask.mask = undefined;
-				}
-			}
+		if (!slot.bone.active) return;
+
+		if (attachment instanceof ClippingAttachment) {
+			const clip = (this.clippingSlotToPixiMasks[slot.data.name] ||= { slot, vertices: [] as number[] });
+			clip.slot = slot;
+			clip.maskComputed = false;
+			this.currentClippingSlot = clip;
 		}
 	}
 
-	private currentClippingSlot: SlotsToClipping | undefined;
+	private closeCurrentPixiMaskIfEndingAt (slot: Slot) {
+		const currentClippingSlot = this.currentClippingSlot;
+		const clippingAttachment = currentClippingSlot?.slot.appliedPose.attachment;
+		if (currentClippingSlot && clippingAttachment instanceof ClippingAttachment && clippingAttachment.endSlot === slot.data) {
+			this.currentClippingSlot = undefined;
+		}
+	}
+
+	private cleanupPixiMasks () {
+		for (const key in this.clippingSlotToPixiMasks) {
+			const clippingSlotToPixiMask = this.clippingSlotToPixiMasks[key];
+			if ((
+				!clippingSlotToPixiMask.slot.bone.active
+				|| !(clippingSlotToPixiMask.slot.appliedPose.attachment instanceof ClippingAttachment)
+				|| !clippingSlotToPixiMask.maskComputed
+			) && clippingSlotToPixiMask.mask) {
+				this.removeChild(clippingSlotToPixiMask.mask);
+				maskPool.free(clippingSlotToPixiMask.mask);
+				clippingSlotToPixiMask.mask = undefined;
+			}
+		}
+		this.currentClippingSlot = undefined;
+	}
+
 	private transformAttachments () {
-		const currentDrawOrder = this.skeleton.drawOrder;
+		const currentDrawOrder = this.skeleton.drawOrder.appliedPose;
+		const skeleton = this.skeleton;
 
 		for (let i = 0; i < currentDrawOrder.length; i++) {
 			const slot = currentDrawOrder[i];
+			const pose = slot.appliedPose;
+			const attachment = pose.attachment;
 
-			this.updateAndSetPixiMask(slot, i === currentDrawOrder.length - 1);
+			this.updateAndSetPixiMask(slot);
 
-			const attachment = slot.getAttachment();
+			if (!slot.bone.active) {
+				this.markSlotAttachmentSkipped(slot, attachment);
+				clipper.clipEnd(slot);
+				continue;
+			}
 
 			if (attachment) {
 				if (attachment instanceof MeshAttachment || attachment instanceof RegionAttachment) {
 					const cacheData = this._getCachedData(slot, attachment);
 
+					const sequence = attachment.sequence;
+					const sequenceIndex = sequence.resolveIndex(pose);
+
 					if (attachment instanceof RegionAttachment) {
-						attachment.computeWorldVertices(slot, cacheData.vertices, 0, 2);
+						attachment.computeWorldVertices(slot, attachment.getOffsets(pose), cacheData.vertices, 0, 2);
 					}
 					else {
 						attachment.computeWorldVertices(
+							skeleton,
 							slot,
 							0,
 							attachment.worldVerticesLength,
@@ -494,52 +866,54 @@ export class Spine extends ViewContainer {
 						);
 					}
 
-					// sequences uvs are known only after computeWorldVertices is invoked
-					if (cacheData.uvs.length < attachment.uvs.length) {
-						cacheData.uvs = new Float32Array(attachment.uvs.length);
-					}
+					cacheData.uvs = sequence.getUVs(sequenceIndex);
 
-					// need to copy because attachments uvs are shared among skeletons using the same atlas
-					fastCopy((attachment.uvs as Float32Array).buffer, cacheData.uvs.buffer);
-
-					const skeleton = slot.bone.skeleton;
 					const skeletonColor = skeleton.color;
-					const slotColor = slot.color;
-
+					const slotColor = pose.color;
 					const attachmentColor = attachment.color;
+					const alpha = skeletonColor.a * slotColor.a * attachmentColor.a;
 
-					cacheData.color.set(
-						skeletonColor.r * slotColor.r * attachmentColor.r,
-						skeletonColor.g * slotColor.g * attachmentColor.g,
-						skeletonColor.b * slotColor.b * attachmentColor.b,
-						skeletonColor.a * slotColor.a * attachmentColor.a,
-					);
+					if (this.alpha === 0 || alpha === 0) {
+						if (!cacheData.skipRender) this.spineAttachmentsDirty = true;
+						cacheData.skipRender = true;
+						cacheData.clipped = false;
+					} else {
+						if (cacheData.skipRender) this.spineAttachmentsDirty = true;
+						cacheData.skipRender = cacheData.clipped = false;
 
-					if (slot.darkColor) {
-						cacheData.darkColor.setFromColor(slot.darkColor);
-					}
+						cacheData.color.set(
+							skeletonColor.r * slotColor.r * attachmentColor.r,
+							skeletonColor.g * slotColor.g * attachmentColor.g,
+							skeletonColor.b * slotColor.b * attachmentColor.b,
+							alpha,
+						);
 
-					cacheData.skipRender = cacheData.clipped = false;
+						if (pose.darkColor) {
+							cacheData.darkColor.setFromColor(pose.darkColor);
+						}
 
-					const texture = attachment.region?.texture.texture || Texture.EMPTY;
+						const texture = (sequence.regions[sequenceIndex]?.texture as SpineTexture)?.texture || Texture.EMPTY;
 
-					if (cacheData.texture !== texture) {
-						cacheData.texture = texture;
-						this.spineTexturesDirty = true;
-					}
+						if (cacheData.texture !== texture) {
+							cacheData.texture = texture;
+							this.spineTexturesDirty = true;
+						}
 
-					if (clipper.isClipping()) {
-						this.updateClippingData(cacheData);
+						if (clipper.isClipping()) {
+							this.updateClippingData(cacheData);
+						}
 					}
 				}
 				else if (attachment instanceof ClippingAttachment) {
-					clipper.clipStart(slot, attachment);
+					clipper.clipEnd(slot);
+					clipper.clipStart(skeleton, slot, attachment);
 					continue;
 				}
 			}
-			clipper.clipEndWithSlot(slot);
+			clipper.clipEnd(slot);
 		}
 		clipper.clipEnd();
+		this.cleanupPixiMasks();
 	}
 
 	private updateClippingData (cacheData: AttachmentCacheData) {
@@ -547,15 +921,16 @@ export class Spine extends ViewContainer {
 
 		clipper.clipTrianglesUnpacked(
 			cacheData.vertices,
+			0,
 			cacheData.indices,
 			cacheData.indices.length,
 			cacheData.uvs,
 		);
 
-		const { clippedVertices, clippedUVs, clippedTriangles } = clipper;
+		const { clippedVerticesTyped, clippedUVsTyped, clippedTrianglesTyped } = clipper;
 
-		const verticesCount = clippedVertices.length / 2;
-		const indicesCount = clippedTriangles.length;
+		const verticesCount = clipper.clippedVerticesLength / 2;
+		const indicesCount = clipper.clippedTrianglesLength;
 
 		if (!cacheData.clippedData) {
 			cacheData.clippedData = {
@@ -590,24 +965,17 @@ export class Spine extends ViewContainer {
 		}
 
 		const { vertices, uvs, indices } = clippedData;
-
-		for (let i = 0; i < verticesCount; i++) {
-			vertices[i * 2] = clippedVertices[i * 2];
-			vertices[(i * 2) + 1] = clippedVertices[(i * 2) + 1];
-
-			uvs[i * 2] = clippedUVs[(i * 2)];
-			uvs[(i * 2) + 1] = clippedUVs[(i * 2) + 1];
-		}
-
-		clippedData.vertexCount = verticesCount;
+		vertices.set(clippedVerticesTyped);
+		uvs.set(clippedUVsTyped);
 
 		for (let i = 0; i < indicesCount; i++) {
-			if (indices[i] !== clippedTriangles[i]) {
-				this.spineAttachmentsDirty = true;
-				indices[i] = clippedTriangles[i];
-			}
+			const index = clippedTrianglesTyped[i];
+			// Pixi's Batcher.updateElement() repacks vertex attributes (positions, UVs, colors),
+			// but it does not repack the index buffer. So we need to check indices differences.
+			if (indices[i] !== index) this.spineAttachmentsDirty = true;
+			indices[i] = index;
 		}
-
+		clippedData.vertexCount = verticesCount;
 		clippedData.indicesCount = indicesCount;
 	}
 
@@ -625,63 +993,116 @@ export class Spine extends ViewContainer {
 		}
 	}
 
-	private updateSlotObject (slotAttachment: { slot: Slot, container: Container }) {
+	private updateSlotObject (slotAttachment: SpineSlotObject) {
 		const { slot, container } = slotAttachment;
 
-		container.visible = this.skeleton.drawOrder.includes(slot);
+		const pose = slot.appliedPose;
+		const slotAlpha = this.skeleton.color.a * pose.color.a;
+		const renderable = this.isSlotObjectRenderable(slotAttachment, slotAlpha);
 
-		if (container.visible) {
-			const bone = slot.bone;
-
-			container.position.set(bone.worldX, bone.worldY);
-
-			container.scale.x = bone.getWorldScaleX();
-			container.scale.y = bone.getWorldScaleY();
-
-			container.rotation = bone.getWorldRotationX() * DEG_TO_RAD;
-
-			container.alpha = this.skeleton.color.a * slot.color.a;
+		if (slotAttachment.wasRenderable !== renderable) {
+			this.spineAttachmentsDirty = true;
+			slotAttachment.wasRenderable = renderable;
 		}
+
+		container.visible = renderable;
+
+		if (renderable) {
+			const applied = slot.bone.appliedPose;
+
+			const matrix = container.localTransform;
+			matrix.a = applied.a;
+			matrix.b = applied.c;
+			matrix.c = -applied.b;
+			matrix.d = -applied.d;
+			matrix.tx = applied.worldX;
+			matrix.ty = applied.worldY;
+			container.setFromMatrix(matrix);
+
+			container.alpha = slotAlpha;
+
+			if (slotAttachment.followSlotColor) {
+				container.tint =
+					((255 * this.skeleton.color.r * pose.color.r) << 16) |
+					((255 * this.skeleton.color.g * pose.color.g) << 8) |
+					(255 * this.skeleton.color.b * pose.color.b);
+			}
+		} else if (container.mask) {
+			container.mask = null;
+		}
+	}
+
+	private isSlotObjectRenderable (slotAttachment: SpineSlotObject, slotAlpha = this.skeleton.color.a * slotAttachment.slot.appliedPose.color.a) {
+		const { slot } = slotAttachment;
+		const followAttachmentValue = slotAttachment.followAttachmentTimeline ? Boolean(slot.appliedPose.attachment) : true;
+
+		return this.skeleton.drawOrder.appliedPose.includes(slot)
+			&& slot.bone.active
+			&& followAttachmentValue
+			&& this.alpha > 0
+			&& slotAlpha > 0;
+	}
+
+	private getRenderableCacheId (slot: Slot, attachment: RegionAttachment | MeshAttachment): string {
+		return `${slot.data.index}-${attachment.name}`;
+	}
+
+	private getExistingCachedData (slot: Slot, attachment: RegionAttachment | MeshAttachment): AttachmentCacheData | undefined {
+		return this.attachmentCacheData[slot.data.index]?.[attachment.name];
+	}
+
+	private markSlotAttachmentSkipped (slot: Slot, attachment: Attachment | null | undefined) {
+		if (!(attachment instanceof RegionAttachment || attachment instanceof MeshAttachment)) return;
+
+		const cacheData = this.getExistingCachedData(slot, attachment);
+		if (!cacheData) return;
+
+		if (!cacheData.skipRender) this.spineAttachmentsDirty = true;
+		cacheData.skipRender = true;
+		cacheData.clipped = false;
 	}
 
 	/** @internal */
 	_getCachedData (slot: Slot, attachment: RegionAttachment | MeshAttachment): AttachmentCacheData {
-		return this.attachmentCacheData[slot.data.index][attachment.name] || this.initCachedData(slot, attachment);
+		return this.getExistingCachedData(slot, attachment) || this.initCachedData(slot, attachment);
 	}
 
 	private initCachedData (slot: Slot, attachment: RegionAttachment | MeshAttachment): AttachmentCacheData {
 		let vertices: Float32Array;
 
+		this.spineAttachmentsDirty = true;
+
 		if (attachment instanceof RegionAttachment) {
 			vertices = new Float32Array(8);
 
+			const sequence = attachment.sequence;
 			this.attachmentCacheData[slot.data.index][attachment.name] = {
-				id: `${slot.data.index}-${attachment.name}`,
+				id: this.getRenderableCacheId(slot, attachment),
 				vertices,
 				clipped: false,
 				indices: [0, 1, 2, 0, 2, 3],
-				uvs: new Float32Array(attachment.uvs.length),
+				uvs: new Float32Array(sequence.getUVs(0).length),
 				color: new Color(1, 1, 1, 1),
 				darkColor: new Color(0, 0, 0, 0),
 				darkTint: this.darkTint,
 				skipRender: false,
-				texture: attachment.region?.texture.texture,
+				texture: (sequence.regions[0]?.texture as SpineTexture)?.texture,
 			};
-		}
-		else {
+		} else {
 			vertices = new Float32Array(attachment.worldVerticesLength);
 
+			const sequence = attachment.sequence;
 			this.attachmentCacheData[slot.data.index][attachment.name] = {
-				id: `${slot.data.index}-${attachment.name}`,
+				id: this.getRenderableCacheId(slot, attachment),
 				vertices,
 				clipped: false,
 				indices: attachment.triangles,
-				uvs: new Float32Array(attachment.uvs.length),
+				uvs: new Float32Array(sequence.getUVs(0).length),
 				color: new Color(1, 1, 1, 1),
 				darkColor: new Color(0, 0, 0, 0),
 				darkTint: this.darkTint,
 				skipRender: false,
-				texture: attachment.region?.texture.texture,
+				texture: (sequence.regions[0]?.texture as SpineTexture)?.texture,
 			};
 		}
 
@@ -691,7 +1112,9 @@ export class Spine extends ViewContainer {
 	protected onViewUpdate () {
 		// increment from the 12th bit!
 		this._didViewChangeTick++;
-		this._boundsDirty = true;
+		if (!this._boundsProvider) {
+			this._boundsDirty = true;
+		}
 
 		if (this.didViewUpdate) return;
 		this.didViewUpdate = true;
@@ -711,8 +1134,11 @@ export class Spine extends ViewContainer {
 	 *
 	 * @param container - The container to attach to the slot
 	 * @param slotRef - The slot id or  slot to attach to
+	 * @param options - Optional settings for the attachment.
+	 * @param options.followAttachmentTimeline - If true, the attachment will follow the slot's attachment timeline.
+	 * @param options.followSlotColor - If true, the container tint will follow the skeleton and slot colors.
 	 */
-	public addSlotObject (slot: number | string | Slot, container: Container) {
+	public addSlotObject (slot: number | string | Slot, container: Container, options?: { followAttachmentTimeline?: boolean, followSlotColor?: boolean }) {
 		slot = this.getSlotFromRef(slot);
 
 		// need to check in on the container too...
@@ -724,14 +1150,22 @@ export class Spine extends ViewContainer {
 
 		this.removeSlotObject(slot);
 
+		container.mask = null;
 		container.includeInBuild = false;
 
 		// TODO only add once??
 		this.addChild(container);
 
-		const slotObject = { container, slot };
+		const slotObject: SpineSlotObject = {
+			container,
+			slot,
+			followAttachmentTimeline: options?.followAttachmentTimeline || false,
+			followSlotColor: options?.followSlotColor || false,
+			wasRenderable: false,
+		};
 		this._slotsObject[slot.data.name] = slotObject;
 
+		this.spineAttachmentsDirty = true;
 		this.updateSlotObject(slotObject);
 	}
 
@@ -753,8 +1187,7 @@ export class Spine extends ViewContainer {
 					break;
 				}
 			}
-		}
-		else {
+		} else {
 			const slot = this.getSlotFromRef(slotOrContainer);
 
 			containerToRemove = this._slotsObject[slot.data.name]?.container;
@@ -764,8 +1197,25 @@ export class Spine extends ViewContainer {
 		if (containerToRemove) {
 			this.removeChild(containerToRemove);
 
+			containerToRemove.mask = null;
 			containerToRemove.includeInBuild = true;
+			this.spineAttachmentsDirty = true;
 		}
+	}
+
+	/**
+	 * Removes all PixiJS containers attached to any slot.
+	 */
+	public removeSlotObjects () {
+		Object.entries(this._slotsObject).forEach(([slotName, slotObject]) => {
+			if (slotObject) {
+				slotObject.container.removeFromParent();
+				slotObject.container.mask = null;
+				slotObject.container.includeInBuild = true;
+			}
+			delete this._slotsObject[slotName];
+		});
+		this.spineAttachmentsDirty = true;
 	}
 
 	/**
@@ -789,22 +1239,34 @@ export class Spine extends ViewContainer {
 
 		skeletonBounds.update(this.skeleton, true);
 
-		if (skeletonBounds.minX === Infinity) {
+		if (this._boundsProvider) {
+			const boundsSpine = this._boundsProvider.calculateBounds(this);
+
+			const bounds = this._bounds;
+			bounds.clear();
+
+			bounds.x = boundsSpine.x;
+			bounds.y = boundsSpine.y;
+			bounds.width = boundsSpine.width;
+			bounds.height = boundsSpine.height;
+
+		} else if (skeletonBounds.minX === Infinity) {
 			if (this.hasNeverUpdated) {
 				this._updateAndApplyState(0);
 				this._boundsDirty = false;
 			}
 			this._validateAndTransformAttachments();
 
-			const drawOrder = this.skeleton.drawOrder;
+			const drawOrder = this.skeleton.drawOrder.appliedPose;
 			const bounds = this._bounds;
 
 			bounds.clear();
 
 			for (let i = 0; i < drawOrder.length; i++) {
 				const slot = drawOrder[i];
+				if (!slot.bone.active) continue;
 
-				const attachment = slot.getAttachment();
+				const attachment = slot.appliedPose.attachment;
 
 				if (attachment && (attachment instanceof RegionAttachment || attachment instanceof MeshAttachment)) {
 					const cacheData = this._getCachedData(slot, attachment);
@@ -812,8 +1274,7 @@ export class Spine extends ViewContainer {
 					bounds.addVertexData(cacheData.vertices, 0, cacheData.vertices.length);
 				}
 			}
-		}
-		else {
+		} else {
 			this._bounds.minX = skeletonBounds.minX;
 			this._bounds.minY = skeletonBounds.minY;
 			this._bounds.maxX = skeletonBounds.maxX;
@@ -836,14 +1297,41 @@ export class Spine extends ViewContainer {
 	public override destroy (options: DestroyOptions = false) {
 		super.destroy(options);
 
-		Ticker.shared.remove(this.internalUpdate, this);
+		this._ticker.remove(this.internalUpdate, this);
+		(this._ticker as unknown) = null;
 		this.state.clearListeners();
 		this.debug = undefined;
-		this.skeleton = null as any;
-		this.state = null as any;
-		(this._slotsObject as any) = null;
+		(this.skeleton as unknown) = null;
+		(this.state as unknown) = null;
+		(this._slotsObject as unknown) = null;
+		(this.attachmentCacheData as unknown) = null;
 		this._lastAttachments.length = 0;
-		this.attachmentCacheData = null as any;
+		this._lastRenderableCacheIds.length = 0;
+		this._lastClippingAttachmentIds.length = 0;
+	}
+
+	/**
+	 * Unloads this Spine object's cached {@link SkeletonData}.
+	 *
+	 * Existing Spine objects that use this SkeletonData continue to work. Future Spine objects created with the same
+	 * skeleton, atlas, and scale will parse a new SkeletonData.
+	 * @returns `true` if the cached SkeletonData was removed, otherwise `false`.
+	 */
+	public unloadFromCache (): boolean {
+		const skeletonData = this.skeleton?.data;
+		if (!skeletonData) return false;
+
+		const cacheKey = Spine.skeletonDataCacheKeys.get(skeletonData);
+
+		if (!cacheKey || !Cache.has(cacheKey)) return false;
+
+		// If the cache was repopulated with different SkeletonData for this key, don't remove it.
+		if (Cache.get<SkeletonData>(cacheKey) !== skeletonData) return false;
+
+		Cache.remove(cacheKey);
+		Spine.skeletonDataCacheKeys.delete(skeletonData);
+
+		return true;
 	}
 
 	/** Converts a point from the skeleton coordinate system to the Pixi world coordinate system. */
@@ -860,38 +1348,46 @@ export class Spine extends ViewContainer {
 	public pixiWorldCoordinatesToBone (point: { x: number; y: number }, bone: Bone) {
 		this.pixiWorldCoordinatesToSkeleton(point);
 		if (bone.parent) {
-			bone.parent.worldToLocal(point as Vector2);
-		}
-		else {
-			bone.worldToLocal(point as Vector2);
+			bone.parent.appliedPose.worldToLocal(point as Vector2);
+		} else {
+			bone.appliedPose.worldToLocal(point as Vector2);
 		}
 	}
 
 	/**
-	 * Use this method to instantiate a Spine game object.
-	 * Before instantiating a Spine game object, the skeleton (`.skel` or `.json`) and the atlas text files must be loaded into the Assets. For example:
+	 * Get a convenient initialization configuration for your Spine game object.
+	 * Before instantiating a Spine game object, the skeleton (`.skel` or `.json`) and the atlas text files must be loaded into the {@link Assets}. For example:
 	 * ```
-	 * PIXI.Assets.add("sackData", "./assets/sack-pro.skel");
-	 * PIXI.Assets.add("sackAtlas", "./assets/sack-pma.atlas");
+	 * PIXI.Assets.add("sackData", "/assets/sack-pro.skel");
+	 * PIXI.Assets.add("sackAtlas", "/assets/sack-pma.atlas");
 	 * await PIXI.Assets.load(["sackData", "sackAtlas"]);
 	 * ```
 	 * Once a Spine game object is created, its skeleton data is cached into {@link Cache} using the key:
 	 * `${skeletonAssetName}-${atlasAssetName}-${options?.scale ?? 1}`
 	 *
 	 * @param options - Options to configure the Spine game object. See {@link SpineFromOptions}
-	 * @returns {Spine} The Spine game object instantiated
+	 * @returns {SpineOptions} The configuration ready to be passed to the Spine constructor
 	 */
-	static from ({ skeleton, atlas, scale = 1, darkTint, autoUpdate = true }: SpineFromOptions) {
-		const cacheKey = `${skeleton}-${atlas}-${scale}`;
+	static createOptions ({ skeleton, atlas, scale = 1, darkTint, autoUpdate = true, boundsProvider, allowMissingRegions = false, ticker }: SpineFromOptions): SpineOptions {
+		const cacheKey = Spine.getSkeletonCacheKey({ skeleton, atlas, scale });
 
 		if (Cache.has(cacheKey)) {
-			return new Spine(Cache.get<SkeletonData>(cacheKey));
+			const skeletonData = Cache.get<SkeletonData>(cacheKey);
+			Spine.skeletonDataCacheKeys.set(skeletonData, cacheKey);
+			return {
+				skeletonData,
+				darkTint,
+				autoUpdate,
+				boundsProvider,
+				ticker,
+			};
 		}
 
-		const skeletonAsset = Assets.get<any | Uint8Array>(skeleton);
-
 		const atlasAsset = Assets.get<TextureAtlas>(atlas);
-		const attachmentLoader = new AtlasAttachmentLoader(atlasAsset);
+		const attachmentLoader = new AtlasAttachmentLoader(atlasAsset, allowMissingRegions);
+
+		// biome-ignore lint/suspicious/noExplicitAny: json skeleton data is any
+		const skeletonAsset = Assets.get<any | Uint8Array>(skeleton);
 		const parser = skeletonAsset instanceof Uint8Array
 			? new SkeletonBinary(attachmentLoader)
 			: new SkeletonJson(attachmentLoader);
@@ -901,10 +1397,39 @@ export class Spine extends ViewContainer {
 
 		Cache.set(cacheKey, skeletonData);
 
-		return new Spine({
+		Spine.skeletonDataCacheKeys.set(skeletonData, cacheKey);
+
+		return {
 			skeletonData,
 			darkTint,
 			autoUpdate,
-		});
+			boundsProvider,
+			ticker,
+		};
+	}
+
+	private static readonly skeletonDataCacheKeys = new WeakMap<SkeletonData, string>();
+
+	private static getSkeletonCacheKey ({ skeleton, atlas, scale = 1 }: Pick<SpineFromOptions, "skeleton" | "atlas" | "scale">): string {
+		return `${skeleton}-${atlas}-${scale}`;
+	}
+
+	/**
+	 * @deprecated Use directly the Spine constructor or {@link createOptions} to make options and customize it to pass to the constructor
+	 * Use this method to instantiate a Spine game object.
+	 * Before instantiating a Spine game object, the skeleton (`.skel` or `.json`) and the atlas text files must be loaded into the Assets. For example:
+	 * ```
+	 * PIXI.Assets.add("sackData", "/assets/sack-pro.skel");
+	 * PIXI.Assets.add("sackAtlas", "/assets/sack-pma.atlas");
+	 * await PIXI.Assets.load(["sackData", "sackAtlas"]);
+	 * ```
+	 * Once a Spine game object is created, its skeleton data is cached into {@link Cache} using the key:
+	 * `${skeletonAssetName}-${atlasAssetName}-${options?.scale ?? 1}`
+	 *
+	 * @param options - Options to configure the Spine game object. See {@link SpineFromOptions}
+	 * @returns {Spine} The Spine game object instantiated
+	 */
+	static from (options: SpineFromOptions) {
+		return new Spine(Spine.createOptions(options));
 	}
 }

@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,8 +23,8 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 #include "SpineAtlasAsset.h"
@@ -44,13 +44,11 @@ void USpineAtlasAsset::SetAtlasFileName(const FName &AtlasFileName) {
 	importData->UpdateFilenameOnly(AtlasFileName.ToString());
 	TArray<FString> files;
 	importData->ExtractFilenames(files);
-	if (files.Num() > 0)
-		atlasFileName = FName(*files[0]);
+	if (files.Num() > 0) atlasFileName = FName(*files[0]);
 }
 
 void USpineAtlasAsset::PostInitProperties() {
-	if (!HasAnyFlags(RF_ClassDefaultObject))
-		importData = NewObject<UAssetImportData>(this, TEXT("AssetImportData"));
+	if (!HasAnyFlags(RF_ClassDefaultObject)) importData = NewObject<UAssetImportData>(this, TEXT("AssetImportData"));
 	Super::PostInitProperties();
 }
 
@@ -69,8 +67,7 @@ void USpineAtlasAsset::Serialize(FArchive &Ar) {
 FName USpineAtlasAsset::GetAtlasFileName() const {
 #if WITH_EDITORONLY_DATA
 	TArray<FString> files;
-	if (importData)
-		importData->ExtractFilenames(files);
+	if (importData) importData->ExtractFilenames(files);
 	if (files.Num() > 0)
 		return FName(*files[0]);
 	else
@@ -115,8 +112,7 @@ Atlas *USpineAtlasAsset::GetAtlas() {
 		}
 		std::string t = TCHAR_TO_UTF8(*rawData);
 
-		atlas = new (__FILE__, __LINE__)
-				Atlas(t.c_str(), strlen(t.c_str()), "", &_spineUETextureLoader);
+		atlas = new (__FILE__, __LINE__) Atlas(t.c_str(), strlen(t.c_str()), "", &_spineUETextureLoader);
 	}
 	return this->atlas;
 }

@@ -1,0 +1,31 @@
+name: Check Haxe Formatting
+
+on:
+  push:
+    branches:
+      - '**'
+    paths:
+      - 'spine-haxe/**'
+      - 'formatters/format-haxe.sh'
+      - '.github/workflows/format-check-haxe.yml'
+  workflow_dispatch:
+
+jobs:
+  check-haxe:
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install Haxe
+      uses: krdlab/setup-haxe@v1
+      with:
+        haxe-version: '4.3.2'
+    - run: haxelib install formatter
+
+    - name: Format Haxe
+      run: ./formatters/format-haxe.sh
+
+    - name: Check for changes
+      run: |
+        git ls-files -m
+        if [[ `git ls-files -m` ]]; then echo "Detected Haxe formatting errors!" & exit 1; fi

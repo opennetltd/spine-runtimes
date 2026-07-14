@@ -1,0 +1,18 @@
+{
+  "name": "spine-ios-codegen",
+  "version": "1.0.0",
+  "description": "Swift bindings generator for Spine",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "generate": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "spine-c-codegen": "file:../../spine-c/codegen"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "tsx": "^4.0.0"
+  }
+}

@@ -10,8 +10,22 @@ Shader "Universal Render Pipeline/Spine/Skeleton Lit" {
 		[MaterialToggle(_TINT_BLACK_ON)]  _TintBlack("Tint Black", Float) = 0
 		_Color("    Light Color", Color) = (1,1,1,1)
 		_Black("    Dark Color", Color) = (0,0,0,0)
+		[MaterialToggle(_ADAPTIVE_PROBE_VOLUMES_PER_PIXEL)]  _AdaptiveProbeVolumesPerPixel("APV per Pixel", Float) = 1
+		[MaterialToggle(_FOG)] _Fog("Fog", Float) = 0
 		[HideInInspector] _StencilRef("Stencil Reference", Float) = 1.0
 		[Enum(UnityEngine.Rendering.CompareFunction)] _StencilComp("Stencil Compare", Float) = 8 // Set to Always as default
+
+		// Outline properties are drawn via custom editor.
+		[HideInInspector] _OutlineWidth("Outline Width", Range(0,8)) = 3.0
+		[HideInInspector][MaterialToggle(_USE_SCREENSPACE_OUTLINE_WIDTH)] _UseScreenSpaceOutlineWidth("Width in Screen Space", Float) = 0
+		[HideInInspector] _OutlineColor("Outline Color", Color) = (1,1,0,1)
+		[HideInInspector][MaterialToggle(_OUTLINE_FILL_INSIDE)]_Fill("Fill", Float) = 0
+		[HideInInspector] _OutlineReferenceTexWidth("Reference Texture Width", Int) = 1024
+		[HideInInspector] _ThresholdEnd("Outline Threshold", Range(0,1)) = 0.25
+		[HideInInspector] _OutlineSmoothness("Outline Smoothness", Range(0,1)) = 1.0
+		[HideInInspector][MaterialToggle(_USE8NEIGHBOURHOOD_ON)] _Use8Neighbourhood("Sample 8 Neighbours", Float) = 1
+		[HideInInspector] _OutlineOpaqueAlpha("Opaque Alpha", Range(0,1)) = 1.0
+		[HideInInspector] _OutlineMipLevel("Outline Mip Level", Range(0,3)) = 0
 	}
 
 	SubShader {
@@ -52,10 +66,15 @@ Shader "Universal Render Pipeline/Spine/Skeleton Lit" {
 			#pragma multi_compile _ _LIGHT_AFFECTS_ADDITIVE
 			#pragma multi_compile_fragment _ _LIGHT_COOKIES
 			#pragma shader_feature _TINT_BLACK_ON
+			#pragma shader_feature _ _FOG
 			// Farward+ renderer keywords
 			#pragma multi_compile_fragment _ _LIGHT_LAYERS
 			#pragma multi_compile _ _FORWARD_PLUS
 			#pragma multi_compile_fragment _ _WRITE_RENDERING_LAYERS
+			#pragma multi_compile _ PROBE_VOLUMES_L1 PROBE_VOLUMES_L2
+			#if defined(PROBE_VOLUMES_L1) || defined(PROBE_VOLUMES_L2)
+			#pragma multi_compile _ _ADAPTIVE_PROBE_VOLUMES_PER_PIXEL
+			#endif
 
 			// -------------------------------------
 			// Unity defined keywords
@@ -195,4 +214,5 @@ Shader "Universal Render Pipeline/Spine/Skeleton Lit" {
 	}
 
 	FallBack "Universal Render Pipeline/Spine/Skeleton"
+	CustomEditor "SpineShaderWithOutlineGUI"
 }

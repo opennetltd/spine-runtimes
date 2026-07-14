@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2026, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,8 +23,8 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 #if UNITY_2019_1_OR_NEWER
@@ -84,7 +84,7 @@ namespace Spine.Unity.Playables {
 		protected void HandlePause (Playable playable) {
 			if (animationStateComponent.IsNullOrDestroyed()) return;
 
-			TrackEntry current = animationStateComponent.AnimationState.GetCurrent(trackIndex);
+			TrackEntry current = animationStateComponent.AnimationState.GetTrack(trackIndex);
 			if (current != null && current == timelineStartedTrackEntry) {
 				previousTimeScale = current.TimeScale;
 				current.TimeScale = 0;
@@ -95,7 +95,7 @@ namespace Spine.Unity.Playables {
 		protected void HandleResume (Playable playable) {
 			if (animationStateComponent.IsNullOrDestroyed()) return;
 
-			TrackEntry current = animationStateComponent.AnimationState.GetCurrent(trackIndex);
+			TrackEntry current = animationStateComponent.AnimationState.GetTrack(trackIndex);
 			if (current != null && current == pausedTrackEntry) {
 				current.TimeScale = previousTimeScale;
 			}
@@ -107,7 +107,7 @@ namespace Spine.Unity.Playables {
 			AnimationState state = animationStateComponent.AnimationState;
 			if (endAtClipEnd &&
 				timelineStartedTrackEntry != null &&
-				timelineStartedTrackEntry == state.GetCurrent(trackIndex)) {
+				timelineStartedTrackEntry == state.GetTrack(trackIndex)) {
 
 				if (endMixOutDuration >= 0)
 					state.SetEmptyAnimation(trackIndex, endMixOutDuration);
@@ -133,7 +133,9 @@ namespace Spine.Unity.Playables {
 		public override void ProcessFrame (Playable playable, FrameData info, object playerData) {
 			SkeletonAnimation skeletonAnimation = playerData as SkeletonAnimation;
 			SkeletonGraphic skeletonGraphic = playerData as SkeletonGraphic;
-			animationStateComponent = playerData as IAnimationStateComponent;
+			animationStateComponent = skeletonGraphic != null ?
+				skeletonGraphic.Animation as IAnimationStateComponent :
+				playerData as IAnimationStateComponent;
 			ISkeletonComponent skeletonComponent = playerData as ISkeletonComponent;
 			if (animationStateComponent.IsNullOrDestroyed() || skeletonComponent == null) return;
 
@@ -179,7 +181,7 @@ namespace Spine.Unity.Playables {
 						startingClips[numStartingClips++] = clipPlayable;
 					}
 				} else if (rootSpeedChanged) {
-					TrackEntry currentEntry = state.GetCurrent(trackIndex);
+					TrackEntry currentEntry = state.GetTrack(trackIndex);
 					AdjustTrackEntryTimeScale(playable, i, currentEntry);
 				}
 			}
@@ -207,7 +209,7 @@ namespace Spine.Unity.Playables {
 					if (clipData.animationReference.Animation != null) {
 						animationStateComponent.UnscaledTime = this.unscaledTime;
 
-						TrackEntry currentEntry = state.GetCurrent(trackIndex);
+						TrackEntry currentEntry = state.GetTrack(trackIndex);
 						Spine.TrackEntry trackEntry;
 						float customMixDuration = clipData.customDuration ? GetCustomMixDuration(clipData) : 0.0f;
 						if (currentEntry == null && customMixDuration > 0) {
@@ -226,7 +228,6 @@ namespace Spine.Unity.Playables {
 #endif
 						trackEntry.TimeScale = clipSpeed * rootPlayableSpeed;
 						trackEntry.MixAttachmentThreshold = clipData.attachmentThreshold;
-						trackEntry.HoldPrevious = clipData.holdPrevious;
 						trackEntry.Alpha = clipData.alpha;
 
 						if (clipData.customDuration)
@@ -239,9 +240,9 @@ namespace Spine.Unity.Playables {
 			if (numStartingClips > 0) {
 				if (skeletonAnimation) {
 					skeletonAnimation.Update(0);
-					skeletonAnimation.LateUpdate();
+					skeletonAnimation.Renderer.LateUpdate();
 				} else if (skeletonGraphic) {
-					skeletonGraphic.Update(0);
+					skeletonGraphic.Animation.Update(0);
 					skeletonGraphic.LateUpdate();
 				}
 			}
@@ -318,13 +319,13 @@ namespace Spine.Unity.Playables {
 				}
 
 				if (trackIndex == 0)
-					skeleton.SetToSetupPose();
+					skeleton.SetupPose();
 
 				// Approximate what AnimationState might do at runtime.
 				if (fromAnimation != null && mixDuration > 0 && toClipTime < mixDuration) {
 					dummyAnimationState = dummyAnimationState ?? new AnimationState(skeletonComponent.SkeletonDataAsset.GetAnimationStateData());
 
-					TrackEntry toEntry = dummyAnimationState.GetCurrent(0);
+					TrackEntry toEntry = dummyAnimationState.GetTrack(0);
 					TrackEntry fromEntry = toEntry != null ? toEntry.MixingFrom : null;
 					bool isAnimationTransitionMatch = (toEntry != null && toEntry.Animation == toAnimation && fromEntry != null && fromEntry.Animation == fromAnimation);
 
@@ -334,7 +335,6 @@ namespace Spine.Unity.Playables {
 						fromEntry.AllowImmediateQueue();
 						if (toAnimation != null) {
 							toEntry = dummyAnimationState.SetAnimation(0, toAnimation, clipData.loop);
-							toEntry.HoldPrevious = clipData.holdPrevious;
 							toEntry.Alpha = clipData.alpha;
 						}
 					}
@@ -353,7 +353,7 @@ namespace Spine.Unity.Playables {
 					dummyAnimationState.Event -= EditorEvent;
 				} else {
 					if (toAnimation != null) {
-						toAnimation.Apply(skeleton, 0, toClipTime, clipData.loop, editorAnimationEvents, clipData.alpha, MixBlend.Setup, MixDirection.In);
+						toAnimation.Apply(skeleton, 0, toClipTime, clipData.loop, editorAnimationEvents, clipData.alpha, MixFrom.Setup, false, false, false);
 						if (EditorEvent != null) {
 							foreach (Spine.Event e in editorAnimationEvents) {
 								EditorEvent(null, e);
@@ -362,10 +362,10 @@ namespace Spine.Unity.Playables {
 					}
 				}
 
-				skeleton.UpdateWorldTransform(Skeleton.Physics.Update);
+				skeleton.UpdateWorldTransform(Physics.Update);
 				if (skeletonAnimation) {
-					skeletonAnimation.AfterAnimationApplied();
-					skeletonAnimation.LateUpdate();
+					skeletonAnimation.Renderer.AfterAnimationApplied();
+					skeletonAnimation.Renderer.LateUpdate();
 				} else if (skeletonGraphic) {
 					skeletonGraphic.AfterAnimationApplied();
 					skeletonGraphic.LateUpdate();

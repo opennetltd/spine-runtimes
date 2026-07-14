@@ -9,7 +9,7 @@ Shader "Spine/Skeleton Tint" {
 		_Color ("Tint Color", Color) = (1,1,1,1)
 		_Black ("Dark Color", Color) = (0,0,0,0)
 		[NoScaleOffset] _MainTex ("MainTex", 2D) = "black" {}
-		[Toggle(_STRAIGHT_ALPHA_INPUT)] _StraightAlphaInput("Straight Alpha Texture", Int) = 0
+		[Toggle(_STRAIGHT_ALPHA_INPUT)] _StraightAlphaInput("Straight Alpha Texture", Int) = 1
 		_Cutoff("Shadow alpha cutoff", Range(0,1)) = 0.1
 		[Toggle(_DARK_COLOR_ALPHA_ADDITIVE)] _DarkColorAlphaAdditive("Additive DarkColor.A", Int) = 0
 		[HideInInspector] _StencilRef("Stencil Reference", Float) = 1.0
@@ -19,6 +19,7 @@ Shader "Spine/Skeleton Tint" {
 		[HideInInspector] _OutlineWidth("Outline Width", Range(0,8)) = 3.0
 		[HideInInspector][MaterialToggle(_USE_SCREENSPACE_OUTLINE_WIDTH)] _UseScreenSpaceOutlineWidth("Width in Screen Space", Float) = 0
 		[HideInInspector] _OutlineColor("Outline Color", Color) = (1,1,0,1)
+		[HideInInspector][MaterialToggle(_OUTLINE_FILL_INSIDE)]_Fill("Fill", Float) = 0
 		[HideInInspector] _OutlineReferenceTexWidth("Reference Texture Width", Int) = 1024
 		[HideInInspector] _ThresholdEnd("Outline Threshold", Range(0,1)) = 0.25
 		[HideInInspector] _OutlineSmoothness("Outline Smoothness", Range(0,1)) = 1.0

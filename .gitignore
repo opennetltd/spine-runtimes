@@ -38,17 +38,8 @@ spine-libgdx/spine-libgdx/bin
 spine-libgdx/spine-libgdx-tests/bin
 spine-libgdx/spine-skeletonviewer/bin
 
-spine-cocos2dx/dependencies
-spine-cocos2dx/example/cocos2dx.zip
-spine-cocos2dx/example/__MACOSX
-spine-cocos2dx/example/cocos2d
-spine-cocos2dx/example/proj.win32/spine-cocos2d-x.VC.opendb
-spine-cocos2dx/example/proj.win32/spine-cocos2d-x.VC.db
 xcuserdata/
 xcshareddata/
-
-spine-cocos2d-objc/cocos2d/*
-spine-cocos2d-objc/spine-cocos2d-iphone-objc.xcodeproj/project.xcworkspace/xcshareddata/
 
 spine-csharp/.vs/
 spine-csharp/bin
@@ -136,15 +127,17 @@ spine-ue/SpineUE4.VC.VC.opendb
 *.iml
 */out/
 cmake-build-debug-visual-studio
-spine-cocos2dx/build-v4/
-spine-cocos2dx/example-v4/cocos2d
-spine-cocos2dx/example-v4/cocos2dx.zip
 
 spine-ts/spine-core/dist
 spine-ts/spine-canvas/dist
+spine-ts/spine-construct3/dist
+spine-ts/spine-construct3/spine-construct3-lib/dist
 spine-ts/spine-webgl/dist
 spine-ts/spine-player/dist
+spine-ts/spine-webcomponents/dist
 spine-ts/spine-threejs/dist
+spine-ts/spine-phaser-v3/dist
+spine-ts/spine-phaser-v4/dist
 spine-ts/spine-pixi-v7/dist
 spine-ts/spine-pixi-v8/dist
 spine-libgdx/gradle
@@ -159,13 +152,7 @@ spine-monogame/spine-monogame-example/bin
 spine-monogame/spine-monogame-example/obj
 spine-libgdx/spine-libgdx/out
 spine-libgdx/spine-skeletonviewer/out
-spine-cocos2d-objc/cocos2d/
 cmake-build-release
-spine-cocos2dx/example-v4/build-ios
-spine-cocos2dx/example-v4/build-macos
-spine-cocos2dx/example/build-ios
-spine-cocos2dx/example/proj.android/app/.cxx
-spine-cocos2dx/example/build-win
 spine-godot/godot
 spine-godot/spine_godot/*.o
 spine-godot/spine_godot/spine-cpp
@@ -177,7 +164,6 @@ spine-godot/spine_godot/*.obj
 *.o
 spine-godot/example/.godot
 spine-godot/example-v4/.godot
-spine-cocos2dx/example/build-macos
 spine-godot/logs
 !spine-godot/build
 spine-ts/spine-ts.zip
@@ -189,7 +175,6 @@ spine-flutter/src/spine-cpp
 
 spine-godot/.clang-format
 
-spine-ts/spine-phaser/dist
 spine-godot/.cache
 spine-godot/build/compile_commands.json
 
@@ -219,3 +204,47 @@ spine-godot/build/version.txt
 spine-godot/vc140.pdb
 spine-godot/example-v4-extension/bin
 spine-godot/example-v4-extension/MoltenVK.xcframework
+spine-flutter/example/android/app/.cxx
+CLAUDE.md
+.claude
+.claude-trace
+port-plan.md
+port-todo.md
+spine-libgdx/spine-libgdx/.settings/org.eclipse.buildship.core.prefs
+spine-libgdx/spine-libgdx/.settings/org.eclipse.jdt.apt.core.prefs
+spine-libgdx/spine-libgdx-tests/.settings/org.eclipse.buildship.core.prefs
+spine-libgdx/spine-libgdx-tests/.settings/org.eclipse.jdt.apt.core.prefs
+spine-libgdx/spine-skeletonviewer/.settings/org.eclipse.buildship.core.prefs
+spine-libgdx/spine-skeletonviewer/.settings/org.eclipse.jdt.apt.core.prefs
+spine-cpp/.cache
+.build
+spine-libgdx/.settings
+out.json
+spine-cpp/extraction.log
+extraction.log
+spine-c-new/codegen/dist
+spine-c-new/codegen/all-spine-types.json
+spine-c-new/codegen/spine-cpp-types.json
+docs/spine-runtimes-types.md
+spine-c/codegen/dist
+tests/output
+spine-c/.cache
+spine-libgdx/.classpath
+spine-libgdx/.factorypath
+spine-libgdx/.project
+.clang-format
+spine-c/codegen/spine-cpp-types.json
+spine-flutter/example/devtools_options.yaml
+spine-glfw/.cache
+formatters/eclipse-formatter/format-diff.txt
+spine-cpp/build-debug
+spine-cpp/build-linux
+spine-cpp/build-release-debug
+spine-flutter/test/spine_flutter.dylib
+spine-c/codegen/nullable.md
+spine-c/.docker-built
+
+.cache/
+spine-godot/class_info.txt
+spine-godot/class_meta.json
+spine-ue/DerivedDataCache

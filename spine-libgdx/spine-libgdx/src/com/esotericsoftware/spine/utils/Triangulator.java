@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated February 20, 2024. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2024, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
- * https://esotericsoftware.com/spine-editor-license
+ * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,8 +23,8 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 package com.esotericsoftware.spine.utils;
@@ -36,8 +36,8 @@ import com.badlogic.gdx.utils.Pool;
 import com.badlogic.gdx.utils.ShortArray;
 
 class Triangulator {
-	private final Array<FloatArray> convexPolygons = new Array(false, 16);
-	private final Array<ShortArray> convexPolygonsIndices = new Array(false, 16);
+	private final Array<FloatArray> convexPolygons = new Array(false, 8, FloatArray[]::new);
+	private final Array<ShortArray> convexPolygonsIndices = new Array(false, 8, ShortArray[]::new);
 
 	private final ShortArray indicesArray = new ShortArray();
 	private final BooleanArray isConcaveArray = new BooleanArray();
@@ -67,12 +67,12 @@ class Triangulator {
 
 		BooleanArray isConcaveArray = this.isConcaveArray;
 		boolean[] isConcave = isConcaveArray.setSize(vertexCount);
-		for (int i = 0, n = vertexCount; i < n; ++i)
+		for (int i = 0; i < vertexCount; i++)
 			isConcave[i] = isConcave(i, vertexCount, vertices, indices);
 
 		ShortArray triangles = this.triangles;
 		triangles.clear();
-		triangles.ensureCapacity(Math.max(0, vertexCount - 2) << 2);
+		triangles.ensureCapacity(Math.max(0, vertexCount - 2) * 3);
 
 		while (vertexCount > 3) {
 			// Find ear tip.
@@ -84,15 +84,15 @@ class Triangulator {
 					float p1x = vertices[p1], p1y = vertices[p1 + 1];
 					float p2x = vertices[p2], p2y = vertices[p2 + 1];
 					float p3x = vertices[p3], p3y = vertices[p3 + 1];
-					for (int ii = (next + 1) % vertexCount; ii != previous; ii = (ii + 1) % vertexCount) {
-						if (!isConcave[ii]) continue;
-						int v = indices[ii] << 1;
-						float vx = vertices[v], vy = vertices[v + 1];
-						if (positiveArea(p3x, p3y, p1x, p1y, vx, vy)) {
-							if (positiveArea(p1x, p1y, p2x, p2y, vx, vy)) {
-								if (positiveArea(p2x, p2y, p3x, p3y, vx, vy)) break outer;
-							}
+					for (int ii = next + 1 < vertexCount ? next + 1 : 0; ii != previous;) {
+						if (isConcave[ii]) {
+							int v = indices[ii] << 1;
+							float vx = vertices[v], vy = vertices[v + 1];
+							if (positiveArea(p3x, p3y, p1x, p1y, vx, vy) //
+								&& positiveArea(p1x, p1y, p2x, p2y, vx, vy) //
+								&& positiveArea(p2x, p2y, p3x, p3y, vx, vy)) break outer;
 						}
+						if (++ii == vertexCount) ii = 0;
 					}
 					break;
 				}
@@ -102,34 +102,28 @@ class Triangulator {
 						if (!isConcave[i]) break;
 						i--;
 					} while (i > 0);
+					previous = i > 0 ? i - 1 : vertexCount - 1;
+					next = i + 1 < vertexCount ? i + 1 : 0;
 					break;
 				}
 
 				previous = i;
 				i = next;
-				next = (next + 1) % vertexCount;
+				if (++next == vertexCount) next = 0;
 			}
 
 			// Cut ear tip.
-			triangles.add(indices[(vertexCount + i - 1) % vertexCount]);
-			triangles.add(indices[i]);
-			triangles.add(indices[(i + 1) % vertexCount]);
+			triangles.add(indices[previous], indices[i], indices[next]);
 			indicesArray.removeIndex(i);
 			isConcaveArray.removeIndex(i);
 			vertexCount--;
 
-			int previousIndex = (vertexCount + i - 1) % vertexCount;
-			int nextIndex = i == vertexCount ? 0 : i;
+			int previousIndex = i > 0 ? i - 1 : vertexCount - 1;
+			int nextIndex = i < vertexCount ? i : 0;
 			isConcave[previousIndex] = isConcave(previousIndex, vertexCount, vertices, indices);
 			isConcave[nextIndex] = isConcave(nextIndex, vertexCount, vertices, indices);
 		}
-
-		if (vertexCount == 3) {
-			triangles.add(indices[2]);
-			triangles.add(indices[0]);
-			triangles.add(indices[1]);
-		}
-
+		if (vertexCount == 3) triangles.add(indices[2], indices[0], indices[1]);
 		return triangles;
 	}
 
@@ -160,42 +154,31 @@ class Triangulator {
 			float x3 = vertices[t3], y3 = vertices[t3 + 1];
 
 			// If the base of the last triangle is the same as this triangle, check if they form a convex polygon (triangle fan).
-			boolean merged = false;
 			if (fanBaseIndex == t1) {
 				int o = polygon.size - 4;
 				float[] p = polygon.items;
-				int winding1 = winding(p[o], p[o + 1], p[o + 2], p[o + 3], x3, y3);
-				int winding2 = winding(x3, y3, p[0], p[1], p[2], p[3]);
-				if (winding1 == lastWinding && winding2 == lastWinding) {
-					polygon.add(x3);
-					polygon.add(y3);
+				if (winding(p[o], p[o + 1], p[o + 2], p[o + 3], x3, y3) == lastWinding
+					&& winding(x3, y3, p[0], p[1], p[2], p[3]) == lastWinding) {
+					polygon.add(x3, y3);
 					polygonIndices.add(t3);
-					merged = true;
+					continue;
 				}
 			}
 
 			// Otherwise make this triangle the new base.
-			if (!merged) {
-				if (polygon.size > 0) {
-					convexPolygons.add(polygon);
-					convexPolygonsIndices.add(polygonIndices);
-					polygon = polygonPool.obtain();
-					polygonIndices = polygonIndicesPool.obtain();
-				}
-				polygon.clear();
-				polygon.add(x1);
-				polygon.add(y1);
-				polygon.add(x2);
-				polygon.add(y2);
-				polygon.add(x3);
-				polygon.add(y3);
-				polygonIndices.clear();
-				polygonIndices.add(t1);
-				polygonIndices.add(t2);
-				polygonIndices.add(t3);
-				lastWinding = winding(x1, y1, x2, y2, x3, y3);
-				fanBaseIndex = t1;
+			if (polygon.size > 0) {
+				convexPolygons.add(polygon);
+				convexPolygonsIndices.add(polygonIndices);
+				polygon = polygonPool.obtain();
+				polygonIndices = polygonIndicesPool.obtain();
 			}
+			polygon.clear();
+			polygon.add(x1, y1, x2, y2);
+			polygon.add(x3, y3);
+			polygonIndices.clear();
+			polygonIndices.add((short)t1, (short)t2, (short)t3);
+			lastWinding = winding(x1, y1, x2, y2, x3, y3);
+			fanBaseIndex = t1;
 		}
 
 		if (polygon.size > 0) {
@@ -203,15 +186,16 @@ class Triangulator {
 			convexPolygonsIndices.add(polygonIndices);
 		}
 
-		// Go through the list of polygons and try to merge the remaining triangles with the found triangle fans.
-		Object[] convexPolygonsIndicesItems = convexPolygonsIndices.items, convexPolygonsItems = convexPolygons.items;
+		// Merge remaining triangles with the found triangle fans.
+		ShortArray[] convexPolygonsIndicesItems = convexPolygonsIndices.items;
+		FloatArray[] convexPolygonsItems = convexPolygons.items;
 		for (int i = 0, n = convexPolygons.size; i < n; i++) {
-			polygonIndices = (ShortArray)convexPolygonsIndicesItems[i];
+			polygonIndices = convexPolygonsIndicesItems[i];
 			if (polygonIndices.size == 0) continue;
-			int firstIndex = polygonIndices.first();
-			int lastIndex = polygonIndices.get(polygonIndices.size - 1);
+			int firstIndex = polygonIndices.items[0];
+			int lastIndex = polygonIndices.items[polygonIndices.size - 1];
 
-			polygon = (FloatArray)convexPolygonsItems[i];
+			polygon = convexPolygonsItems[i];
 			int o = polygon.size - 4;
 			float[] p = polygon.items;
 			float prevPrevX = p[o], prevPrevY = p[o + 1];
@@ -222,51 +206,50 @@ class Triangulator {
 
 			for (int ii = 0; ii < n; ii++) {
 				if (ii == i) continue;
-				ShortArray otherIndices = (ShortArray)convexPolygonsIndicesItems[ii];
+				ShortArray otherIndices = convexPolygonsIndicesItems[ii];
 				if (otherIndices.size != 3) continue;
-				int otherFirstIndex = otherIndices.first();
-				int otherSecondIndex = otherIndices.get(1);
-				int otherLastIndex = otherIndices.get(2);
+				int otherFirstIndex = otherIndices.items[0];
+				int otherSecondIndex = otherIndices.items[1];
+				int otherLastIndex = otherIndices.items[2];
 
-				FloatArray otherPoly = (FloatArray)convexPolygonsItems[ii];
-				float x3 = otherPoly.get(otherPoly.size - 2), y3 = otherPoly.get(otherPoly.size - 1);
+				FloatArray otherPoly = convexPolygonsItems[ii];
+				float x3 = otherPoly.items[otherPoly.size - 2], y3 = otherPoly.items[otherPoly.size - 1];
 
 				if (otherFirstIndex != firstIndex || otherSecondIndex != lastIndex) continue;
-				int winding1 = winding(prevPrevX, prevPrevY, prevX, prevY, x3, y3);
-				int winding2 = winding(x3, y3, firstX, firstY, secondX, secondY);
-				if (winding1 == winding && winding2 == winding) {
+				if (winding(prevPrevX, prevPrevY, prevX, prevY, x3, y3) == winding
+					&& winding(x3, y3, firstX, firstY, secondX, secondY) == winding) {
 					otherPoly.clear();
 					otherIndices.clear();
-					polygon.add(x3);
-					polygon.add(y3);
+					polygon.add(x3, y3);
 					polygonIndices.add(otherLastIndex);
+					lastIndex = otherLastIndex;
 					prevPrevX = prevX;
 					prevPrevY = prevY;
 					prevX = x3;
 					prevY = y3;
-					ii = 0;
+					ii = -1;
 				}
 			}
 		}
 
-		// Remove empty polygons that resulted from the merge step above.
+		// Remove empty polygons from the merge step above.
 		for (int i = convexPolygons.size - 1; i >= 0; i--) {
-			polygon = (FloatArray)convexPolygonsItems[i];
+			polygon = convexPolygonsItems[i];
 			if (polygon.size == 0) {
 				convexPolygons.removeIndex(i);
 				polygonPool.free(polygon);
 				polygonIndices = convexPolygonsIndices.removeIndex(i);
 				polygonIndicesPool.free(polygonIndices);
-			}
+			} else
+				polygon.add(polygon.items[0], polygon.items[1]);
 		}
-
 		return convexPolygons;
 	}
 
 	static private boolean isConcave (int index, int vertexCount, float[] vertices, short[] indices) {
-		int previous = indices[(vertexCount + index - 1) % vertexCount] << 1;
+		int previous = indices[index > 0 ? index - 1 : vertexCount - 1] << 1;
 		int current = indices[index] << 1;
-		int next = indices[(index + 1) % vertexCount] << 1;
+		int next = indices[index + 1 < vertexCount ? index + 1 : 0] << 1;
 		return !positiveArea(vertices[previous], vertices[previous + 1], vertices[current], vertices[current + 1], vertices[next],
 			vertices[next + 1]);
 	}
@@ -276,7 +259,6 @@ class Triangulator {
 	}
 
 	static private int winding (float p1x, float p1y, float p2x, float p2y, float p3x, float p3y) {
-		float px = p2x - p1x, py = p2y - p1y;
-		return p3x * py - p3y * px + px * p1y - p1x * py >= 0 ? 1 : -1;
+		return p1x * (p3y - p2y) + p2x * (p1y - p3y) + p3x * (p2y - p1y) >= 0 ? 1 : -1;
 	}
 }

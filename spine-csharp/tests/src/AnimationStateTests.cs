@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2026, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,8 +23,8 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 //#define RUN_ADDITIONAL_FORUM_RELATED_TEST
@@ -44,27 +44,27 @@ namespace Spine {
 		}
 
 		class NullAttachmentLoader : AttachmentLoader {
-			public RegionAttachment NewRegionAttachment (Skin skin, string name, string path, Sequence sequence) {
+			public RegionAttachment NewRegionAttachment (Skin skin, string placeholder, string name, string path, Sequence sequence) {
 				return null;
 			}
 
-			public MeshAttachment NewMeshAttachment (Skin skin, string name, string path, Sequence sequence) {
+			public MeshAttachment NewMeshAttachment (Skin skin, string placeholder, string name, string path, Sequence sequence) {
 				return null;
 			}
 
-			public BoundingBoxAttachment NewBoundingBoxAttachment (Skin skin, string name) {
+			public BoundingBoxAttachment NewBoundingBoxAttachment (Skin skin, string placeholder, string name) {
 				return null;
 			}
 
-			public ClippingAttachment NewClippingAttachment (Skin skin, string name) {
+			public ClippingAttachment NewClippingAttachment (Skin skin, string placeholder, string name) {
 				return null;
 			}
 
-			public PathAttachment NewPathAttachment (Skin skin, string name) {
+			public PathAttachment NewPathAttachment (Skin skin, string placeholder, string name) {
 				return null;
 			}
 
-			public PointAttachment NewPointAttachment (Skin skin, string name) {
+			public PointAttachment NewPointAttachment (Skin skin, string placeholder, string name) {
 				return null;
 			}
 		}
@@ -602,11 +602,13 @@ namespace Spine {
 			Setup("setAnimation twice", // 21
 				Expect(0, "start", 0, 0), //
 				Expect(0, "interrupt", 0, 0), //
-				Expect(0, "end", 0, 0), //
-				Expect(0, "dispose", 0, 0), //
 
 				Expect(1, "start", 0, 0), //
 				Expect(1, "event 0", 0, 0), //
+
+				Expect(0, "end", 0, 0.1f), //
+				Expect(0, "dispose", 0, 0.1f), //
+
 				Expect(1, "event 14", 0.5f, 0.5f), //
 
 				Note("First 2 setAnimation calls are done."),
@@ -615,8 +617,6 @@ namespace Spine {
 
 				Expect(0, "start", 0, 0.8f), //
 				Expect(0, "interrupt", 0, 0.8f), //
-				Expect(0, "end", 0, 0.8f), //
-				Expect(0, "dispose", 0, 0.8f), //
 
 				Expect(2, "start", 0, 0.8f), //
 				Expect(2, "event 0", 0.1f, 0.9f), //
@@ -624,18 +624,21 @@ namespace Spine {
 				Expect(1, "end", 0.9f, 1), //
 				Expect(1, "dispose", 0.9f, 1), //
 
+				Expect(0, "end", 0.1f, 1), //
+				Expect(0, "dispose", 0.1f, 1), //
+
 				Expect(2, "event 14", 0.5f, 1.3f), //
 				Expect(2, "event 30", 1, 1.8f), //
 				Expect(2, "complete", 1, 1.8f), //
 				Expect(2, "end", 1, 1.9f), //
 				Expect(2, "dispose", 1, 1.9f) //
 			);
-			state.SetAnimation(0, "events0", false); // First should be ignored.
+			state.SetAnimation(0, "events0", false); // Kept as mixingFrom (not discarded, different animation).
 			state.SetAnimation(0, "events1", false);
 			Run(0.1f, 1000, new TestListener(
 				(time) => {
 					if (IsEqual(time, 0.8f)) {
-						state.SetAnimation(0, "events0", false); // First should be ignored.
+						state.SetAnimation(0, "events0", false); // Kept as mixingFrom (not discarded, different animation).
 						state.SetAnimation(0, "events2", false).TrackEnd = 1;
 					}
 				}));
@@ -643,8 +646,6 @@ namespace Spine {
 			Setup("setAnimation twice with multiple mixing", // 22
 				Expect(0, "start", 0, 0), //
 				Expect(0, "interrupt", 0, 0), //
-				Expect(0, "end", 0, 0), //
-				Expect(0, "dispose", 0, 0), //
 
 				Expect(1, "start", 0, 0), //
 				Expect(1, "event 0", 0, 0), //
@@ -655,8 +656,6 @@ namespace Spine {
 
 				Expect(0, "start", 0, 0.2f), //
 				Expect(0, "interrupt", 0, 0.2f), //
-				Expect(0, "end", 0, 0.2f), //
-				Expect(0, "dispose", 0, 0.2f), //
 
 				Expect(2, "start", 0, 0.2f), //
 				Expect(2, "event 0", 0.1f, 0.3f), //
@@ -667,19 +666,26 @@ namespace Spine {
 
 				Expect(1, "start", 0, 0.4f), //
 				Expect(1, "interrupt", 0, 0.4f), //
-				Expect(1, "end", 0, 0.4f), //
-				Expect(1, "dispose", 0, 0.4f), //
 
 				Expect(0, "start", 0, 0.4f), //
 				Expect(0, "event 0", 0.1f, 0.5f), //
 
+				Expect(0, "end", 0.6f, 0.7f), //
+				Expect(0, "dispose", 0.6f, 0.7f), //
+
 				Expect(1, "end", 0.8f, 0.9f), //
 				Expect(1, "dispose", 0.8f, 0.9f), //
+
+				Expect(0, "end", 0.6f, 0.9f), //
+				Expect(0, "dispose", 0.6f, 0.9f), //
 
 				Expect(0, "event 14", 0.5f, 0.9f), //
 
 				Expect(2, "end", 0.8f, 1.1f), //
 				Expect(2, "dispose", 0.8f, 1.1f), //
+
+				Expect(1, "end", 0.6f, 1.1f), //
+				Expect(1, "dispose", 0.6f, 1.1f), //
 
 				Expect(0, "event 30", 1, 1.4f), //
 				Expect(0, "complete", 1, 1.4f), //
@@ -687,16 +693,16 @@ namespace Spine {
 				Expect(0, "dispose", 1, 1.5f) //
 			);
 			stateData.DefaultMix = 0.6f;
-			state.SetAnimation(0, "events0", false); // First should be ignored.
+			state.SetAnimation(0, "events0", false); // Kept as mixingFrom (not discarded, different animation).
 			state.SetAnimation(0, "events1", false);
 			Run(0.1f, 1000, new TestListener(
 				(time) => {
 					if (IsEqual(time, 0.2f)) {
-						state.SetAnimation(0, "events0", false); // First should be ignored.
+						state.SetAnimation(0, "events0", false); // Kept as mixingFrom (not discarded, different animation).
 						state.SetAnimation(0, "events2", false);
 					}
 					if (IsEqual(time, 0.4f)) {
-						state.SetAnimation(0, "events1", false); // First should be ignored.
+						state.SetAnimation(0, "events1", false); // Kept as mixingFrom (not discarded, different animation).
 						state.SetAnimation(0, "events0", false).TrackEnd = 1;
 					}
 				}));

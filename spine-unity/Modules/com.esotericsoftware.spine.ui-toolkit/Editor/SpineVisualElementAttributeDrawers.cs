@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2024, Esoteric Software LLC
+ * Copyright (c) 2013-2026, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,18 +23,122 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 //#define CHANGE_BOUNDS_ON_ANIMATION_CHANGE
 
+using System.Linq;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace Spine.Unity.Editor {
+
+	[CustomPropertyDrawer(typeof(UITKBlendModeMaterialsAttribute))]
+	public class UITKBlendModeMaterialsAttributeDrawer : PropertyDrawer {
+
+		protected UITKBlendModeMaterialsAttribute TargetAttribute { get { return (UITKBlendModeMaterialsAttribute)attribute; } }
+
+		public override VisualElement CreatePropertyGUI (SerializedProperty materialsProperty) {
+			var container = new VisualElement();
+			PropertyField blendModeMaterials = new PropertyField();
+			blendModeMaterials.BindProperty(materialsProperty);
+
+			SerializedProperty normalMaterialProperty = materialsProperty.FindPropertyRelative("normalMaterial");
+			SerializedProperty additiveMaterialProperty = materialsProperty.FindPropertyRelative("additiveMaterial");
+			SerializedProperty multiplyMaterialProperty = materialsProperty.FindPropertyRelative("multiplyMaterial");
+			SerializedProperty screenMaterialProperty = materialsProperty.FindPropertyRelative("screenMaterial");
+			PropertyField normalField = new PropertyField();
+			PropertyField additiveField = new PropertyField();
+			PropertyField multiplyField = new PropertyField();
+			PropertyField screenField = new PropertyField();
+
+			normalField.BindProperty(normalMaterialProperty);
+			additiveField.BindProperty(additiveMaterialProperty);
+			multiplyField.BindProperty(multiplyMaterialProperty);
+			screenField.BindProperty(screenMaterialProperty);
+
+			var parentPropertyPath = materialsProperty.propertyPath.Substring(0, materialsProperty.propertyPath.LastIndexOf('.'));
+			var parent = materialsProperty.serializedObject.FindProperty(parentPropertyPath);
+			SerializedProperty skeletonDataProperty = parent.FindPropertyRelative(TargetAttribute.dataField);
+
+			Button detectMaterialsButton = new Button(() => {
+				DetectMaterials(materialsProperty, (SkeletonDataAsset)skeletonDataProperty.objectReferenceValue);
+			});
+			detectMaterialsButton.text = "Detect Materials";
+			container.Add(detectMaterialsButton);
+
+			//container.Add(blendModeMaterials);
+			container.Add(normalField);
+			container.Add(additiveField);
+			container.Add(multiplyField);
+			container.Add(screenField);
+
+			container.Bind(materialsProperty.serializedObject);
+			return container;
+		}
+
+		protected void DetectMaterials (SerializedProperty materialsProperty, SkeletonDataAsset skeletonDataAsset) {
+			if (!skeletonDataAsset)
+				return;
+
+			SerializedProperty normalMaterialProperty = materialsProperty.FindPropertyRelative("normalMaterial");
+			SerializedProperty additiveMaterialProperty = materialsProperty.FindPropertyRelative("additiveMaterial");
+			SerializedProperty multiplyMaterialProperty = materialsProperty.FindPropertyRelative("multiplyMaterial");
+			SerializedProperty screenMaterialProperty = materialsProperty.FindPropertyRelative("screenMaterial");
+			bool hasPMATextures = HasPMATextures(skeletonDataAsset);
+
+			if (hasPMATextures) {
+				AssignMaterial(normalMaterialProperty, "Spine-UITK-Normal-PMA");
+			} else {
+				AssignMaterial(normalMaterialProperty, "Spine-UITK-Normal-Straight");
+			}
+
+			if (!skeletonDataAsset.blendModeMaterials.RequiresBlendModeMaterials) {
+				additiveMaterialProperty.objectReferenceValue = null;
+				multiplyMaterialProperty.objectReferenceValue = null;
+				screenMaterialProperty.objectReferenceValue = null;
+			} else {
+				if (hasPMATextures) {
+					AssignMaterial(additiveMaterialProperty, "Spine-UITK-Additive-PMA");
+					AssignMaterial(multiplyMaterialProperty, "Spine-UITK-Multiply-PMA");
+					AssignMaterial(screenMaterialProperty, "Spine-UITK-Screen-PMA");
+				} else {
+					AssignMaterial(additiveMaterialProperty, "Spine-UITK-Additive-Straight");
+					AssignMaterial(multiplyMaterialProperty, "Spine-UITK-Multiply-Straight");
+					AssignMaterial(screenMaterialProperty, "Spine-UITK-Screen-Straight");
+				}
+			}
+			materialsProperty.serializedObject.ApplyModifiedProperties();
+		}
+
+		bool HasPMATextures (SkeletonDataAsset skeletonDataAsset) {
+			if (skeletonDataAsset.atlasAssets.Length == 0) return false;
+			AtlasAssetBase firstAtlasAsset = skeletonDataAsset.atlasAssets[0];
+			if (firstAtlasAsset.MaterialCount == 0) return false;
+			
+			Texture texture = firstAtlasAsset.Materials.First().mainTexture;
+			bool detectionSucceeded;
+			return IsSkeletonTexturePMA(texture, skeletonDataAsset.name, out detectionSucceeded);
+		}
+
+		void AssignMaterial (SerializedProperty property, string name) {
+			Material material = MaterialWithName(name);
+			if (material != null)
+				property.objectReferenceValue = material;
+		}
+
+		public static Material MaterialWithName (string name) {
+			return SkeletonGraphicUtility.MaterialWithName(name);
+		}
+
+		public static bool IsSkeletonTexturePMA (Texture texture, string skeletonName, out bool detectionSucceeded) {
+			return SkeletonGraphicUtility.IsSkeletonTexturePMA(texture, skeletonName, out detectionSucceeded);
+		}
+	}
 
 	[CustomPropertyDrawer(typeof(BoundsFromAnimationAttribute))]
 	public class BoundsFromAnimationAttributeDrawer : PropertyDrawer {
@@ -92,14 +196,14 @@ namespace Spine.Unity.Editor {
 			Skeleton skeleton = new Skeleton(skeletonData);
 			if (!string.IsNullOrEmpty(skin) && !string.Equals(skin, "default", System.StringComparison.Ordinal))
 				skeleton.SetSkin(skin);
-			skeleton.SetSlotsToSetupPose();
+			skeleton.SetupPose();
 
 			Spine.Animation animation = skeletonData.FindAnimation(animationName);
 			if (animation != null)
-				animation.Apply(skeleton, -1, 0, false, null, 1.0f, MixBlend.First, MixDirection.In);
+				animation.Apply(skeleton, -1, 0, false, null, 1.0f, MixFrom.Setup, false, false, false);
 
 			skeleton.Update(0f);
-			skeleton.UpdateWorldTransform(Skeleton.Physics.Update);
+			skeleton.UpdateWorldTransform(Physics.Update);
 
 			float x, y, width, height;
 			SkeletonClipping clipper = new SkeletonClipping();

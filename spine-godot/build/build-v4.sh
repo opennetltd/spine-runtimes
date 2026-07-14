@@ -49,10 +49,9 @@ if [ $dev == "true" ]; then
 fi
 
 cpus=2
-if [ "$OSTYPE" == "msys" ]; then
+if [[ "$OSTYPE" == "msys"* || "$OSTYPE" == "win32"* || "$OSTYPE" == "cygwin"* ]]; then
 	os="windows"
 	cpus=$NUMBER_OF_PROCESSORS
-	target="$target"
 	godot_exe="godot.windows.editor$dev_extension.x86_64$mono_extension.exe"
 	godot_exe_host=$godot_exe
 elif [[ "$OSTYPE" == "darwin"* ]]; then
@@ -74,12 +73,16 @@ fi
 echo "CPUS: $cpus"
 
 pushd ../godot
+if [ "$os" == "windows" ] && [ -f "misc/scripts/install_d3d12_sdk_windows.py" ]; then
+	echo "Installing Direct3D 12 SDK dependencies"
+	python misc/scripts/install_d3d12_sdk_windows.py
+fi
 if [ "$os" == "macos" ] && [ $dev == "false" ]; then
 	scons $target $mono_module arch=x86_64 compiledb=yes custom_modules="../spine_godot" opengl3=yes --jobs=$cpus
 	scons $target $mono_module arch=arm64 compiledb=yes custom_modules="../spine_godot" opengl3=yes --jobs=$cpus
 	if [ $mono == "true" ]; then
 		echo "Building C# glue and assemblies."
-		"./bin/$godot_exe_host" --generate-mono-glue modules/mono/glue
+		"./bin/$godot_exe_host" --headless --generate-mono-glue modules/mono/glue
 		python3 ./modules/mono/build_scripts/build_assemblies.py --godot-output-dir ./bin --push-nupkgs-local ../godot-spine-csharp
 	fi
 	pushd bin

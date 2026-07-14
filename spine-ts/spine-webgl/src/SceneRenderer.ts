@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,19 +23,20 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
-import { Color, Disposable, Skeleton, MathUtils, TextureAtlasRegion } from "@esotericsoftware/spine-core";
+import { Color, type Disposable, MathUtils, type Skeleton, type TextureAtlasRegion } from "@esotericsoftware/spine-core";
 import { OrthoCamera } from "./Camera.js";
-import { GLTexture } from "./GLTexture.js";
+import type { GLTexture } from "./GLTexture.js";
 import { PolygonBatcher } from "./PolygonBatcher.js";
 import { Shader } from "./Shader.js";
 import { ShapeRenderer } from "./ShapeRenderer.js";
 import { SkeletonDebugRenderer } from "./SkeletonDebugRenderer.js";
-import { SkeletonRenderer, VertexTransformer } from "./SkeletonRenderer.js";
+import { SkeletonRenderer, type VertexTransformer } from "./SkeletonRenderer.js";
 import { ManagedWebGLRenderingContext } from "./WebGL.js";
+
 ;
 
 const quad = [
@@ -57,6 +58,8 @@ export class SceneRenderer implements Disposable {
 	private shapes: ShapeRenderer;
 	private shapesShader: Shader;
 	private activeRenderer: PolygonBatcher | ShapeRenderer | SkeletonDebugRenderer | null = null;
+	private maxCanvasWidth = 0;
+	private maxCanvasHeight = 0;
 	skeletonRenderer: SkeletonRenderer;
 	skeletonDebugRenderer: SkeletonDebugRenderer;
 
@@ -86,15 +89,13 @@ export class SceneRenderer implements Disposable {
 		this.enableRenderer(this.batcher);
 	}
 
-	drawSkeleton (skeleton: Skeleton, premultipliedAlpha = false, slotRangeStart = -1, slotRangeEnd = -1, transform: VertexTransformer | null = null) {
+	drawSkeleton (skeleton: Skeleton, slotRangeStart = -1, slotRangeEnd = -1, transform: VertexTransformer | null = null) {
 		this.enableRenderer(this.batcher);
-		this.skeletonRenderer.premultipliedAlpha = premultipliedAlpha;
 		this.skeletonRenderer.draw(this.batcher, skeleton, slotRangeStart, slotRangeEnd, transform);
 	}
 
-	drawSkeletonDebug (skeleton: Skeleton, premultipliedAlpha = false, ignoredBones?: Array<string>) {
+	drawSkeletonDebug (skeleton: Skeleton, ignoredBones?: Array<string>) {
 		this.enableRenderer(this.shapes);
-		this.skeletonDebugRenderer.premultipliedAlpha = premultipliedAlpha;
 		this.skeletonDebugRenderer.draw(this.shapes, skeleton, ignoredBones);
 	}
 
@@ -229,22 +230,22 @@ export class SceneRenderer implements Disposable {
 		if (!color) color = WHITE;
 
 		// bottom left and top right corner points relative to origin
-		let worldOriginX = x + pivotX;
-		let worldOriginY = y + pivotY;
-		let fx = -pivotX;
-		let fy = -pivotY;
-		let fx2 = width - pivotX;
-		let fy2 = height - pivotY;
+		const worldOriginX = x + pivotX;
+		const worldOriginY = y + pivotY;
+		const fx = -pivotX;
+		const fy = -pivotY;
+		const fx2 = width - pivotX;
+		const fy2 = height - pivotY;
 
 		// construct corner points, start from top left and go counter clockwise
-		let p1x = fx;
-		let p1y = fy;
-		let p2x = fx;
-		let p2y = fy2;
-		let p3x = fx2;
-		let p3y = fy2;
-		let p4x = fx2;
-		let p4y = fy;
+		const p1x = fx;
+		const p1y = fy;
+		const p2x = fx;
+		const p2y = fy2;
+		const p3x = fx2;
+		const p3y = fy2;
+		const p4x = fx2;
+		const p4y = fy;
 
 		let x1 = 0;
 		let y1 = 0;
@@ -256,9 +257,9 @@ export class SceneRenderer implements Disposable {
 		let y4 = 0;
 
 		// rotate
-		if (angle != 0) {
-			let cos = MathUtils.cosDeg(angle);
-			let sin = MathUtils.sinDeg(angle);
+		if (angle !== 0) {
+			const cos = MathUtils.cosDeg(angle);
+			const sin = MathUtils.sinDeg(angle);
 
 			x1 = cos * p1x - sin * p1y;
 			y1 = sin * p1x + cos * p1y;
@@ -463,30 +464,51 @@ export class SceneRenderer implements Disposable {
 		this.activeRenderer = null;
 	}
 
-	resize (resizeMode: ResizeMode) {
-		let canvas = this.canvas;
-		var dpr = window.devicePixelRatio || 1;
+	resize (resizeMode: ResizeMode, worldWidth?: number, worldHeight?: number) {
+		const canvas = this.canvas;
+		const dpr = this.getSafeDevicePixelRatio(canvas.clientWidth, canvas.clientHeight);
 		var w = Math.round(canvas.clientWidth * dpr);
 		var h = Math.round(canvas.clientHeight * dpr);
-
-		if (canvas.width != w || canvas.height != h) {
+		if (canvas.width !== w || canvas.height !== h) {
 			canvas.width = w;
 			canvas.height = h;
 		}
-		this.context.gl.viewport(0, 0, canvas.width, canvas.height);
 
-		// Nothing to do for stretch, we simply apply the viewport size of the camera.
-		if (resizeMode === ResizeMode.Expand)
-			this.camera.setViewport(w, h);
-		else if (resizeMode === ResizeMode.Fit) {
-			let sourceWidth = canvas.width, sourceHeight = canvas.height;
-			let targetWidth = this.camera.viewportWidth, targetHeight = this.camera.viewportHeight;
-			let targetRatio = targetHeight / targetWidth;
-			let sourceRatio = sourceHeight / sourceWidth;
-			let scale = targetRatio < sourceRatio ? targetWidth / sourceWidth : targetHeight / sourceHeight;
-			this.camera.setViewport(sourceWidth * scale, sourceHeight * scale);
+		if (resizeMode === ResizeMode.FitClip && worldWidth !== undefined && worldHeight !== undefined) {
+			const targetRatio = h / w, sourceRatio = worldHeight / worldWidth;
+			const scale = targetRatio > sourceRatio ? w / worldWidth : h / worldHeight;
+			worldWidth *= scale;
+			worldHeight *= scale;
+			this.camera.setViewport(worldWidth, worldHeight);
+			this.context.gl.viewport((w - worldWidth) / 2, (h - worldHeight) / 2, worldWidth, worldHeight);
+		} else {
+			if (resizeMode === ResizeMode.Fit) {
+				const targetWidth = this.camera.viewportWidth, targetHeight = this.camera.viewportHeight;
+				const targetRatio = targetHeight / targetWidth, sourceRatio = h / w;
+				const scale = targetRatio < sourceRatio ? targetWidth / w : targetHeight / h;
+				this.camera.setViewport(w * scale, h * scale);
+			} else if (resizeMode === ResizeMode.Expand)
+				this.camera.setViewport(w, h);
+			// Nothing to do for stretch, we simply apply the viewport size of the camera.
+
+			this.context.gl.viewport(0, 0, w, h);
 		}
 		this.camera.update();
+	}
+
+	private getSafeDevicePixelRatio (cssWidth: number, cssHeight: number): number {
+		const dpr = window.devicePixelRatio || 1;
+		if (cssWidth <= 0 || cssHeight <= 0) return dpr;
+
+		if (this.maxCanvasWidth === 0 || this.maxCanvasHeight === 0) {
+			const gl = this.context.gl;
+			const maxRenderbufferSize = gl.getParameter(gl.MAX_RENDERBUFFER_SIZE);
+			const maxViewportDims = gl.getParameter(gl.MAX_VIEWPORT_DIMS);
+			this.maxCanvasWidth = Math.min(maxRenderbufferSize, maxViewportDims[0]);
+			this.maxCanvasHeight = Math.min(maxRenderbufferSize, maxViewportDims[1]);
+		}
+
+		return Math.min(dpr, this.maxCanvasWidth / cssWidth, this.maxCanvasHeight / cssHeight);
 	}
 
 	private enableRenderer (renderer: PolygonBatcher | ShapeRenderer | SkeletonDebugRenderer) {
@@ -511,5 +533,6 @@ export class SceneRenderer implements Disposable {
 export enum ResizeMode {
 	Stretch,
 	Expand,
-	Fit
+	Fit,
+	FitClip,
 }

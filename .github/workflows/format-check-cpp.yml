@@ -1,0 +1,39 @@
+name: Check C++ Formatting
+
+on:
+  push:
+    branches:
+      - '**'
+    paths:
+      - 'spine-cpp/**'
+      - 'spine-c/**'
+      - 'spine-godot/**'
+      - 'spine-ue/**'
+      - 'spine-glfw/**'
+      - 'spine-sdl/**'
+      - 'spine-sfml/**'
+      - 'spine-ios/**'
+      - 'spine-flutter/ios/**'
+      - 'spine-flutter/macos/**'
+      - 'spine-flutter/src/**'
+      - 'formatters/.clang-format'
+      - 'formatters/format-cpp.sh'
+      - '.github/workflows/format-check-cpp.yml'
+  workflow_dispatch:
+
+jobs:
+  check-cpp:
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup clang-format
+      run: ./formatters/setup-clang-format-docker.sh
+
+    - name: Format C++
+      run: ./formatters/format-cpp.sh
+
+    - name: Check for changes
+      run: |
+        git ls-files -m
+        if [[ `git ls-files -m` ]]; then echo "Detected C++ formatting errors!" & exit 1; fi

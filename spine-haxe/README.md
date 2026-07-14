@@ -2,7 +2,7 @@
 
 The spine-haxe runtime provides functionality to load, manipulate and render [Spine](http://esotericsoftware.com) skeletal animation data using [Haxe](https://haxe.org/) in combination with [OpenFL](https://www.openfl.org/) and [Lime](https://lime.openfl.org/).
 
-For documentation of the core API in `spine-core`, please refer to our [Spine Runtimes Guide](http://esotericsoftware.com/spine-runtimes-guide).
+For documentation of the core API, please refer to our [Spine Runtimes Guide](http://esotericsoftware.com/spine-runtimes-guide).
 
 For documentation of `spine-haxe`, please refer to our [spine-haxe Guide](https://esotericsoftware.com/spine-haxe).
 
@@ -18,20 +18,25 @@ For the official legal terms governing the Spine Runtimes, please read the [Spin
 
 ## Spine version
 
-spine-haxe works with data exported from Spine 4.2.xx.
+spine-haxe works with data exported from Spine 4.3.xx.
 
 spine-haxe supports all Spine features except premultiplied alpha atlases and two color tinting.
 
 ## Setup
-The core module of spine-haxe has zero dependencies. The rendering implementation through Starling has two dependencies: openfl and starling.
+The spine-haxe runtime is composed of a core module, that is a Haxe implementation of the renderer-agnostic Spine Runtimes core APIs, and the following specific renderer implementations:
+ - [Starling](https://lib.haxe.org/p/starling/)
+ - [HaxeFlixel](https://lib.haxe.org/p/flixel/) (minimum supported version 5.9.0)
+
+The core module of spine-haxe has zero dependencies. The rendering implementation depends on: openfl, starling, and flixel.
 To use spine-haxe you have first to install all the necessary dependencies:
 
 ```
 haxelib install openfl
 haxelib install starling
+haxelib install flixel
 ```
 
-Once you have installed the dependencies, you can [download the latest version of spine-haxe](https://esotericsoftware.com/files/spine-haxe/4.2/spine-haxe-latest.zip) and install it:
+Once you have installed the dependencies, you can [download the latest version of spine-haxe](https://esotericsoftware.com/files/spine-haxe/4.3/spine-haxe-latest.zip) and install it:
 
 ```
 haxelib install spine-haxe-x.y.z.zip
@@ -60,6 +65,7 @@ To setup the development environment install the following:
    haxelib install openfl
    haxelib run openfl setup
    haxelib install starling
+   haxelib install flixel
    ```
 3. Clone the `spine-runtimes` repository, and use `haxelib` to setup a dev library:
    ```
@@ -77,3 +83,47 @@ As an IDE, we recommend [Visual Studio Code](https://code.visualstudio.com/) wit
 The extensions provide IDE features like auto-completion, debugging, and build support.
 
 To debug a build, set the corresponding Lime target in the status bar at the bottom of VS Code to e.g. `HTML5 / Debug`. Run the `lime` run configuration by pressing `F5`.
+
+## Releasing
+
+`spine-haxe` is released as a zip archive using GitHub Actions. The release workflow is triggered by tags from `EsotericSoftware/spine-runtimes` matching `spine-haxe-x.y.z`, for example `spine-haxe-4.3.2`.
+
+The manual process is shown below for reference, but it is normally performed automatically by running `./publish.sh` from the `spine-haxe/` folder on a release branch such as `4.3`. The script increments the patch version, optionally updates `CHANGELOG.md`, commits the changes, creates the matching `spine-haxe-x.y.z` tag, and pushes the branch and tag.
+
+1. Set the release version in `spine-haxe/haxelib.json`:
+
+```json
+"version": "4.3.2",
+"releasenote": "Update to 4.3.2"
+```
+
+2. Add a matching entry to `spine-haxe/CHANGELOG.md`. If previous commits already documented the changes under `## Unreleased`, usually all you need to do is add the release heading below `## Unreleased` and move those entries under it:
+
+```md
+## Unreleased
+
+## 4.3.2 - 2026-06-05
+
+### spine-haxe
+
+- Existing unreleased changelog entries...
+```
+
+3. Commit and push the release version:
+
+```bash
+git add spine-haxe/haxelib.json spine-haxe/CHANGELOG.md
+git commit -m "[haxe] Release 4.3.2"
+git push origin 4.3
+```
+
+4. Tag that commit and push the tag:
+
+```bash
+git tag spine-haxe-4.3.2
+git push origin spine-haxe-4.3.2
+```
+
+The tag triggers the GitHub Actions release workflow. It verifies the tag version matches `haxelib.json`, creates `spine-haxe-4.3.2.zip`, and uploads it to the Esoteric Software server for the matching release line, for example `4.3`.
+
+5. Check the workflow result and the uploaded zip archive.

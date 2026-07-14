@@ -10,7 +10,7 @@
 
   <body>
     <script>
-      (async function () {
+      (async () => {
         var app = new PIXI.Application({
           width: window.innerWidth,
           height: window.innerHeight,
@@ -23,12 +23,12 @@
         document.body.appendChild(app.view);
 
         // Pre-load the skeleton data and atlas. You can also load .json skeleton data.
-        PIXI.Assets.add("girlData", "./assets/celestial-circus-pro.skel");
-        PIXI.Assets.add("girlAtlas", "./assets/celestial-circus-pma.atlas");
+        PIXI.Assets.add("girlData", "/assets/celestial-circus-pro.skel");
+        PIXI.Assets.add("girlAtlas", "/assets/celestial-circus-pma.atlas");
         await PIXI.Assets.load(["girlData", "girlAtlas"]);
 
         // Create the spine display object
-        const girl = spine.Spine.from({skeleton: "girlData", atlas: "girlAtlas",
+        const girl = new spine.Spine({skeleton: "girlData", atlas: "girlAtlas",
           scale: 0.2,
         });
 
@@ -50,17 +50,16 @@
 
         app.stage.on("pointerdown", (e) => {
           isDragging = true;
-          let mousePosition = new spine.Vector2(e.data.global.x, e.data.global.y);
+          const mousePosition = new spine.Vector2(e.data.global.x, e.data.global.y);
           lastX = mousePosition.x;
           lastY = mousePosition.y;
         });
 
         app.stage.on("pointermove", (e) => {
           if (isDragging) {
-            let mousePosition = new spine.Vector2(e.data.global.x, e.data.global.y);
+            const mousePosition = new spine.Vector2(e.data.global.x, e.data.global.y);
             girl.x += mousePosition.x - lastX;
             girl.y += mousePosition.y - lastY;
-            girl.skeleton.physicsTranslate(mousePosition.x - lastX, mousePosition.y - lastY);
             lastX = mousePosition.x;
             lastY = mousePosition.y;
           }

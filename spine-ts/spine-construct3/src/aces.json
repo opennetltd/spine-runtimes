@@ -1,0 +1,1228 @@
+﻿{
+  "$schema": "../aces.schema.json",
+  "custom": {
+    "conditions": [
+      {
+        "id": "on-skeleton-loaded",
+        "scriptName": "OnSkeletonLoaded",
+        "isTrigger": true
+      },
+      {
+        "id": "on-animation-event",
+        "scriptName": "OnAnimationEvent",
+        "isTrigger": true,
+        "params": [
+          {
+            "id": "event",
+            "type": "string",
+            "initialValue": "\"\""
+          },
+          {
+            "id": "track",
+            "type": "number",
+            "initialValue": "-1"
+          },
+          {
+            "id": "animation",
+            "type": "string",
+            "initialValue": "\"\""
+          }
+        ]
+      },
+      {
+        "id": "is-mirrored",
+        "scriptName": "IsMirrored",
+        "isTrigger": false
+      },
+      {
+        "id": "is-flipped",
+        "scriptName": "IsFlipped",
+        "isTrigger": false
+      },
+      {
+        "id": "is-skeleton-loaded",
+        "scriptName": "IsSkeletonLoaded",
+        "isTrigger": false
+      },
+      {
+        "id": "is-playing",
+        "scriptName": "IsPlaying",
+        "isTrigger": false
+      },
+      {
+        "id": "has-collision-body",
+        "scriptName": "HasCollisionBody",
+        "isTrigger": false
+      },
+      {
+        "id": "is-inside-slot",
+        "scriptName": "IsInsideSlot",
+        "isTrigger": false,
+        "params": [
+          {
+            "id": "x",
+            "type": "number"
+          },
+          {
+            "id": "y",
+            "type": "number"
+          },
+          {
+            "id": "slot-name",
+            "type": "string"
+          }
+        ]
+      },
+      {
+        "id": "is-inside-bone-radius",
+        "scriptName": "IsInsideBoneRadius",
+        "isTrigger": false,
+        "params": [
+          {
+            "id": "x",
+            "type": "number"
+          },
+          {
+            "id": "y",
+            "type": "number"
+          },
+          {
+            "id": "bone-name",
+            "type": "string"
+          },
+          {
+            "id": "radius",
+            "type": "number",
+            "initialValue": "10"
+          }
+        ]
+      },
+      {
+        "id": "is-animation-playing",
+        "scriptName": "IsAnimationPlaying",
+        "isTrigger": false,
+        "params": [
+          {
+            "id": "animation-name",
+            "type": "string",
+            "initialValue": "\"\""
+          },
+          {
+            "id": "track-index",
+            "type": "number",
+            "initialValue": "-1"
+          }
+        ]
+      }
+    ],
+    "actions": [
+      {
+        "id": "set-skin",
+        "scriptName": "SetSkin",
+        "highlight": false,
+        "params": [
+          {
+            "id": "skin-name",
+            "type": "string"
+          }
+        ]
+      },
+      {
+        "id": "mirror",
+        "scriptName": "Mirror",
+        "highlight": false,
+        "params": [
+          {
+            "id": "is-mirrored",
+            "type": "boolean"
+          }
+        ]
+      },
+      {
+        "id": "flip",
+        "scriptName": "Flip",
+        "highlight": false,
+        "params": [
+          {
+            "id": "is-flipped",
+            "type": "boolean"
+          }
+        ]
+      },
+      {
+        "id": "set-animation",
+        "scriptName": "SetAnimation",
+        "highlight": true,
+        "params": [
+          {
+            "id": "track-index",
+            "type": "number",
+            "initialValue": "0"
+          },
+          {
+            "id": "animation",
+            "type": "string"
+          },
+          {
+            "id": "loop",
+            "type": "boolean"
+          },
+          {
+            "id": "additive",
+            "type": "combo",
+            "items": [
+              "disabled",
+              "enabled"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "add-animation",
+        "scriptName": "AddAnimation",
+        "highlight": true,
+        "params": [
+          {
+            "id": "track-index",
+            "type": "number",
+            "initialValue": "0"
+          },
+          {
+            "id": "animation",
+            "type": "string"
+          },
+          {
+            "id": "loop",
+            "type": "boolean"
+          },
+          {
+            "id": "delay",
+            "type": "number"
+          },
+          {
+            "id": "additive",
+            "type": "combo",
+            "items": [
+              "disabled",
+              "enabled"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "play",
+        "scriptName": "Play",
+        "highlight": false
+      },
+      {
+        "id": "stop",
+        "scriptName": "Stop",
+        "highlight": false
+      },
+      {
+        "id": "set-empty-animation",
+        "scriptName": "SetEmptyAnimation",
+        "highlight": false,
+        "params": [
+          {
+            "id": "track-index",
+            "type": "number",
+            "initialValue": "0"
+          },
+          {
+            "id": "mix-duration",
+            "type": "number",
+            "initialValue": "0.25"
+          }
+        ]
+      },
+      {
+        "id": "add-empty-animation",
+        "scriptName": "AddEmptyAnimation",
+        "highlight": false,
+        "params": [
+          {
+            "id": "track-index",
+            "type": "number",
+            "initialValue": "0"
+          },
+          {
+            "id": "mix-duration",
+            "type": "number",
+            "initialValue": "0.25"
+          },
+          {
+            "id": "delay",
+            "type": "number"
+          }
+        ]
+      },
+      {
+        "id": "set-attachment",
+        "scriptName": "SetAttachment",
+        "highlight": false,
+        "params": [
+          {
+            "id": "slot-name",
+            "type": "string"
+          },
+          {
+            "id": "attachment-name",
+            "type": "string"
+          }
+        ]
+      },
+      {
+        "id": "create-custom-skin",
+        "scriptName": "CreateCustomSkin",
+        "highlight": false,
+        "params": [
+          {
+            "id": "skin-name",
+            "type": "string"
+          }
+        ]
+      },
+      {
+        "id": "add-custom-skin",
+        "scriptName": "AddCustomSkin",
+        "highlight": false,
+        "params": [
+          {
+            "id": "custom-skin-name",
+            "type": "string"
+          },
+          {
+            "id": "skin-to-add-name",
+            "type": "string"
+          }
+        ]
+      },
+      {
+        "id": "set-custom-skin",
+        "scriptName": "SetCustomSkin",
+        "highlight": false,
+        "params": [
+          {
+            "id": "skin-name",
+            "type": "string"
+          }
+        ]
+      },
+      {
+        "id": "set-time-scale",
+        "scriptName": "SetTimeScale",
+        "highlight": false,
+        "params": [
+          {
+            "id": "track-index",
+            "type": "number",
+            "initialValue": "-1"
+          },
+          {
+            "id": "time-scale",
+            "type": "number"
+          }
+        ]
+      },
+      {
+        "id": "set-animation-time",
+        "scriptName": "SetAnimationTime",
+        "highlight": false,
+        "params": [
+          {
+            "id": "track-index",
+            "type": "number",
+            "initialValue": "0"
+          },
+          {
+            "id": "time",
+            "type": "number"
+          },
+          {
+            "id": "units",
+            "type": "combo",
+            "items": [
+              "seconds",
+              "ratio"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "set-animation-mix",
+        "scriptName": "SetAnimationMix",
+        "highlight": false,
+        "params": [
+          {
+            "id": "from-name",
+            "type": "string"
+          },
+          {
+            "id": "to-name",
+            "type": "string"
+          },
+          {
+            "id": "duration",
+            "type": "number"
+          }
+        ]
+      },
+      {
+        "id": "set-default-mix",
+        "scriptName": "SetDefaultMix",
+        "highlight": false,
+        "params": [
+          {
+            "id": "duration",
+            "type": "number",
+            "initialValue": "0"
+          }
+        ]
+      },
+      {
+        "id": "set-physics-mode",
+        "scriptName": "SetPhysicsMode",
+        "highlight": false,
+        "params": [
+          {
+            "id": "physics-mode",
+            "type": "combo",
+            "items": [
+              "none",
+              "reset",
+              "update",
+              "pose"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "set-skeleton-color",
+        "scriptName": "SetSkeletonColor",
+        "highlight": false,
+        "params": [
+          {
+            "id": "color",
+            "type": "string"
+          }
+        ]
+      },
+      {
+        "id": "set-track-alpha",
+        "scriptName": "SetTrackAlpha",
+        "highlight": false,
+        "params": [
+          {
+            "id": "alpha",
+            "type": "number"
+          },
+          {
+            "id": "track-index",
+            "type": "number"
+          }
+        ]
+      },
+      {
+        "id": "clear-track",
+        "scriptName": "ClearTrack",
+        "highlight": false,
+        "params": [
+          {
+            "id": "track-index",
+            "type": "number"
+          }
+        ]
+      },
+      {
+        "id": "set-slot-color",
+        "scriptName": "SetSlotColor",
+        "highlight": false,
+        "params": [
+          {
+            "id": "slot-name",
+            "type": "string"
+          },
+          {
+            "id": "color",
+            "type": "string"
+          }
+        ]
+      },
+      {
+        "id": "reset-slot-colors",
+        "scriptName": "ResetSlotColors",
+        "highlight": false,
+        "params": [
+          {
+            "id": "slot-name",
+            "type": "string"
+          }
+        ]
+      },
+      {
+        "id": "set-bone-pose",
+        "scriptName": "SetBonePose",
+        "highlight": false,
+        "params": [
+          {
+            "id": "bone-name",
+            "type": "string"
+          },
+          {
+            "id": "mode",
+            "type": "combo",
+            "items": [
+              "local",
+              "game"
+            ]
+          },
+          {
+            "id": "apply-mode",
+            "type": "combo",
+            "items": [
+              "once",
+              "hold"
+            ]
+          },
+          {
+            "id": "x",
+            "type": "any",
+            "initialValue": "\"\""
+          },
+          {
+            "id": "y",
+            "type": "any",
+            "initialValue": "\"\""
+          },
+          {
+            "id": "rotation",
+            "type": "any",
+            "initialValue": "\"\""
+          },
+          {
+            "id": "scaleX",
+            "type": "any",
+            "initialValue": "\"\""
+          },
+          {
+            "id": "scaleY",
+            "type": "any",
+            "initialValue": "\"\""
+          }
+        ]
+      },
+      {
+        "id": "release-bone-hold",
+        "scriptName": "ReleaseBoneHold",
+        "highlight": false,
+        "params": [
+          {
+            "id": "bone-name",
+            "type": "string"
+          },
+          {
+            "id": "reset-to-setup",
+            "type": "boolean"
+          }
+        ]
+      },
+      {
+        "id": "setup-pose",
+        "scriptName": "SetupPose",
+        "highlight": false,
+        "params": [
+          {
+            "id": "target",
+            "type": "combo",
+            "items": [
+              "all",
+              "bones",
+              "slots"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "setup-bone-slot-pose",
+        "scriptName": "SetupBoneSlotPose",
+        "highlight": false,
+        "params": [
+          {
+            "id": "type",
+            "type": "combo",
+            "items": [
+              "bone",
+              "slot"
+            ]
+          },
+          {
+            "id": "name",
+            "type": "string"
+          }
+        ]
+      },
+      {
+        "id": "attach-instance-to-bone",
+        "scriptName": "AttachInstanceToBone",
+        "highlight": false,
+        "params": [
+          {
+            "id": "uid",
+            "type": "number"
+          },
+          {
+            "id": "bone-name",
+            "type": "string"
+          },
+          {
+            "id": "offset-x",
+            "type": "number"
+          },
+          {
+            "id": "offset-y",
+            "type": "number"
+          },
+          {
+            "id": "offset-angle",
+            "type": "number"
+          },
+          {
+            "id": "offset-scale-x",
+            "type": "number",
+            "initialValue": "1"
+          },
+          {
+            "id": "offset-scale-y",
+            "type": "number",
+            "initialValue": "1"
+          }
+        ]
+      },
+      {
+        "id": "attach-object-to-bone",
+        "scriptName": "AttachObjectToBone",
+        "highlight": false,
+        "params": [
+          {
+            "id": "object",
+            "type": "object"
+          },
+          {
+            "id": "bone-name",
+            "type": "string"
+          },
+          {
+            "id": "offset-x",
+            "type": "number"
+          },
+          {
+            "id": "offset-y",
+            "type": "number"
+          },
+          {
+            "id": "offset-angle",
+            "type": "number"
+          },
+          {
+            "id": "offset-scale-x",
+            "type": "number",
+            "initialValue": "1"
+          },
+          {
+            "id": "offset-scale-y",
+            "type": "number",
+            "initialValue": "1"
+          }
+        ]
+      },
+      {
+        "id": "detach-object-from-bone",
+        "scriptName": "DetachObjectFromBone",
+        "highlight": false,
+        "params": [
+          {
+            "id": "object",
+            "type": "object"
+          },
+          {
+            "id": "bone-name",
+            "type": "string"
+          }
+        ]
+      },
+      {
+        "id": "detach-all-from-bone",
+        "scriptName": "DetachAllFromBone",
+        "highlight": false,
+        "params": [
+          {
+            "id": "bone-name",
+            "type": "string"
+          }
+        ]
+      },
+      {
+        "id": "add-handle",
+        "scriptName": "AddHandle",
+        "highlight": false,
+        "params": [
+          {
+            "id": "type",
+            "type": "combo",
+            "items": [
+              "bone",
+              "slot"
+            ]
+          },
+          {
+            "id": "name",
+            "type": "string"
+          },
+          {
+            "id": "radius",
+            "type": "number"
+          },
+          {
+            "id": "debug",
+            "type": "boolean"
+          }
+        ]
+      },
+      {
+        "id": "remove-handle",
+        "scriptName": "RemoveHandle",
+        "highlight": false,
+        "params": [
+          {
+            "id": "type",
+            "type": "combo",
+            "items": [
+              "bone",
+              "slot"
+            ]
+          },
+          {
+            "id": "name",
+            "type": "string"
+          }
+        ]
+      },
+      {
+        "id": "set-collision-bounding-box",
+        "scriptName": "SetCollisionBoundingBox",
+        "highlight": false,
+        "params": [
+          {
+            "id": "slot-name",
+            "type": "string"
+          },
+          {
+            "id": "attachment-name",
+            "type": "string"
+          }
+        ]
+      },
+      {
+        "id": "clear-collision-bounding-box",
+        "scriptName": "ClearCollisionBoundingBox",
+        "highlight": false
+      },
+      {
+        "id": "set-collision-bounding-box-debug",
+        "scriptName": "SetCollisionBoundingBoxDebug",
+        "highlight": false,
+        "params": [
+          {
+            "id": "enabled",
+            "type": "boolean"
+          }
+        ]
+      },
+      {
+        "id": "set-collision-body-drives-object",
+        "scriptName": "SetCollisionBodyDrivesObject",
+        "highlight": false,
+        "params": [
+          {
+            "id": "enabled",
+            "type": "boolean"
+          }
+        ]
+      },
+      {
+        "id": "set-runtime-asset-cache-retained-when-unused",
+        "scriptName": "SetRuntimeAssetCacheRetainedWhenUnused",
+        "highlight": false,
+        "params": [
+          {
+            "id": "enabled",
+            "type": "boolean"
+          },
+          {
+            "id": "scope",
+            "type": "combo",
+            "items": [
+              "this-object-type",
+              "all-spine-objects"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "release-cached-spine-assets",
+        "scriptName": "ReleaseCachedSpineAssets",
+        "highlight": false
+      },
+      {
+        "id": "release-all-cached-spine-assets",
+        "scriptName": "ReleaseAllCachedSpineAssets",
+        "highlight": false
+      },
+      {
+        "id": "set-bounds",
+        "scriptName": "SetBounds",
+        "highlight": false,
+        "params": [
+          {
+            "id": "x",
+            "type": "number",
+            "initialValue": "0"
+          },
+          {
+            "id": "y",
+            "type": "number",
+            "initialValue": "0"
+          },
+          {
+            "id": "width",
+            "type": "number",
+            "initialValue": "200"
+          },
+          {
+            "id": "height",
+            "type": "number",
+            "initialValue": "200"
+          }
+        ]
+      },
+      {
+        "id": "set-bounds-for-skin-animation",
+        "scriptName": "SetBoundsForSkinAnimation",
+        "highlight": false,
+        "params": [
+          {
+            "id": "skins",
+            "type": "string",
+            "initialValue": "\"\""
+          },
+          {
+            "id": "animation",
+            "type": "string",
+            "initialValue": "\"\""
+          }
+        ]
+      },
+      {
+        "id": "set-bounds-for-setup-pose",
+        "scriptName": "SetBoundsForSetupPose",
+        "highlight": false
+      }
+    ],
+    "expressions": [
+      {
+        "id": "slot-attachment",
+        "expressionName": "SlotAttachment",
+        "highlight": false,
+        "returnType": "string",
+        "params": [
+          {
+            "id": "slot-name",
+            "type": "string"
+          }
+        ]
+      },
+      {
+        "id": "slot-attachment-placeholder",
+        "expressionName": "SlotAttachmentPlaceholder",
+        "highlight": false,
+        "returnType": "string",
+        "params": [
+          {
+            "id": "slot-name",
+            "type": "string"
+          }
+        ]
+      },
+      {
+        "id": "bone-x",
+        "expressionName": "BoneX",
+        "highlight": false,
+        "returnType": "number",
+        "params": [
+          {
+            "id": "bone-name",
+            "type": "string"
+          }
+        ]
+      },
+      {
+        "id": "bone-y",
+        "expressionName": "BoneY",
+        "highlight": false,
+        "returnType": "number",
+        "params": [
+          {
+            "id": "bone-name",
+            "type": "string"
+          }
+        ]
+      },
+      {
+        "id": "bone-rotation",
+        "expressionName": "BoneRotation",
+        "highlight": false,
+        "returnType": "number",
+        "params": [
+          {
+            "id": "bone-name",
+            "type": "string"
+          }
+        ]
+      },
+      {
+        "id": "bone-length",
+        "expressionName": "BoneLength",
+        "highlight": false,
+        "returnType": "number",
+        "params": [
+          {
+            "id": "bone-name",
+            "type": "string"
+          }
+        ]
+      },
+      {
+        "id": "bone-world-x",
+        "expressionName": "BoneWorldX",
+        "highlight": false,
+        "returnType": "number",
+        "params": [
+          {
+            "id": "bone-name",
+            "type": "string"
+          }
+        ]
+      },
+      {
+        "id": "bone-world-y",
+        "expressionName": "BoneWorldY",
+        "highlight": false,
+        "returnType": "number",
+        "params": [
+          {
+            "id": "bone-name",
+            "type": "string"
+          }
+        ]
+      },
+      {
+        "id": "bone-local-x",
+        "expressionName": "BoneLocalX",
+        "highlight": false,
+        "returnType": "number",
+        "params": [{ "id": "bone-name", "type": "string" }]
+      },
+      {
+        "id": "bone-local-y",
+        "expressionName": "BoneLocalY",
+        "highlight": false,
+        "returnType": "number",
+        "params": [{ "id": "bone-name", "type": "string" }]
+      },
+      {
+        "id": "bone-local-rotation",
+        "expressionName": "BoneLocalRotation",
+        "highlight": false,
+        "returnType": "number",
+        "params": [{ "id": "bone-name", "type": "string" }]
+      },
+      {
+        "id": "bone-local-scale-x",
+        "expressionName": "BoneLocalScaleX",
+        "highlight": false,
+        "returnType": "number",
+        "params": [{ "id": "bone-name", "type": "string" }]
+      },
+      {
+        "id": "bone-local-scale-y",
+        "expressionName": "BoneLocalScaleY",
+        "highlight": false,
+        "returnType": "number",
+        "params": [{ "id": "bone-name", "type": "string" }]
+      },
+      {
+        "id": "bone-local-shear-x",
+        "expressionName": "BoneLocalShearX",
+        "highlight": false,
+        "returnType": "number",
+        "params": [{ "id": "bone-name", "type": "string" }]
+      },
+      {
+        "id": "bone-local-shear-y",
+        "expressionName": "BoneLocalShearY",
+        "highlight": false,
+        "returnType": "number",
+        "params": [{ "id": "bone-name", "type": "string" }]
+      },
+      {
+        "id": "current-skin",
+        "expressionName": "CurrentSkin",
+        "highlight": false,
+        "returnType": "string"
+      },
+      {
+        "id": "animations",
+        "expressionName": "Animations",
+        "highlight": false,
+        "returnType": "string"
+      },
+      {
+        "id": "animations-count",
+        "expressionName": "AnimationsCount",
+        "highlight": false,
+        "returnType": "number"
+      },
+      {
+        "id": "animation-name",
+        "expressionName": "AnimationName",
+        "highlight": false,
+        "returnType": "string",
+        "params": [
+          {
+            "id": "index",
+            "type": "number"
+          }
+        ]
+      },
+      {
+        "id": "current-animation",
+        "expressionName": "CurrentAnimation",
+        "highlight": false,
+        "returnType": "string",
+        "params": [
+          {
+            "id": "track-index",
+            "type": "number"
+          }
+        ]
+      },
+      {
+        "id": "get-event-data",
+        "expressionName": "GetEventData",
+        "highlight": false,
+        "returnType": "any",
+        "params": [
+          {
+            "id": "field",
+            "type": "string"
+          }
+        ]
+      },
+      {
+        "id": "time-scale",
+        "expressionName": "TimeScale",
+        "highlight": false,
+        "returnType": "number",
+        "params": [
+          {
+            "id": "track-index",
+            "type": "number",
+            "initialValue": "-1"
+          }
+        ]
+      },
+      {
+        "id": "loop",
+        "expressionName": "Loop",
+        "highlight": false,
+        "returnType": "number",
+        "params": [
+          {
+            "id": "track-index",
+            "type": "number",
+            "initialValue": "0"
+          }
+        ]
+      },
+      {
+        "id": "current-animation-start",
+        "expressionName": "CurrentAnimationStart",
+        "highlight": false,
+        "returnType": "number",
+        "params": [
+          {
+            "id": "track-index",
+            "type": "number"
+          }
+        ]
+      },
+      {
+        "id": "current-animation-end",
+        "expressionName": "CurrentAnimationEnd",
+        "highlight": false,
+        "returnType": "number",
+        "params": [
+          {
+            "id": "track-index",
+            "type": "number"
+          }
+        ]
+      },
+      {
+        "id": "current-animation-last",
+        "expressionName": "CurrentAnimationLast",
+        "highlight": false,
+        "returnType": "number",
+        "params": [
+          {
+            "id": "track-index",
+            "type": "number"
+          }
+        ]
+      },
+      {
+        "id": "bounds-x",
+        "expressionName": "BoundsX",
+        "highlight": false,
+        "returnType": "number"
+      },
+      {
+        "id": "bounds-y",
+        "expressionName": "BoundsY",
+        "highlight": false,
+        "returnType": "number"
+      },
+      {
+        "id": "bounds-width",
+        "expressionName": "BoundsWidth",
+        "highlight": false,
+        "returnType": "number"
+      },
+      {
+        "id": "bounds-height",
+        "expressionName": "BoundsHeight",
+        "highlight": false,
+        "returnType": "number"
+      },
+      {
+        "id": "collision-body-uid",
+        "expressionName": "CollisionBodyUID",
+        "highlight": false,
+        "returnType": "number"
+      },
+      {
+        "id": "bounding-box-point-count",
+        "expressionName": "BoundingBoxPointCount",
+        "highlight": false,
+        "returnType": "number",
+        "params": [
+          { "id": "slot-name", "type": "string" },
+          { "id": "attachment-name", "type": "string" }
+        ]
+      },
+      {
+        "id": "bounding-box-point-x",
+        "expressionName": "BoundingBoxPointX",
+        "highlight": false,
+        "returnType": "number",
+        "params": [
+          { "id": "slot-name", "type": "string" },
+          { "id": "attachment-name", "type": "string" },
+          { "id": "index", "type": "number" }
+        ]
+      },
+      {
+        "id": "bounding-box-point-y",
+        "expressionName": "BoundingBoxPointY",
+        "highlight": false,
+        "returnType": "number",
+        "params": [
+          { "id": "slot-name", "type": "string" },
+          { "id": "attachment-name", "type": "string" },
+          { "id": "index", "type": "number" }
+        ]
+      },
+      {
+        "id": "bounding-box-center-x",
+        "expressionName": "BoundingBoxCenterX",
+        "highlight": false,
+        "returnType": "number",
+        "params": [
+          { "id": "slot-name", "type": "string" },
+          { "id": "attachment-name", "type": "string" }
+        ]
+      },
+      {
+        "id": "bounding-box-center-y",
+        "expressionName": "BoundingBoxCenterY",
+        "highlight": false,
+        "returnType": "number",
+        "params": [
+          { "id": "slot-name", "type": "string" },
+          { "id": "attachment-name", "type": "string" }
+        ]
+      },
+      {
+        "id": "bounding-box-left",
+        "expressionName": "BoundingBoxLeft",
+        "highlight": false,
+        "returnType": "number",
+        "params": [
+          { "id": "slot-name", "type": "string" },
+          { "id": "attachment-name", "type": "string" }
+        ]
+      },
+      {
+        "id": "bounding-box-top",
+        "expressionName": "BoundingBoxTop",
+        "highlight": false,
+        "returnType": "number",
+        "params": [
+          { "id": "slot-name", "type": "string" },
+          { "id": "attachment-name", "type": "string" }
+        ]
+      },
+      {
+        "id": "bounding-box-right",
+        "expressionName": "BoundingBoxRight",
+        "highlight": false,
+        "returnType": "number",
+        "params": [
+          { "id": "slot-name", "type": "string" },
+          { "id": "attachment-name", "type": "string" }
+        ]
+      },
+      {
+        "id": "bounding-box-bottom",
+        "expressionName": "BoundingBoxBottom",
+        "highlight": false,
+        "returnType": "number",
+        "params": [
+          { "id": "slot-name", "type": "string" },
+          { "id": "attachment-name", "type": "string" }
+        ]
+      },
+      {
+        "id": "bounding-box-polygon-json",
+        "expressionName": "BoundingBoxPolygonJson",
+        "highlight": false,
+        "returnType": "string",
+        "params": [
+          { "id": "slot-name", "type": "string" },
+          { "id": "attachment-name", "type": "string" }
+        ]
+      }
+    ]
+  }
+}

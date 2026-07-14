@@ -34,32 +34,17 @@ import {
 	AnimationStateData,
 	AtlasAttachmentLoader,
 	BlendMode,
-	ClippingAttachment,
-	Color,
-	MeshAttachment,
-	NumberArrayLike,
 	Physics,
-	RegionAttachment,
 	Skeleton,
 	SkeletonBinary,
-	SkeletonClipping,
-	SkeletonData,
+	type SkeletonData,
 	SkeletonJson,
+	SkeletonRendererCore,
 	Texture,
 	TextureAtlas,
-	TextureFilter,
-	TextureWrap,
-	Utils,
 } from "@esotericsoftware/spine-core";
-import {
-	Canvas,
-	Surface,
-	CanvasKit,
-	Image,
-	Paint,
-	Shader,
-	BlendMode as CanvasKitBlendMode,
-} from "canvaskit-wasm";
+
+import type { Canvas, CanvasKit, Image, Paint, Shader } from "canvaskit-wasm";
 
 Skeleton.yDown = true;
 
@@ -85,11 +70,27 @@ function toCkBlendMode (ck: CanvasKit, blendMode: BlendMode) {
 	}
 }
 
-function bufferToUtf8String (buffer: any) {
-	if (typeof Buffer !== "undefined") {
+type NodeBufferLike = {
+	readonly buffer: ArrayBufferLike;
+	readonly byteOffset: number;
+	readonly byteLength: number;
+	toString (encoding?: "utf-8" | "utf8"): string;
+};
+
+type BinaryData = ArrayBuffer | Uint8Array | NodeBufferLike;
+
+function binaryDataToUint8Array (buffer: BinaryData): Uint8Array {
+	if (buffer instanceof ArrayBuffer) return new Uint8Array(buffer);
+	if (buffer instanceof Uint8Array) return buffer;
+	return new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+}
+
+function bufferToUtf8String (buffer: BinaryData) {
+	const globalBuffer = (globalThis as { Buffer?: { isBuffer: (value: unknown) => boolean } }).Buffer;
+	if (globalBuffer?.isBuffer(buffer)) {
 		return buffer.toString("utf-8");
 	} else if (typeof TextDecoder !== "undefined") {
-		return new TextDecoder("utf-8").decode(buffer);
+		return new TextDecoder("utf-8").decode(binaryDataToUint8Array(buffer));
 	} else {
 		throw new Error("Unsupported environment");
 	}
@@ -100,9 +101,9 @@ class CanvasKitTexture extends Texture {
 		return this._image;
 	}
 
-	setFilters (minFilter: TextureFilter, magFilter: TextureFilter): void { }
+	setFilters (): void { }
 
-	setWraps (uWrap: TextureWrap, vWrap: TextureWrap): void { }
+	setWraps (): void { }
 
 	dispose (): void {
 		const data: CanvasKitImage = this._image;
@@ -119,11 +120,11 @@ class CanvasKitTexture extends Texture {
 	static async fromFile (
 		ck: CanvasKit,
 		path: string,
-		readFile: (path: string) => Promise<any>
+		readFile: (path: string) => Promise<BinaryData>
 	): Promise<CanvasKitTexture> {
 		const imgData = await readFile(path);
 		if (!imgData) throw new Error(`Could not load image ${path}`);
-		const image = ck.MakeImageFromEncoded(imgData);
+		const image = ck.MakeImageFromEncoded(binaryDataToUint8Array(imgData));
 		if (!image) throw new Error(`Could not load image ${path}`);
 		const paintPerBlendMode = new Map<BlendMode, Paint>();
 		const shaders: Shader[] = [];
@@ -156,7 +157,7 @@ class CanvasKitTexture extends Texture {
 export async function loadTextureAtlas (
 	ck: CanvasKit,
 	atlasFile: string,
-	readFile: (path: string) => Promise<Buffer>
+	readFile: (path: string) => Promise<BinaryData>
 ): Promise<TextureAtlas> {
 	const atlas = new TextureAtlas(bufferToUtf8String(await readFile(atlasFile)));
 	const slashIndex = atlasFile.lastIndexOf("/");
@@ -180,7 +181,7 @@ export async function loadTextureAtlas (
 export async function loadSkeletonData (
 	skeletonFile: string,
 	atlas: TextureAtlas,
-	readFile: (path: string) => Promise<Buffer>,
+	readFile: (path: string) => Promise<BinaryData>,
 	scale = 1
 ): Promise<SkeletonData> {
 	const attachmentLoader = new AtlasAttachmentLoader(atlas);
@@ -188,12 +189,11 @@ export async function loadSkeletonData (
 		? new SkeletonJson(attachmentLoader)
 		: new SkeletonBinary(attachmentLoader);
 	loader.scale = scale;
-	let data = await readFile(skeletonFile);
-	if (skeletonFile.endsWith(".json")) {
-		data = bufferToUtf8String(data);
+	const data = await readFile(skeletonFile);
+	if (loader instanceof SkeletonJson) {
+		return loader.readSkeletonData(bufferToUtf8String(data))
 	}
-	const skeletonData = loader.readSkeletonData(data);
-	return skeletonData;
+	return loader.readSkeletonData(binaryDataToUint8Array(data));
 }
 
 /**
@@ -233,13 +233,7 @@ export class SkeletonDrawable {
  * Renders a {@link Skeleton} or {@link SkeletonDrawable} to a CanvasKit {@link Canvas}.
  */
 export class SkeletonRenderer {
-	private clipper = new SkeletonClipping();
-	private tempColor = new Color();
-	private tempColor2 = new Color();
-	private static QUAD_TRIANGLES = [0, 1, 2, 2, 3, 0];
-	private scratchPositions = Utils.newFloatArray(100);
-	private scratchColors = Utils.newFloatArray(100);
-	private scratchUVs = Utils.newFloatArray(100);
+	private skeletonRenderer = new SkeletonRendererCore();
 
 	/**
 	 * Creates a new skeleton renderer.
@@ -247,128 +241,35 @@ export class SkeletonRenderer {
 	 */
 	constructor (private ck: CanvasKit) { }
 
-	/**
-	 * Renders a skeleton or skeleton drawable in its current pose to the canvas.
-	 * @param canvas the canvas to render to.
-	 * @param skeleton the skeleton or drawable to render.
-	 */
 	render (canvas: Canvas, skeleton: Skeleton | SkeletonDrawable) {
 		if (skeleton instanceof SkeletonDrawable) skeleton = skeleton.skeleton;
-		let clipper = this.clipper;
-		let drawOrder = skeleton.drawOrder;
-		let skeletonColor = skeleton.color;
+		let command = this.skeletonRenderer.render(skeleton);
+		while (command) {
+			const { positions, uvs, colors, indices } = command;
+			const ckImage = command.texture.getImage();
+			const image = ckImage.image;
+			const width = image.width();
+			const height = image.height();
 
-		for (let i = 0, n = drawOrder.length; i < n; i++) {
-			let slot = drawOrder[i];
-			if (!slot.bone.active) {
-				clipper.clipEndWithSlot(slot);
-				continue;
+			for (let i = 0; i < uvs.length; i += 2) {
+				uvs[i] = uvs[i] * width;
+				uvs[i + 1] = uvs[i + 1] * height;
 			}
 
-			let attachment = slot.getAttachment();
-			let positions = this.scratchPositions;
-			let colors = this.scratchColors;
-			let uvs: NumberArrayLike;
-			let texture: CanvasKitTexture;
-			let triangles: Array<number>;
-			let attachmentColor: Color;
-			let numVertices = 0;
-			if (attachment instanceof RegionAttachment) {
-				let region = attachment as RegionAttachment;
-				positions = positions.length < 8 ? Utils.newFloatArray(8) : positions;
-				numVertices = 4;
-				region.computeWorldVertices(slot, positions, 0, 2);
-				triangles = SkeletonRenderer.QUAD_TRIANGLES;
-				uvs = region.uvs as Float32Array;
-				texture = region.region?.texture as CanvasKitTexture;
-				attachmentColor = region.color;
-			} else if (attachment instanceof MeshAttachment) {
-				let mesh = attachment as MeshAttachment;
-				positions =
-					positions.length < mesh.worldVerticesLength
-						? Utils.newFloatArray(mesh.worldVerticesLength)
-						: positions;
-				numVertices = mesh.worldVerticesLength >> 1;
-				mesh.computeWorldVertices(
-					slot,
-					0,
-					mesh.worldVerticesLength,
-					positions,
-					0,
-					2
-				);
-				triangles = mesh.triangles;
-				texture = mesh.region?.texture as CanvasKitTexture;
-				uvs = mesh.uvs as Float32Array;
-				attachmentColor = mesh.color;
-			} else if (attachment instanceof ClippingAttachment) {
-				let clip = attachment as ClippingAttachment;
-				clipper.clipStart(slot, clip);
-				continue;
-			} else {
-				clipper.clipEndWithSlot(slot);
-				continue;
-			}
-
-			if (texture) {
-				if (clipper.isClipping()) {
-					clipper.clipTrianglesUnpacked(
-						positions,
-						triangles,
-						triangles.length,
-						uvs
-					);
-					positions = clipper.clippedVertices;
-					uvs = clipper.clippedUVs;
-					triangles = clipper.clippedTriangles;
-				}
-
-				let slotColor = slot.color;
-				let finalColor = this.tempColor;
-				finalColor.r = skeletonColor.r * slotColor.r * attachmentColor.r;
-				finalColor.g = skeletonColor.g * slotColor.g * attachmentColor.g;
-				finalColor.b = skeletonColor.b * slotColor.b * attachmentColor.b;
-				finalColor.a = skeletonColor.a * slotColor.a * attachmentColor.a;
-
-				if (colors.length / 4 < numVertices)
-					colors = Utils.newFloatArray(numVertices * 4);
-				for (let i = 0, n = numVertices * 4; i < n; i += 4) {
-					colors[i] = finalColor.r;
-					colors[i + 1] = finalColor.g;
-					colors[i + 2] = finalColor.b;
-					colors[i + 3] = finalColor.a;
-				}
-
-				const scaledUvs =
-					this.scratchUVs.length < uvs.length
-						? Utils.newFloatArray(uvs.length)
-						: this.scratchUVs;
-				const width = texture.getImage().image.width();
-				const height = texture.getImage().image.height();
-				for (let i = 0; i < uvs.length; i += 2) {
-					scaledUvs[i] = uvs[i] * width;
-					scaledUvs[i + 1] = uvs[i + 1] * height;
-				}
-
-				const blendMode = slot.data.blendMode;
-				const vertices = this.ck.MakeVertices(
-					this.ck.VertexMode.Triangles,
-					positions,
-					scaledUvs,
-					colors,
-					triangles,
-					false
-				);
-				canvas.drawVertices(
-					vertices,
-					this.ck.BlendMode.Modulate,
-					texture.getImage().paintPerBlendMode.get(blendMode)!
-				);
-				vertices.delete();
-			}
-
-			clipper.clipEndWithSlot(slot);
+			const vertices = this.ck.MakeVertices(
+				this.ck.VertexMode.Triangles,
+				positions,
+				uvs,
+				colors,
+				// biome-ignore lint/suspicious/noExplicitAny: canvaskit wants indices as an array of number
+				indices as any as number[],
+				false
+			);
+			const ckPaint = ckImage.paintPerBlendMode.get(command.blendMode);
+			if (ckPaint) canvas.drawVertices(vertices, this.ck.BlendMode.Modulate, ckPaint);
+			vertices.delete();
+			command = command.next;
 		}
-		clipper.clipEnd();
 	}
+
 }

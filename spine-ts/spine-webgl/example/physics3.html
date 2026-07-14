@@ -24,16 +24,16 @@
 
 			loadAssets(canvas) {
 				// Load the skeleton file.
-				canvas.assetManager.loadBinary("assets/snowglobe-pro.skel");
+				canvas.assetManager.loadBinary("/assets/snowglobe-pro.skel");
 				// Load the atlas and its pages.
-				canvas.assetManager.loadTextureAtlas("assets/snowglobe-pma.atlas");
+				canvas.assetManager.loadTextureAtlas("/assets/snowglobe-pma.atlas");
 			}
 
 			initialize(canvas) {
-				let assetManager = canvas.assetManager;
+				const assetManager = canvas.assetManager;
 
 				// Create the texture atlas.
-				var atlas = assetManager.require("assets/snowglobe-pma.atlas");
+				var atlas = assetManager.require("/assets/snowglobe-pma.atlas");
 
 				// Create a AtlasAttachmentLoader that resolves region, mesh, boundingbox and path attachments
 				var atlasLoader = new spine.AtlasAttachmentLoader(atlas);
@@ -42,8 +42,8 @@
 				var skeletonBinary = new spine.SkeletonBinary(atlasLoader);
 
 				// Set the scale to apply during parsing, parse the file, and create a new skeleton.
-				skeletonBinary.scale = 0.5;
-				var skeletonData = skeletonBinary.readSkeletonData(assetManager.require("assets/snowglobe-pro.skel"));
+				skeletonBinary.scale = 0.4;
+				var skeletonData = skeletonBinary.readSkeletonData(assetManager.require("/assets/snowglobe-pro.skel"));
 				this.skeleton = new spine.Skeleton(skeletonData);
 
 				// Create an AnimationState, and set the "shake" animation in looping mode.
@@ -64,7 +64,7 @@
 			}
 
 			render(canvas) {
-				let renderer = canvas.renderer;
+				const renderer = canvas.renderer;
 				// Resize the viewport to the full canvas.
 				renderer.resize(spine.ResizeMode.Expand);
 
@@ -74,7 +74,7 @@
 				// Begin rendering.
 				renderer.begin();
 				// Draw the skeleton
-				renderer.drawSkeleton(this.skeleton, true);
+				renderer.drawSkeleton(this.skeleton);
 				// Complete rendering.
 				renderer.end();
 			}

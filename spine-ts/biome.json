@@ -1,0 +1,30 @@
+{
+  "formatter": {
+    "enabled": false
+  },
+  "linter": {
+    "enabled": true,
+    "includes": ["**", "!spine-construct3/ts-defs/**"],
+    "rules": {
+      "preset": "recommended",
+      "complexity": {
+        "noUselessConstructor": "off"
+      },
+      "correctness": {
+        "noUnusedFunctionParameters": "off"
+      },
+      "style": {
+        "useExponentiationOperator": "off"
+      },
+      "suspicious": {
+        "noAssignInExpressions": "off",
+        "noPrototypeBuiltins": "off"
+      }
+    }
+  },
+  "html": {
+    "linter": {
+      "enabled": false
+    }
+  }
+}

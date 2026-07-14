@@ -1,75 +1,33 @@
-/******************************************************************************
- * Spine Runtimes License Agreement
- * Last updated February 20, 2024. Replaces all prior versions.
- *
- * Copyright (c) 2013-2024, Esoteric Software LLC
- *
- * Integration of the Spine Runtimes into software or otherwise creating
- * derivative works of the Spine Runtimes is permitted under the terms and
- * conditions of Section 2 of the Spine Editor License Agreement:
- * https://esotericsoftware.com/spine-editor-license
- *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
- * "Products"), provided that each user of the Products must obtain their own
- * Spine Editor license and redistribution of the Products in any form must
- * include this license and copyright notice.
- *
- * THE SPINE RUNTIMES ARE PROVIDED BY ESOTERIC SOFTWARE LLC "AS IS" AND ANY
- * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL ESOTERIC SOFTWARE LLC BE LIABLE FOR ANY
- * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
- * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *****************************************************************************/
 
 package com.esotericsoftware.spine;
 
-import com.esotericsoftware.spine.Skeleton.Physics;
+abstract public class ConstraintData< //
+	T extends Constraint, //
+	P extends Pose> //
+	extends PosedData<P> {
 
-/** The base class for all constraint datas. */
-abstract public class ConstraintData {
-	final String name;
-	int order;
-	boolean skinRequired;
-
-	public ConstraintData (String name) {
-		if (name == null) throw new IllegalArgumentException("name cannot be null.");
-		this.name = name;
+	public ConstraintData (String name, P setup) {
+		super(name, setup);
 	}
 
-	/** The constraint's name, which is unique across all constraints in the skeleton of the same type. */
-	public String getName () {
-		return name;
-	}
-
-	/** The ordinal of this constraint for the order a skeleton's constraints will be applied by
-	 * {@link Skeleton#updateWorldTransform(Physics)}. */
-	public int getOrder () {
-		return order;
-	}
-
-	public void setOrder (int order) {
-		this.order = order;
-	}
-
-	/** When true, {@link Skeleton#updateWorldTransform(Physics)} only updates this constraint if the {@link Skeleton#getSkin()}
-	 * contains this constraint.
+	/** The constraint's name, unique across all constraints in the skeleton.
 	 * <p>
-	 * See {@link Skin#getConstraints()}. */
-	public boolean getSkinRequired () {
-		return skinRequired;
+	 * See {@link SkeletonData#findConstraint(String, Class)} and {@link Skeleton#findConstraint(String, Class)}. */
+	public String getName () { // Do not port.
+		return super.getName();
 	}
 
-	public void setSkinRequired (boolean skinRequired) {
-		this.skinRequired = skinRequired;
-	}
+	abstract public T create (Skeleton skeleton);
 
-	public String toString () {
-		return name;
+	/** Determines how the {@link BonePose#scaleY} changes when {@link BonePose#scaleX} is set. */
+	static public enum ScaleYMode {
+		/** scaleY is not changed. */
+		none,
+		/** scaleY is multiplied by the scaleX factor, preserving the bone's aspect ratio. */
+		uniform,
+		/** scaleY is divided by the scaleX factor, preserving the bone's area. */
+		volume;
+
+		static public final ScaleYMode[] values = ScaleYMode.values();
 	}
 }

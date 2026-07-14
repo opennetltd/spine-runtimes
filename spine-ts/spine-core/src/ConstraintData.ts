@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,11 +23,35 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
+import type { BonePose } from "./BonePose.js";
+import type { Constraint } from "./Constraint.js";
+import type { Pose } from "./Pose.js";
+import { PosedData } from "./PosedData.js";
+import type { Skeleton } from "./Skeleton.js";
+
 /** The base class for all constraint datas. */
-export abstract class ConstraintData {
-	constructor (public name: string, public order: number, public skinRequired: boolean) { }
+export abstract class ConstraintData<
+	T extends Constraint<T, ConstraintData<T, P>, P>,
+	P extends Pose<P>>
+	extends PosedData<P> {
+
+	constructor (name: string, setup: P) {
+		super(name, setup);
+	}
+
+	abstract create (skeleton: Skeleton): T;
+}
+
+/** Determines how the {@link BonePose.scaleY} changes when {@link BonePose.scaleX} is set. */
+export enum ScaleYMode {
+	/** scaleY is not changed. */
+	None,
+	/** scaleY is multiplied by the scaleX factor, preserving the bone's aspect ratio. */
+	Uniform,
+	/** scaleY is divided by the scaleX factor, preserving the bone's area. */
+	Volume
 }

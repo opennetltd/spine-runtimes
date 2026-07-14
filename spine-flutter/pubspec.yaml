@@ -1,26 +1,25 @@
 name: spine_flutter
 description: The official Spine Flutter Runtime to load, display and interact with Spine animations.
-version: 4.2.33
+version: 4.3.6
 homepage: https://esotericsoftware.com
 repository: https://github.com/esotericsoftware/spine-runtimes
 issue_tracker: https://github.com/esotericsoftware/spine-runtimes/issues
 documentation: https://esotericsoftware.com/spine-flutter
 
 environment:
-  sdk: '>=2.17.6 <4.0.0'
+  sdk: '>=3.0.0 <4.0.0'
   flutter: ">=3.16.0"
 
 dependencies:
   flutter:
     sdk: flutter
-  ffi: ^2.1.0
-  web_ffi_fork: ^0.7.4
   inject_js: ^2.0.0
   js: ^0.6.5
   meta: ^1.10.0
   http: ^1.1.0
   path: ^1.8.2
   crypto: ^3.0.3
+  universal_ffi: ^1.1.3
 
 dev_dependencies:
   ffigen: ^10.0.0
@@ -44,5 +43,3 @@ flutter:
   assets:
     - lib/assets/libspine_flutter.js
     - lib/assets/libspine_flutter.wasm
-    - src/spine-cpp-lite/spine-cpp-lite.cpp
-    - src/spine-cpp-lite/spine-cpp-lite.h

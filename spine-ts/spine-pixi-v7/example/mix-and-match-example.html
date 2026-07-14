@@ -10,7 +10,7 @@
 
   <body>
     <script>
-      (async function () {
+      (async () => {
         var app = new PIXI.Application({
           width: window.innerWidth,
           height: window.innerHeight,
@@ -23,12 +23,12 @@
         document.body.appendChild(app.view);
 
         // Pre-load the skeleton data and atlas. You can also load .json skeleton data.
-        PIXI.Assets.add("mixAndMatchData", "./assets/mix-and-match-pro.skel");
-        PIXI.Assets.add("mixAndMatchAtlas", "./assets/mix-and-match-pma.atlas");
+        PIXI.Assets.add("mixAndMatchData", "/assets/mix-and-match-pro.skel");
+        PIXI.Assets.add("mixAndMatchAtlas", "/assets/mix-and-match-pma.atlas");
         await PIXI.Assets.load(["mixAndMatchData", "mixAndMatchAtlas"]);
 
         // Create the Spine display object
-        const mixAndMatch = spine.Spine.from({skeleton: "mixAndMatchData", atlas: "mixAndMatchAtlas",
+        const mixAndMatch = new spine.Spine({skeleton: "mixAndMatchData", atlas: "mixAndMatchAtlas",
           scale: 0.5,
         });
 
@@ -54,7 +54,7 @@
         skin.addSkin(skeletonData.findSkin("accessories/hat-red-yellow"));
         skin.addSkin(skeletonData.findSkin("eyelids/girly"));
         mixAndMatch.skeleton.setSkin(skin);
-        mixAndMatch.skeleton.setSlotsToSetupPose();
+        mixAndMatch.skeleton.setupPose();
 
         // Center the spine object on screen.
         mixAndMatch.x = window.innerWidth / 2;

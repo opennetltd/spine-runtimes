@@ -1,12 +1,11 @@
 {
 	"extends": "../tsconfig.base.json",
 	"compilerOptions": {
-		"baseUrl": ".",
 		"rootDir": "./src",
 		"outDir": "./dist",
 		"paths": {
-			"@esotericsoftware/spine-core": [
-				"../spine-core/src"
+			"@esotericsoftware/spine-canvas": [
+				"../spine-canvas/src"
 			]
 		}
 	},
@@ -19,7 +18,7 @@
 	],
 	"references": [
 		{
-			"path": "../spine-core"
+			"path": "../spine-canvas"
 		}
 	]
 }

@@ -1,8 +1,8 @@
 # spine-sdl
 
-The spine-sdl runtime provides functionality to load, manipulate and render [Spine](http://esotericsoftware.com) skeletal animation data using [SDL](https://www.libsdl.org/). spine-sdl is based on [spine-c](../spine-c) and [spine-cpp](../spine-cpp), depending on whether you want to use a C or C++ implementation.
+The spine-sdl runtime provides functionality to load, manipulate and render [Spine](http://esotericsoftware.com) skeletal animation data using [SDL](https://www.libsdl.org/). spine-sdl is based on [spine-c](../spine-c) and [spine-cpp](../spine-cpp). Note that spine-c depends on spine-cpp, so both are required regardless of which API you choose to use.
 
-# See the [spine-sdl documentation](http://esotericsoftware.com/spine-sdl) for in-depth information
+# See the [spine-sdl documentation](http://esotericsoftware.com/spine-documentation#runtimes) for in-depth information
 
 ## Licensing
 
@@ -16,54 +16,92 @@ For the official legal terms governing the Spine Runtimes, please read the [Spin
 
 ## Spine version
 
-spine-sdl works with data exported from Spine 4.2.xx.
+spine-sdl works with data exported from Spine 4.3.xx.
 
 spine-sdl supports all Spine features except screen blend mode and two color tinting.
 
 ## Usage
 
-1. Create a new SDL project. See the [SDL documentation](https://wiki.libsdl.org/FrontPage) or have a look at the example in this repository.
-2. Download the Spine Runtimes source using git (`git clone https://github.com/esotericsoftware/spine-runtimes`) or download it as a zip via the download button above.
-3. If you are using C, add the sources from `spine-c/spine-c/src/spine` and `spine-sdl/src/spine-sdl-c.c` to your project, and add the folder `spine-c/spine-c/include` and `spine-sdl/src/spine-sdl-c.h` to your header search path. Note that includes are specified as `#inclue <spine/file.h>`, so the `spine` directory cannot be omitted when copying the source files.
-4. If you are using C++, add the sources from `spine-cpp/spine-cpp/src/spine` and `spine-sdl/src/spine-sdl-cpp.cpp` to your project, and add the folder `spine-cpp/spine-cpp/include` and `spine-sdl/src/spine-sdl-cpp.h` to your header search path. Note that includes are specified as `#include <spine/file.h>`, so the `spine` directory cannot be omitted when copying the source files.
+### Integration with CMake (Recommended)
 
-See the [Spine Runtimes documentation](http://esotericsoftware.com/spine-documentation#runtimesTitle) on how to use the APIs or check out the Spine SDL example in this repository.
+The easiest way to integrate spine-sdl into your project is via CMake FetchContent:
 
-## Example
+```cmake
+include(FetchContent)
+FetchContent_Declare(
+    spine-sdl
+    GIT_REPOSITORY https://github.com/esotericsoftware/spine-runtimes.git
+    GIT_TAG 4.3
+    SOURCE_SUBDIR spine-sdl
+)
+FetchContent_MakeAvailable(spine-sdl)
 
-The Spine SDL example works on Windows, Linux and Mac OS X. For a spine-c based example, see [example/main.c](example/main.c), for a spine-cpp example see [example/main.cpp](example/main.cpp).
+# For C API
+target_link_libraries(your_target spine-sdl-c)
+
+# For C++ API
+target_link_libraries(your_target spine-sdl-cpp)
+```
+
+This will automatically fetch and build spine-sdl along with its dependencies (spine-c, spine-cpp, and SDL).
+
+### Manual Integration
+
+If you prefer manual integration:
+
+1. Download the Spine Runtimes source using git (`git clone https://github.com/esotericsoftware/spine-runtimes`) or download it as a zip.
+2. Add the required source files to your project:
+   - For C API: Add sources from `spine-cpp/src`, `spine-c/src`, and `spine-sdl/src/spine-sdl-c.c`
+   - For C++ API: Add sources from `spine-cpp/src`, `spine-c/src`, and `spine-sdl/src/spine-sdl-cpp.cpp`
+3. Add the include directories: `spine-cpp/include`, `spine-c/include`, and `spine-sdl/src`
+4. Link against SDL2
+
+See the [Spine Runtimes documentation](http://esotericsoftware.com/spine-documentation#runtimes) for detailed API usage.
+
+## Examples
+
+The repository includes example code for both C and C++ APIs:
+- C example: [example/main.c](example/main.c)
+- C++ example: [example/main.cpp](example/main.cpp)
+
+### Building the Examples
 
 ### Windows
 
-1. Install [Visual Studio Community](https://www.visualstudio.com/en-us/downloads/download-visual-studio-vs.aspx). Make sure you install support for C++ as well as th Windows SDK for XP/7/8.
-2. Install CMake via the [Windows installer package](https://cmake.org/download/).
-3. Download the Spine Runtimes repository using git (`git clone https://github.com/esotericsoftware/spine-runtimes`) or download it as a zip via the download button above.
-4. Run CMake GUI from the start menu
-5. Click `Browse Source` and select the directory `spine-runtimes`
-6. Click `Browse Build` and select the `spine-runtimes/spine-sdl/build` directory. You can create the `build` folder directly in the file dialog via `New Folder`.
-7. Click `Configure`. Then click `Generate`. This will create a Visual Studio solution file called `spine.sln` in `spine-runtimes/spine-sdl/build` and also download the SDL dependencies.
-8. Open the `spine.sln` file in Visual Studio
-9. Right click the `spine-sdl-example-c` or `spine-sdl-example-cpp` project in the solution explorer and select `Set as Startup Project` from the context menus
-10. Click `Local Windows Debugger` to run the example
-
-The entire example code is contained in [main.cpp](example/main.cpp#L61)
+1. Install [Visual Studio Community](https://visualstudio.microsoft.com/downloads/). Make sure you install support for C++ and CMake.
+2. Download the Spine Runtimes repository using git (`git clone https://github.com/esotericsoftware/spine-runtimes`) or download it as a zip.
+3. Open Visual Studio Community, then open `spine-sdl/` via the **Open a local folder** button in the Visual Studio Community launcher.
+4. Wait for CMake to finish, then select either `spine-sdl-c-example.exe` or `spine-sdl-cpp-example.exe` as the start-up project and start debugging.
 
 ### Linux
 
-1. Install the [SDL build dependencies](https://github.com/libsdl-org/SDL/blob/main/docs/README-linux.md)
-2. Download the Spine Runtimes repository using git (`git clone https://github.com/esotericsoftware/spine-runtimes`) or download it as a zip via the download button above.
-3. Open a terminal, and `cd` into the `spine-runtimes/spine-sdl` folder
-4. Type `mkdir build && cd build && cmake ../..` to generate Make files
-5. Type `make` to compile the example
-6. Run the example by `cd spine-sdl && ./spine-sdl-c-example` (C) or by `cd spine-sdl && ./spine-sdl-cpp-example` (C++)
+1. Install dependencies:
+   ```bash
+   sudo apt-get install cmake ninja-build  # Ubuntu/Debian
+   # or equivalent for your distribution
+   ```
+2. Clone the repository: `git clone https://github.com/esotericsoftware/spine-runtimes`
+3. Build and run:
+   ```bash
+   cd spine-runtimes/spine-sdl
+   ./build.sh
+   ./build/debug/spine-sdl-c-example    # Run C example
+   ./build/debug/spine-sdl-cpp-example  # Run C++ example
+   ```
 
-### Mac OS X
+### macOS
 
 1. Install [Xcode](https://developer.apple.com/xcode/)
 2. Install [Homebrew](http://brew.sh/)
-3. Open a terminal and install CMake via `brew install cmake`
-4. Download the Spine Runtimes repository using git (`git clone https://github.com/esotericsoftware/spine-runtimes`) or download it as a zip via the download button above.
-5. Open a terminal, and `cd` into the `spine-runtimes/spine-sdl` folder
-6. Type `mkdir build && cd build && cmake ../..` to generate Make files
-7. Type `make` to compile the example
-8. Run the example by `cd spine-sdl && ./spine-sdl-c-example` (C) or by `cd spine-sdl && ./spine-sdl-cpp-example` (C++)
+3. Install dependencies:
+   ```bash
+   brew install cmake ninja
+   ```
+4. Clone the repository: `git clone https://github.com/esotericsoftware/spine-runtimes`
+5. Build and run:
+   ```bash
+   cd spine-runtimes/spine-sdl
+   ./build.sh
+   ./build/debug/spine-sdl-c-example    # Run C example
+   ./build/debug/spine-sdl-cpp-example  # Run C++ example
+   ```

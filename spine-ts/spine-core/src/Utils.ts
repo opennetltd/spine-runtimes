@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,28 +23,29 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
-import { Skeleton } from "./Skeleton.js";
-import { MixBlend } from "./Animation.js";
+/** biome-ignore-all lint/complexity/noStaticOnlyClass: too much things to update */
+
+import type { Skeleton } from "./Skeleton.js";
 
 export interface StringMap<T> {
 	[key: string]: T;
 }
 
 export class IntSet {
-	array = new Array<number | undefined>();
+	array = [] as (number | undefined)[];
 
 	add (value: number): boolean {
-		let contains = this.contains(value);
+		const contains = this.contains(value);
 		this.array[value | 0] = value | 0;
 		return !contains;
 	}
 
 	contains (value: number) {
-		return this.array[value | 0] != undefined;
+		return this.array[value | 0] !== undefined;
 	}
 
 	remove (value: number) {
@@ -61,7 +62,7 @@ export class StringSet {
 	size = 0;
 
 	add (value: string): boolean {
-		let contains = this.entries[value];
+		const contains = this.entries[value];
 		this.entries[value] = true;
 		if (!contains) {
 			this.size++;
@@ -71,10 +72,10 @@ export class StringSet {
 	}
 
 	addAll (values: string[]): boolean {
-		let oldSize = this.size;
-		for (var i = 0, n = values.length; i < n; i++)
+		const oldSize = this.size;
+		for (let i = 0, n = values.length; i < n; i++)
 			this.add(values[i]);
-		return oldSize != this.size;
+		return oldSize !== this.size;
 	}
 
 	contains (value: string) {
@@ -125,11 +126,11 @@ export class Color {
 	}
 
 	setFromString (hex: string) {
-		hex = hex.charAt(0) == '#' ? hex.substr(1) : hex;
+		hex = hex.charAt(0) === '#' ? hex.substr(1) : hex;
 		this.r = parseInt(hex.substr(0, 2), 16) / 255;
 		this.g = parseInt(hex.substr(2, 2), 16) / 255;
 		this.b = parseInt(hex.substr(4, 2), 16) / 255;
-		this.a = hex.length != 8 ? 1 : parseInt(hex.substr(6, 2), 16) / 255;
+		this.a = hex.length !== 8 ? 1 : parseInt(hex.substr(6, 2), 16) / 255;
 		return this;
 	}
 
@@ -170,16 +171,19 @@ export class Color {
 	}
 
 	toRgb888 () {
-		const hex = (x: number) => ("0" + (x * 255).toString(16)).slice(-2);
-		return Number("0x" + hex(this.r) + hex(this.g) + hex(this.b));
+		const hex = (x: number) => (`0${(x * 255).toString(16)}`).slice(-2);
+		return Number(`0x${hex(this.r)}${hex(this.g)}${hex(this.b)}`);
 	}
 
-	static fromString (hex: string): Color {
-		return new Color().setFromString(hex);
+	static fromString (hex: string, color = new Color()): Color {
+		return color.setFromString(hex);
 	}
 }
 
 export class MathUtils {
+	static epsilon = 0.00001;
+	static epsilon2 = MathUtils.epsilon * MathUtils.epsilon;
+	// biome-ignore lint/suspicious/noApproximativeNumericConstant: reference runtime
 	static PI = 3.1415927;
 	static PI2 = MathUtils.PI * 2;
 	static invPI2 = 1 / MathUtils.PI2;
@@ -203,7 +207,7 @@ export class MathUtils {
 	}
 
 	static atan2Deg (y: number, x: number) {
-		return Math.atan2(y, x) * MathUtils.degRad;
+		return Math.atan2(y, x) * MathUtils.radDeg;
 	}
 
 	static signum (value: number): number {
@@ -215,7 +219,7 @@ export class MathUtils {
 	}
 
 	static cbrt (x: number) {
-		let y = Math.pow(Math.abs(x), 1 / 3);
+		const y = Math.pow(Math.abs(x), 1 / 3);
 		return x < 0 ? -y : y;
 	}
 
@@ -224,8 +228,8 @@ export class MathUtils {
 	}
 
 	static randomTriangularWith (min: number, max: number, mode: number): number {
-		let u = Math.random();
-		let d = max - min;
+		const u = Math.random();
+		const d = max - min;
 		if (u <= (mode - min) / d) return min + Math.sqrt(u * d * (mode - min));
 		return max - Math.sqrt((1 - u) * d * (max - mode));
 	}
@@ -236,8 +240,51 @@ export class MathUtils {
 }
 
 export abstract class Interpolation {
+	static readonly linear: Interpolation = new class extends Interpolation {
+		protected applyInternal (a: number): number {
+			return a;
+		}
+	}();
+
+	/** Aka "smoothstep". */
+	static readonly smooth: Interpolation = new class extends Interpolation {
+		protected applyInternal (a: number): number {
+			return a * a * (3 - 2 * a);
+		}
+	}();
+
+	/** Slow, then fast. */
+	static readonly slowFast: Interpolation = new class extends Interpolation {
+		protected applyInternal (a: number): number {
+			return a * a;
+		}
+	}();
+
+	/** Fast, then slow. */
+	static readonly fastSlow: Interpolation = new class extends Interpolation {
+		protected applyInternal (a: number): number {
+			return (a - 1) * (a - 1) * -1 + 1;
+		}
+	}();
+
+	static readonly circle: Interpolation = new class extends Interpolation {
+		protected applyInternal (a: number): number {
+			if (a <= 0.5) {
+				a *= 2;
+				return (1 - Math.sqrt(1 - a * a)) / 2;
+			}
+			a--;
+			a *= 2;
+			return (Math.sqrt(1 - a * a) + 1) / 2;
+		}
+	}();
+
 	protected abstract applyInternal (a: number): number;
-	apply (start: number, end: number, a: number): number {
+
+	apply (a: number): number;
+	apply (start: number, end: number, a: number): number;
+	apply (start: number, end?: number, a?: number): number {
+		if (end === undefined || a === undefined) return this.applyInternal(start);
 		return start + (end - start) * this.applyInternal(a);
 	}
 }
@@ -252,7 +299,7 @@ export class Pow extends Interpolation {
 
 	applyInternal (a: number): number {
 		if (a <= 0.5) return Math.pow(a * 2, this.power) / 2;
-		return Math.pow((a - 1) * 2, this.power) / (this.power % 2 == 0 ? -2 : 2) + 1;
+		return Math.pow((a - 1) * 2, this.power) / (this.power % 2 === 0 ? -2 : 2) + 1;
 	}
 }
 
@@ -262,7 +309,7 @@ export class PowOut extends Pow {
 	}
 
 	applyInternal (a: number): number {
-		return Math.pow(a - 1, this.power) * (this.power % 2 == 0 ? -1 : 1) + 1;
+		return Math.pow(a - 1, this.power) * (this.power % 2 === 0 ? -1 : 1) + 1;
 	}
 }
 
@@ -280,9 +327,10 @@ export class Utils {
 			array[i] = value;
 	}
 
+	// biome-ignore lint/suspicious/noExplicitAny: ok any in this case
 	static setArraySize<T> (array: Array<T>, size: number, value: any = 0): Array<T> {
-		let oldSize = array.length;
-		if (oldSize == size) return array;
+		const oldSize = array.length;
+		if (oldSize === size) return array;
 		array.length = size;
 		if (oldSize < size) {
 			for (let i = oldSize; i < size; i++) array[i] = value;
@@ -290,13 +338,14 @@ export class Utils {
 		return array;
 	}
 
+	// biome-ignore lint/suspicious/noExplicitAny: ok any in this case
 	static ensureArrayCapacity<T> (array: Array<T>, size: number, value: any = 0): Array<T> {
 		if (array.length >= size) return array;
 		return Utils.setArraySize(array, size, value);
 	}
 
 	static newArray<T> (size: number, defaultValue: T): Array<T> {
-		let array = new Array<T>(size);
+		const array: T[] = [];
 		for (let i = 0; i < size; i++) array[i] = defaultValue;
 		return array;
 	}
@@ -305,7 +354,7 @@ export class Utils {
 		if (Utils.SUPPORTS_TYPED_ARRAYS)
 			return new Float32Array(size)
 		else {
-			let array = new Array<number>(size);
+			const array: number[] = [];
 			for (let i = 0; i < array.length; i++) array[i] = 0;
 			return array;
 		}
@@ -315,13 +364,13 @@ export class Utils {
 		if (Utils.SUPPORTS_TYPED_ARRAYS)
 			return new Int16Array(size)
 		else {
-			let array = new Array<number>(size);
+			const array: number[] = [];
 			for (let i = 0; i < array.length; i++) array[i] = 0;
 			return array;
 		}
 	}
 
-	static toFloatArray (array: Array<number>) {
+	static toFloatArray (array: Array<number>): number[] | Float32Array {
 		return Utils.SUPPORTS_TYPED_ARRAYS ? new Float32Array(array) : array;
 	}
 
@@ -329,16 +378,17 @@ export class Utils {
 		return Utils.SUPPORTS_TYPED_ARRAYS ? Math.fround(value) : value;
 	}
 
-	// This function is used to fix WebKit 602 specific issue described at http://esotericsoftware.com/forum/iOS-10-disappearing-graphics-10109
-	static webkit602BugfixHelper (alpha: number, blend: MixBlend) {
+	// This function is used to fix WebKit 602 specific issue described at https://esotericsoftware.com/forum/d/10109-ios-10-disappearing-graphics
+	static webkit602BugfixHelper (alpha: number) {
 	}
 
 	static contains<T> (array: Array<T>, element: T, identity = true) {
-		for (var i = 0; i < array.length; i++)
-			if (array[i] == element) return true;
+		for (let i = 0; i < array.length; i++)
+			if (array[i] === element) return true;
 		return false;
 	}
 
+	// biome-ignore lint/suspicious/noExplicitAny: ok any in this case
 	static enumValue (type: any, name: string) {
 		return type[name[0].toUpperCase() + name.slice(1)];
 	}
@@ -347,14 +397,14 @@ export class Utils {
 export class DebugUtils {
 	static logBones (skeleton: Skeleton) {
 		for (let i = 0; i < skeleton.bones.length; i++) {
-			let bone = skeleton.bones[i];
-			console.log(bone.data.name + ", " + bone.a + ", " + bone.b + ", " + bone.c + ", " + bone.d + ", " + bone.worldX + ", " + bone.worldY);
+			const bone = skeleton.bones[i].appliedPose;
+			console.log(`${bone.bone.data.name}, ${bone.a}, ${bone.b}, ${bone.c}, ${bone.d}, ${bone.worldX}, ${bone.worldY}`);
 		}
 	}
 }
 
 export class Pool<T> {
-	private items = new Array<T>();
+	private items = [] as T[];
 	private instantiator: () => T;
 
 	constructor (instantiator: () => T) {
@@ -362,11 +412,13 @@ export class Pool<T> {
 	}
 
 	obtain () {
+		// biome-ignore lint/style/noNonNullAssertion: length check
 		return this.items.length > 0 ? this.items.pop()! : this.instantiator();
 	}
 
 	free (item: T) {
-		if ((item as any).reset) (item as any).reset();
+		// biome-ignore lint/suspicious/noExplicitAny: T can be anything
+		(item as any).reset?.();
 		this.items.push(item);
 	}
 
@@ -391,14 +443,14 @@ export class Vector2 {
 	}
 
 	length () {
-		let x = this.x;
-		let y = this.y;
+		const x = this.x;
+		const y = this.y;
 		return Math.sqrt(x * x + y * y);
 	}
 
 	normalize () {
-		let len = this.length();
-		if (len != 0) {
+		const len = this.length();
+		if (len !== 0) {
 			this.x /= len;
 			this.y /= len;
 		}
@@ -417,7 +469,7 @@ export class TimeKeeper {
 	private frameTime = 0;
 
 	update () {
-		let now = Date.now() / 1000;
+		const now = Date.now() / 1000;
 		this.delta = now - this.lastTime;
 		this.frameTime += this.delta;
 		this.totalTime += this.delta;

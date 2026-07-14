@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,18 +23,18 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
-import { Skin } from "../Skin.js";
-import { BoundingBoxAttachment } from "./BoundingBoxAttachment.js";
-import { ClippingAttachment } from "./ClippingAttachment.js";
-import { MeshAttachment } from "./MeshAttachment.js";
-import { PathAttachment } from "./PathAttachment.js";
-import { PointAttachment } from "./PointAttachment.js";
-import { RegionAttachment } from "./RegionAttachment.js";
-import { Sequence } from "./Sequence.js";
+import type { Skin } from "../Skin.js";
+import type { BoundingBoxAttachment } from "./BoundingBoxAttachment.js";
+import type { ClippingAttachment } from "./ClippingAttachment.js";
+import type { MeshAttachment } from "./MeshAttachment.js";
+import type { PathAttachment } from "./PathAttachment.js";
+import type { PointAttachment } from "./PointAttachment.js";
+import type { RegionAttachment } from "./RegionAttachment.js";
+import type { Sequence } from "./Sequence.js";
 
 /** The interface which can be implemented to customize creating and populating attachments.
  *
@@ -42,20 +42,20 @@ import { Sequence } from "./Sequence.js";
  * Runtimes Guide. */
 export interface AttachmentLoader {
 	/** @return May be null to not load an attachment. */
-	newRegionAttachment (skin: Skin, name: string, path: string, sequence: Sequence | null): RegionAttachment;
+	newRegionAttachment (skin: Skin, placeholder: string, name: string, path: string, sequence: Sequence): RegionAttachment;
 
 	/** @return May be null to not load an attachment. */
-	newMeshAttachment (skin: Skin, name: string, path: string, sequence: Sequence | null): MeshAttachment;
+	newMeshAttachment (skin: Skin, placeholder: string, name: string, path: string, sequence: Sequence): MeshAttachment;
 
 	/** @return May be null to not load an attachment. */
-	newBoundingBoxAttachment (skin: Skin, name: string): BoundingBoxAttachment;
+	newBoundingBoxAttachment (skin: Skin, placeholder: string, name: string): BoundingBoxAttachment;
 
 	/** @return May be null to not load an attachment */
-	newPathAttachment (skin: Skin, name: string): PathAttachment;
+	newPathAttachment (skin: Skin, placeholder: string, name: string): PathAttachment;
 
 	/** @return May be null to not load an attachment */
-	newPointAttachment (skin: Skin, name: string): PointAttachment;
+	newPointAttachment (skin: Skin, placeholder: string, name: string): PointAttachment;
 
 	/** @return May be null to not load an attachment */
-	newClippingAttachment (skin: Skin, name: string): ClippingAttachment;
+	newClippingAttachment (skin: Skin, placeholder: string, name: string): ClippingAttachment;
 }

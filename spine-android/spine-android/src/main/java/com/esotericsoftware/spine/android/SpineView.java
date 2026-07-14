@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,8 +23,8 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 package com.esotericsoftware.spine.android;
@@ -44,9 +44,11 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.Choreographer;
 import android.view.View;
 
+import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
 
 import java.io.File;
@@ -291,7 +293,7 @@ public class SpineView extends View implements Choreographer.FrameCallback {
 	/** The same as {@link SpineView#loadFromDrawable(AndroidSkeletonDrawable, Context, SpineController)}, but can be used after
 	 * instantiating the view via {@link SpineView#SpineView(Context, SpineController)}. */
 	public void loadFromDrawable (AndroidSkeletonDrawable drawable) {
-		loadFrom( () -> drawable);
+		post( () -> setSkeletonDrawable(drawable));
 	}
 
 	/** Get the {@link SpineController} */
@@ -350,19 +352,46 @@ public class SpineView extends View implements Choreographer.FrameCallback {
 		this.rendering = rendering;
 	}
 
-	private void loadFrom (AndroidSkeletonDrawableLoader loader) {
+	/** Load the skeleton from a {@link AndroidSkeletonDrawableLoader}. This method is asynchronous. If you want to control the
+	 * loading thread yourself, obtain an {@link AndroidSkeletonDrawable} using
+	 * {@link AndroidSkeletonDrawable#fromHttp(URL, URL, File)} or another load method, then call
+	 * {@link SpineView#loadFromDrawable(AndroidSkeletonDrawable)} or
+	 * {@link SpineView#setSkeletonDrawable(AndroidSkeletonDrawable)}. */
+	public void loadFrom (AndroidSkeletonDrawableLoader loader) {
+		if (controller == null) {
+			throw new IllegalStateException(
+				"SpineController is not set. When using SpineView from XML, call setController(...) before loadFromAsset/loadFromFile/loadFromHttp/loadFromDrawable.");
+		}
 		Handler mainHandler = new Handler(Looper.getMainLooper());
 		Thread backgroundThread = new Thread( () -> {
-			final AndroidSkeletonDrawable skeletonDrawable = loader.load();
-			mainHandler.post( () -> {
-				computedBounds = boundsProvider.computeBounds(skeletonDrawable);
-				updateCanvasTransform();
-
-				controller.init(skeletonDrawable);
-				Choreographer.getInstance().postFrameCallback(SpineView.this);
-			});
+			try {
+				final AndroidSkeletonDrawable skeletonDrawable = loader.load();
+				mainHandler.post( () -> {
+					if (controller == null) {
+						throw new IllegalStateException(
+							"SpineController became null before initialization. Ensure setController(...) is called and not cleared until loading completes.");
+					}
+					setSkeletonDrawable(skeletonDrawable);
+				});
+			} catch (Exception e) {
+				Log.e("SpineView", "Error loading skeleton", e);
+			}
 		});
 		backgroundThread.start();
+	}
+
+	/** Set the skeleton drawable. Must be called from the main thread. */
+	@MainThread
+	public final void setSkeletonDrawable (@NonNull AndroidSkeletonDrawable skeletonDrawable) {
+		if (controller == null) {
+			throw new IllegalStateException(
+				"SpineController is not set. When using SpineView from XML, call setController(...) before setSkeletonDrawable/loadFromAsset/loadFromFile/loadFromHttp/loadFromDrawable.");
+		}
+		computedBounds = boundsProvider.computeBounds(skeletonDrawable);
+		updateCanvasTransform();
+
+		controller.init(skeletonDrawable);
+		Choreographer.getInstance().postFrameCallback(SpineView.this);
 	}
 
 	@Override

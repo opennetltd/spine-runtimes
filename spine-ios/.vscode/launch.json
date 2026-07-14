@@ -1,0 +1,15 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb-dap",
+            "request": "launch",
+            "name": "Debug SpineTest (LLDB-DAP)",
+            "program": "${workspaceFolder}/test/.build/debug/SpineTest",
+            "args": [],
+            "cwd": "${workspaceFolder}/test",
+            "preLaunchTask": "swift: Build Debug",
+            "stopOnEntry": false
+        },
+    ]
+}

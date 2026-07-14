@@ -1,0 +1,33 @@
+name: Check TypeScript Formatting
+
+on:
+  push:
+    branches:
+      - '**'
+    paths:
+      - 'spine-ts/**'
+      - 'tests/**/*.ts'
+      - 'tests/tsfmt.json'
+      - 'formatters/tsfmt.json'
+      - 'formatters/format-ts.sh'
+      - '.github/workflows/format-check-typescript.yml'
+  workflow_dispatch:
+
+jobs:
+  check-typescript:
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install Node and dependencies
+      uses: actions/setup-node@v3
+      with:
+        node-version: "24"
+
+    - name: Format TypeScript
+      run: ./formatters/format-ts.sh
+
+    - name: Check for changes
+      run: |
+        git ls-files -m
+        if [[ `git ls-files -m` ]]; then echo "Detected TypeScript formatting errors!" & exit 1; fi

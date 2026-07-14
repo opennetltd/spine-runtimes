@@ -35,7 +35,7 @@ gun-nohand
 bounds:1561,35,209,203
 offsets:0,0,210,203
 head
-bounds:1608,618,271,298
+bounds:1605,618,271,298
 lower-leg
 bounds:1413,91,146,189
 offsets:0,6,146,195
@@ -50,14 +50,15 @@ raptor-back-arm
 bounds:844,9,163,172
 rotate:90
 raptor-body
-bounds:2,451,1264,465
+bounds:2,451,1261,465
+offsets:0,0,1264,465
 raptor-front-arm
 bounds:1413,282,162,203
 raptor-front-leg
 bounds:2,67,382,514
 rotate:90
 raptor-hindleg-back
-bounds:1268,487,338,429
+bounds:1265,487,338,429
 raptor-horn
 bounds:1098,86,363,158
 offsets:0,0,363,159
@@ -80,7 +81,7 @@ bounds:1791,257,114,189
 raptor-saddle-w-shadow
 bounds:518,108,324,341
 raptor-tail-shadow
-bounds:1881,539,377,126
+bounds:1878,539,377,126
 rotate:90
 raptor-tongue
 bounds:1772,67,171,128
@@ -95,4 +96,4 @@ bounds:620,15,97,91
 torso
 bounds:1907,355,108,182
 visor
-bounds:1608,448,261,168
+bounds:1605,448,261,168

@@ -16,8 +16,8 @@
     var mouse = new spine.Vector3(),
       last = new spine.Vector3();
     new spine.SpinePlayer("player", {
-      skeleton: "assets/celestial-circus-pro.skel",
-      atlas: "assets/celestial-circus-pma.atlas",
+      skeleton: "/assets/celestial-circus-pro.skel",
+      atlas: "/assets/celestial-circus-pma.atlas",
       showControls: true,
       animation: "swing",
       success: (player) => {
@@ -36,8 +36,8 @@
               player.canvas.clientWidth,
               player.canvas.clientHeight
             );
-            player.skeleton.getRootBone().x += mouse.x - last.x;
-            player.skeleton.getRootBone().y += mouse.y - last.y;
+            player.skeleton.getRootBone().pose.x += mouse.x - last.x;
+            player.skeleton.getRootBone().pose.y += mouse.y - last.y;
             last.setFrom(mouse);
           },
           up: () => (player.paused = false),

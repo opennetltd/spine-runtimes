@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,8 +23,8 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *****************************************************************************/
 
 package spine.animation;
@@ -33,15 +33,17 @@ import spine.Event;
 import spine.Skeleton;
 import spine.Slot;
 
+/** Changes a slot's spine.Slot.attachment. */
 class AttachmentTimeline extends Timeline implements SlotTimeline {
 	public var slotIndex:Int = 0;
 
-	/** The attachment name for each key frame. May contain null values to clear the attachment. */
+	/** The attachment name for each frame. May contain null values to clear the attachment. */
 	public var attachmentNames:Array<String>;
 
 	public function new(frameCount:Int, slotIndex:Int) {
-		super(frameCount, [Property.attachment + "|" + slotIndex]);
+		super(frameCount, Property.attachment + "|" + slotIndex);
 		this.slotIndex = slotIndex;
+		this.instant = true;
 		attachmentNames = new Array<String>();
 		attachmentNames.resize(frameCount);
 	}
@@ -54,36 +56,31 @@ class AttachmentTimeline extends Timeline implements SlotTimeline {
 		return slotIndex;
 	}
 
-	/** Sets the time in seconds and the attachment name for the specified key frame. */
+	/** Sets the time and attachment name for the specified frame.
+	 * @param frame Between 0 and frameCount, inclusive.
+	 * @param time The frame time in seconds. */
 	public function setFrame(frame:Int, time:Float, attachmentName:String):Void {
 		frames[frame] = time;
 		attachmentNames[frame] = attachmentName;
 	}
 
-	public override function apply(skeleton:Skeleton, lastTime:Float, time:Float, events:Array<Event>, alpha:Float, blend:MixBlend,
-			direction:MixDirection):Void {
-		var slot:Slot = skeleton.slots[slotIndex];
+	public function apply(skeleton:Skeleton, lastTime:Float, time:Float, events:Array<Event>, alpha:Float, from:MixFrom, add:Bool, out:Bool, appliedPose:Bool) {
+		var slot = skeleton.slots[slotIndex];
 		if (!slot.bone.active)
 			return;
+		var pose = appliedPose ? slot.appliedPose : slot.pose;
 
-		if (direction == MixDirection.mixOut) {
-			if (blend == MixBlend.setup) {
-				setAttachment(skeleton, slot, slot.data.attachmentName);
-			}
-			return;
-		}
-
-		if (time < frames[0]) {
-			if (blend == MixBlend.setup || blend == MixBlend.first) {
-				setAttachment(skeleton, slot, slot.data.attachmentName);
-			}
-			return;
-		}
-
-		setAttachment(skeleton, slot, attachmentNames[Timeline.search1(frames, time)]);
+		if (out) {
+			if (from != MixFrom.current)
+				setAttachment(skeleton, pose, slot.data.attachmentName);
+		} else if (time < frames[0]) {
+			if (from != MixFrom.current)
+				setAttachment(skeleton, pose, slot.data.attachmentName);
+		} else
+			setAttachment(skeleton, pose, attachmentNames[Timeline.search1(frames, time)]);
 	}
 
-	private function setAttachment(skeleton:Skeleton, slot:Slot, attachmentName:String):Void {
-		slot.attachment = attachmentName == null ? null : skeleton.getAttachmentForSlotIndex(slotIndex, attachmentName);
+	private function setAttachment(skeleton:Skeleton, pose:SlotPose, attachmentName:String):Void {
+		pose.attachment = attachmentName == null ? null : skeleton.getAttachmentForSlotIndex(slotIndex, attachmentName);
 	}
 }

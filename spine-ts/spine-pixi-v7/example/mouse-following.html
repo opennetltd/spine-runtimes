@@ -10,7 +10,7 @@
 
     <body>
         <script>
-            (async function () {
+            (async () => {
                 var app = new PIXI.Application({
                     width: window.innerWidth,
                     height: window.innerHeight,
@@ -23,12 +23,12 @@
                 document.body.appendChild(app.view);
 
                 // Pre-load the skeleton data and atlas. You can also load .json skeleton data.
-                PIXI.Assets.add("spineboyData", "./assets/spineboy-pro.skel");
-                PIXI.Assets.add("spineboyAtlas", "./assets/spineboy-pma.atlas");
+                PIXI.Assets.add("spineboyData", "/assets/spineboy-pro.skel");
+                PIXI.Assets.add("spineboyAtlas", "/assets/spineboy-pma.atlas");
                 await PIXI.Assets.load(["spineboyData", "spineboyAtlas"]);
 
                 // Create the spine display object
-                const spineboy = spine.Spine.from({skeleton: "spineboyData", atlas: "spineboyAtlas",
+                const spineboy = new spine.Spine({skeleton: "spineboyData", atlas: "spineboyAtlas",
                     scale: 0.5,
                 });
 
@@ -79,11 +79,11 @@
                     // and transform it to the crosshair bone's parent root bone
                     // coordinate system via `worldToLocal()`. `position` is relative
                     // to the crosshair bone's parent bone after this
-                    crosshairBone.parent.worldToLocal(position);
+                    crosshairBone.parent.pose.worldToLocal(position);
 
                     // Set the crosshair bone's position to the mouse position
-                    crosshairBone.x = position.x;
-                    crosshairBone.y = position.y;
+                    crosshairBone.pose.x = position.x;
+                    crosshairBone.pose.y = position.y;
                 };
             })();
         </script>

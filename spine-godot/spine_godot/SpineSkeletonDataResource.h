@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,8 +23,8 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 #pragma once
@@ -82,14 +82,16 @@ private:
 	spine::SkeletonData *skeleton_data;
 	spine::AnimationStateData *animation_state_data;
 
+#ifdef TOOLS_ENABLED
+	ObjectID editor_file_system_id;
+#endif
+
 	void update_skeleton_data();
 
 #ifdef SPINE_GODOT_EXTENSION
-	void load_resources(spine::Atlas *atlas, const String &json,
-						const PackedByteArray &binary);
+	void load_resources(spine::Atlas *atlas, const String &json, const PackedByteArray &binary);
 #else
-	void load_resources(spine::Atlas *atlas, const String &json,
-						const Vector<uint8_t> &binary);
+	void load_resources(spine::Atlas *atlas, const String &json, const Vector<uint8_t> &binary);
 #endif
 
 public:
@@ -101,11 +103,12 @@ public:
 	void set_atlas_res(const Ref<SpineAtlasResource> &atlas);
 	Ref<SpineAtlasResource> get_atlas_res();
 
-	void
-	set_skeleton_file_res(const Ref<SpineSkeletonFileResource> &skeleton_file);
+	void set_skeleton_file_res(const Ref<SpineSkeletonFileResource> &skeleton_file);
 	Ref<SpineSkeletonFileResource> get_skeleton_file_res();
 
-	spine::SkeletonData *get_skeleton_data() const { return skeleton_data; }
+	spine::SkeletonData *get_skeleton_data() const {
+		return skeleton_data;
+	}
 
 	spine::AnimationStateData *get_animation_state_data() const {
 		return animation_state_data;
@@ -152,17 +155,13 @@ public:
 
 	Ref<SpineAnimation> find_animation(const String &animation_name) const;
 
-	Ref<SpineIkConstraintData>
-	find_ik_constraint(const String &constraint_name) const;
+	Ref<SpineIkConstraintData> find_ik_constraint(const String &constraint_name) const;
 
-	Ref<SpineTransformConstraintData>
-	find_transform_constraint(const String &constraint_name) const;
+	Ref<SpineTransformConstraintData> find_transform_constraint(const String &constraint_name) const;
 
-	Ref<SpinePathConstraintData>
-	find_path_constraint(const String &constraint_name) const;
+	Ref<SpinePathConstraintData> find_path_constraint(const String &constraint_name) const;
 
-	Ref<SpinePhysicsConstraintData>
-	find_physics_constraint(const String &constraint_name) const;
+	Ref<SpinePhysicsConstraintData> find_physics_constraint(const String &constraint_name) const;
 
 	String get_skeleton_name() const;
 
@@ -209,4 +208,12 @@ public:
 	float get_reference_scale() const;
 
 	void set_reference_scale(float reference_scale);
+
+#ifdef TOOLS_ENABLED
+#if VERSION_MAJOR > 3
+	void _on_resources_reimported(const PackedStringArray &resources);
+#else
+	void _on_resources_reimported(const PoolStringArray &resources);
+#endif
+#endif
 };

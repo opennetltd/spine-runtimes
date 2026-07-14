@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,8 +23,8 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 #include "SpineSkin.h"
@@ -34,9 +34,9 @@
 #include "SpineSprite.h"
 
 void SpineSkin::_bind_methods() {
-	ClassDB::bind_method(D_METHOD("set_attachment", "slot_index", "name", "attachment"), &SpineSkin::set_attachment);
-	ClassDB::bind_method(D_METHOD("get_attachment", "slot_index", "name"), &SpineSkin::get_attachment);
-	ClassDB::bind_method(D_METHOD("remove_attachment", "slot_index", "name"), &SpineSkin::remove_attachment);
+	ClassDB::bind_method(D_METHOD("set_attachment", "slot_index", "placeholder", "attachment"), &SpineSkin::set_attachment);
+	ClassDB::bind_method(D_METHOD("get_attachment", "slot_index", "placeholder"), &SpineSkin::get_attachment);
+	ClassDB::bind_method(D_METHOD("remove_attachment", "slot_index", "placeholder"), &SpineSkin::remove_attachment);
 	ClassDB::bind_method(D_METHOD("find_names_for_slot", "slot_index"), &SpineSkin::find_names_for_slot);
 	ClassDB::bind_method(D_METHOD("find_attachments_for_slot", "slot_index"), &SpineSkin::find_attachments_for_slot);
 	ClassDB::bind_method(D_METHOD("get_name"), &SpineSkin::get_name);
@@ -72,29 +72,30 @@ Ref<SpineSkin> SpineSkin::init(const String &name, SpineSprite *sprite) {
 	return this;
 }
 
-void SpineSkin::set_attachment(int slot_index, const String &name, Ref<SpineAttachment> attachment) {
+void SpineSkin::set_attachment(int slot_index, const String &placeholder, Ref<SpineAttachment> attachment) {
 	SPINE_CHECK(get_spine_object(), )
-	get_spine_object()->setAttachment(slot_index, SPINE_STRING(name), attachment.is_valid() && attachment->get_spine_owner() ? attachment->get_spine_object() : nullptr);
+	get_spine_object()->setAttachment(slot_index, SPINE_STRING(placeholder),
+									  attachment.is_valid() && attachment->get_spine_owner() ? attachment->get_spine_object() : nullptr);
 }
 
-Ref<SpineAttachment> SpineSkin::get_attachment(int slot_index, const String &name) {
+Ref<SpineAttachment> SpineSkin::get_attachment(int slot_index, const String &placeholder) {
 	SPINE_CHECK(get_spine_object(), nullptr)
-	auto attachment = get_spine_object()->getAttachment(slot_index, SPINE_STRING(name));
-	if (attachment) return nullptr;
+	auto attachment = get_spine_object()->getAttachment(slot_index, SPINE_STRING(placeholder));
+	if (!attachment) return nullptr;
 	Ref<SpineAttachment> attachment_ref(memnew(SpineAttachment));
 	attachment_ref->set_spine_object(get_spine_owner(), attachment);
 	return attachment_ref;
 }
 
-void SpineSkin::remove_attachment(int slot_index, const String &name) {
+void SpineSkin::remove_attachment(int slot_index, const String &placeholder) {
 	SPINE_CHECK(get_spine_object(), )
-	get_spine_object()->removeAttachment(slot_index, SPINE_STRING(name));
+	get_spine_object()->removeAttachment(slot_index, SPINE_STRING(placeholder));
 }
 
 Array SpineSkin::find_names_for_slot(int slot_index) {
 	Array result;
 	SPINE_CHECK(get_spine_object(), result)
-	spine::Vector<spine::String> names;
+	spine::Array<spine::String> names;
 	get_spine_object()->findNamesForSlot(slot_index, names);
 	result.resize((int) names.size());
 	for (int i = 0; i < names.size(); ++i) {
@@ -106,7 +107,7 @@ Array SpineSkin::find_names_for_slot(int slot_index) {
 Array SpineSkin::find_attachments_for_slot(int slot_index) {
 	Array result;
 	SPINE_CHECK(get_spine_object(), result)
-	spine::Vector<spine::Attachment *> attachments;
+	spine::Array<spine::Attachment *> attachments;
 	get_spine_object()->findAttachmentsForSlot(slot_index, attachments);
 	result.resize((int) attachments.size());
 	for (int i = 0; i < attachments.size(); ++i) {
@@ -123,7 +124,13 @@ Array SpineSkin::find_attachments_for_slot(int slot_index) {
 
 String SpineSkin::get_name() {
 	SPINE_CHECK(get_spine_object(), "")
-	return get_spine_object()->getName().buffer();
+	String name;
+#if (VERSION_MAJOR >= 4 && VERSION_MINOR >= 5)
+	name = String::utf8(get_spine_object()->getName().buffer());
+#else
+	name.parse_utf8(get_spine_object()->getName().buffer());
+#endif
+	return name;
 }
 
 void SpineSkin::add_skin(Ref<SpineSkin> other) {
@@ -132,7 +139,7 @@ void SpineSkin::add_skin(Ref<SpineSkin> other) {
 		ERR_PRINT("other is not a valid SpineSkin.");
 		return;
 	}
-	get_spine_object()->addSkin(other->get_spine_object());
+	get_spine_object()->addSkin(*other->get_spine_object());
 }
 
 void SpineSkin::copy_skin(Ref<SpineSkin> other) {
@@ -141,7 +148,7 @@ void SpineSkin::copy_skin(Ref<SpineSkin> other) {
 		ERR_PRINT("other is not a valid SpineSkin.");
 		return;
 	}
-	get_spine_object()->copySkin(other->get_spine_object());
+	get_spine_object()->copySkin(*other->get_spine_object());
 }
 
 Array SpineSkin::get_attachments() {
@@ -156,7 +163,7 @@ Array SpineSkin::get_attachments() {
 			attachment_ref = Ref<SpineAttachment>(memnew(SpineAttachment));
 			attachment_ref->set_spine_object(get_spine_owner(), entry._attachment);
 		}
-		entry_ref->init(entry._slotIndex, entry._name.buffer(), attachment_ref);
+		entry_ref->init(entry._slotIndex, entry._placeholder.buffer(), attachment_ref);
 		result.push_back(entry_ref);
 	}
 	return result;
@@ -165,7 +172,7 @@ Array SpineSkin::get_attachments() {
 Array SpineSkin::get_bones() {
 	Array result;
 	SPINE_CHECK(get_spine_object(), result)
-	auto bones = get_spine_object()->getBones();
+	auto &bones = get_spine_object()->getBones();
 	result.resize((int) bones.size());
 	for (int i = 0; i < bones.size(); ++i) {
 		Ref<SpineBoneData> bone_ref(memnew(SpineBoneData));
@@ -178,7 +185,7 @@ Array SpineSkin::get_bones() {
 Array SpineSkin::get_constraints() {
 	Array result;
 	SPINE_CHECK(get_spine_object(), result)
-	auto constraints = get_spine_object()->getConstraints();
+	auto &constraints = get_spine_object()->getConstraints();
 	result.resize((int) constraints.size());
 	for (int i = 0; i < constraints.size(); ++i) {
 		Ref<SpineConstraintData> constraint_ref(memnew(SpineConstraintData));

@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,12 +23,12 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 import type { ColorSource } from "@pixi/core";
-import { Shader, TextureMatrix, Color, Texture, Matrix, Program } from "@pixi/core";
+import { Color, Matrix, Program, Shader, Texture, TextureMatrix } from "@pixi/core";
 
 const vertex = `
 attribute vec2 aVertexPosition;
@@ -94,7 +94,7 @@ export class DarkTintMaterial extends Shader {
 	private _tintColor: Color;
 	private _darkTintColor: Color;
 
-	constructor(texture?: Texture) {
+	constructor (texture?: Texture) {
 		const uniforms = {
 			uSampler: texture ?? Texture.EMPTY,
 			alpha: 1,
@@ -127,10 +127,10 @@ export class DarkTintMaterial extends Shader {
 		this._colorDirty = true;
 	}
 
-	public get texture(): Texture {
+	public get texture (): Texture {
 		return this.uniforms.uSampler;
 	}
-	public set texture(value: Texture) {
+	public set texture (value: Texture) {
 		if (this.uniforms.uSampler !== value) {
 			if (!this.uniforms.uSampler.baseTexture.alphaMode !== !value.baseTexture.alphaMode) {
 				this._colorDirty = true;
@@ -141,7 +141,7 @@ export class DarkTintMaterial extends Shader {
 		}
 	}
 
-	public set alpha(value: number) {
+	public set alpha (value: number) {
 		if (value === this._alpha) {
 			return;
 		}
@@ -149,11 +149,11 @@ export class DarkTintMaterial extends Shader {
 		this._alpha = value;
 		this._colorDirty = true;
 	}
-	public get alpha(): number {
+	public get alpha (): number {
 		return this._alpha;
 	}
 
-	public set tint(value: ColorSource) {
+	public set tint (value: ColorSource) {
 		if (value === this.tint) {
 			return;
 		}
@@ -162,11 +162,11 @@ export class DarkTintMaterial extends Shader {
 		this._tintRGB = this._tintColor.toLittleEndianNumber();
 		this._colorDirty = true;
 	}
-	public get tint(): ColorSource {
-		return this._tintColor.value!;
+	public get tint (): ColorSource {
+		return this._tintColor.value as ColorSource;
 	}
 
-	public set darkTint(value: ColorSource) {
+	public set darkTint (value: ColorSource) {
 		if (value === this.darkTint) {
 			return;
 		}
@@ -175,20 +175,20 @@ export class DarkTintMaterial extends Shader {
 		this._darkTintRGB = this._darkTintColor.toLittleEndianNumber();
 		this._colorDirty = true;
 	}
-	public get darkTint(): ColorSource {
-		return this._darkTintColor.value!;
+	public get darkTint (): ColorSource {
+		return this._darkTintColor.value as ColorSource;
 	}
 
-	public get tintValue(): number {
+	public get tintValue (): number {
 		return this._tintColor.toNumber();
 	}
 
-	public get darkTintValue(): number {
+	public get darkTintValue (): number {
 		return this._darkTintColor.toNumber();
 	}
 
 	/** Gets called automatically by the Mesh. Intended to be overridden for custom {@link PIXI.MeshMaterial} objects. */
-	public update(): void {
+	public update (): void {
 		if (this._colorDirty) {
 			this._colorDirty = false;
 			Color.shared.setValue(this._tintColor).premultiply(this._alpha, true).toArray(this.uniforms.uColor);

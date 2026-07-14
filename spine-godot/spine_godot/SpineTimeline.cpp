@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,8 +23,8 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 #include "SpineTimeline.h"
@@ -35,7 +35,8 @@
 #endif
 
 void SpineTimeline::_bind_methods() {
-	ClassDB::bind_method(D_METHOD("apply", "skeleton", "last_time", "time", "events", "alpha", "blend", "direction"), &SpineTimeline::apply);
+	ClassDB::bind_method(D_METHOD("apply", "skeleton", "last_time", "time", "events", "alpha", "from_setup", "add", "out", "applied_pose"),
+						 &SpineTimeline::apply);
 	ClassDB::bind_method(D_METHOD("get_frame_entries"), &SpineTimeline::get_frame_entries);
 	ClassDB::bind_method(D_METHOD("get_frame_count"), &SpineTimeline::get_frame_count);
 	ClassDB::bind_method(D_METHOD("get_frames"), &SpineTimeline::get_frames);
@@ -44,16 +45,17 @@ void SpineTimeline::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_type"), &SpineTimeline::get_type);
 }
 
-void SpineTimeline::apply(Ref<SpineSkeleton> skeleton, float last_time, float time, Array events, float alpha,
-						  SpineConstant::MixBlend blend, SpineConstant::MixDirection direction) {
+void SpineTimeline::apply(Ref<SpineSkeleton> skeleton, float last_time, float time, Array events, float alpha, bool from_setup, bool add, bool out,
+						  bool applied_pose) {
 	SPINE_CHECK(get_spine_object(), )
 	if (!skeleton->get_spine_object()) return;
-	spine::Vector<spine::Event *> spine_events;
+	spine::Array<spine::Event *> spine_events;
 	spine_events.setSize((int) events.size(), nullptr);
 	for (int i = 0; i < events.size(); ++i) {
 		events[i] = ((Ref<SpineEvent>) spine_events[i])->get_spine_object();
 	}
-	get_spine_object()->apply(*(skeleton->get_spine_object()), last_time, time, &spine_events, alpha, (spine::MixBlend) blend, (spine::MixDirection) direction);
+	get_spine_object()->apply(*(skeleton->get_spine_object()), last_time, time, &spine_events, alpha,
+							  from_setup ? spine::MixFrom_Setup : spine::MixFrom_Current, add, out, applied_pose);
 }
 
 int SpineTimeline::get_frame_entries() {

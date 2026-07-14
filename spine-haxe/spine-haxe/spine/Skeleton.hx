@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,105 +23,148 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *****************************************************************************/
 
 package spine;
 
-import lime.math.Rectangle;
-import haxe.ds.StringMap;
+import spine.Rectangle;
 import spine.attachments.Attachment;
 import spine.attachments.ClippingAttachment;
 import spine.attachments.MeshAttachment;
-import spine.attachments.PathAttachment;
 import spine.attachments.RegionAttachment;
 
+/** Stores the current pose for a skeleton.
+ *
+ * @see https://esotericsoftware.com/spine-runtime-architecture#Instance-objects Instance objects in the Spine Runtimes Guide
+ */
 class Skeleton {
 	private static var quadTriangles:Array<Int> = [0, 1, 2, 2, 3, 0];
-	private var _data:SkeletonData;
 
-	public var bones:Array<Bone>;
-	public var slots:Array<Slot>; // Setup pose draw order.
-	public var drawOrder:Array<Slot>;
-	public var ikConstraints:Array<IkConstraint>;
-	public var transformConstraints:Array<TransformConstraint>;
-	public var pathConstraints:Array<PathConstraint>;
-	public var physicsConstraints:Array<PhysicsConstraint>;
+	/** The skeleton's setup pose data. */
+	public final data:SkeletonData;
 
-	private var _updateCache:Array<Updatable> = new Array<Updatable>();
-	private var _skin:Skin;
+	/** The skeleton's bones, sorted parent first. The root bone is always the first bone. */
+	public final bones:Array<Bone>;
 
-	public var color:Color = new Color(1, 1, 1, 1);
-	public var scaleX:Float = 1;
-	public var scaleY:Float = 1;
+	/** The skeleton's slots. */
+	public final slots:Array<Slot>; // Setup pose draw order.
+
+	/** The skeleton's draw order. Use drawOrder.appliedPose for rendering and drawOrder.pose for changing the draw order. */
+	public var drawOrder:DrawOrder;
+
+	/** The skeleton's constraints. */
+	public final constraints:Array<Constraint<Dynamic, Dynamic, Dynamic>>;
+
+	/** The skeleton's physics constraints. */
+	public final physics:Array<PhysicsConstraint>;
+
+	/** The list of bones and constraints, sorted in the order they should be updated, as computed by Skeleton.updateCache(). */
+	public final _updateCache = new Array<Dynamic>();
+
+	private final resetCache = new Array<Posed<Dynamic, Dynamic>>();
+
+	/** The skeleton's current skin. */
+	public var skin(default, set):Skin = null;
+
+	/** The color to tint all the skeleton's attachments. */
+	public final color:Color;
+
+	/** Sets the skeleton X position, which is added to the root bone worldX position.
+	 *
+	 * Bones that do not inherit translation are still affected by this property. */
 	public var x:Float = 0;
+
+	/** Sets the skeleton Y position, which is added to the root bone worldY position.
+	 *
+	 * Bones that do not inherit translation are still affected by this property. */
 	public var y:Float = 0;
+
+	/** Scales the entire skeleton on the X axis.
+	 *
+	 * Bones that do not inherit scale are still affected by this property. */
+	public var scaleX:Float = 1;
+
+	/** Scales the entire skeleton on the Y axis.
+	 *
+	 * Bones that do not inherit scale are still affected by this property. */
+	public var scaleY(get, default):Float = 1;
+
+	function get_scaleY() {
+		return scaleY * Bone.yDir;
+	}
+
+	/** Returns the skeleton's time. This is used for time-based manipulations, such as spine.PhysicsConstraint.
+	 *
+	 * See Skeleton.update(). */
 	public var time:Float = 0;
 
+	public var windX:Float = 1;
+	public var windY:Float = 0;
+	public var gravityX:Float = 0;
+	public var gravityY:Float = 1;
+
+	public var _update = 0;
+
+	/** Creates a new skeleton with the specified skeleton data. */
 	public function new(data:SkeletonData) {
-		if (data == null) {
+		if (data == null)
 			throw new SpineException("data cannot be null.");
-		}
-		_data = data;
+		this.data = data;
 
 		bones = new Array<Bone>();
 		for (boneData in data.bones) {
 			var bone:Bone;
 			if (boneData.parent == null) {
-				bone = new Bone(boneData, this, null);
+				bone = new Bone(boneData, null);
 			} else {
 				var parent:Bone = bones[boneData.parent.index];
-				bone = new Bone(boneData, this, parent);
+				bone = new Bone(boneData, parent);
 				parent.children.push(bone);
 			}
 			bones.push(bone);
 		}
 
 		slots = new Array<Slot>();
-		drawOrder = new Array<Slot>();
 		for (slotData in data.slots) {
-			var bone = bones[slotData.boneData.index];
-			var slot:Slot = new Slot(slotData, bone);
+			var slot = new Slot(slotData, this);
 			slots.push(slot);
-			drawOrder.push(slot);
+		}
+		drawOrder = new DrawOrder(slots);
+
+		physics = new Array<PhysicsConstraint>();
+		constraints = new Array<Constraint<Dynamic, Dynamic, Dynamic>>();
+		for (constraintData in data.constraints) {
+			var constraint = constraintData.create(this);
+			if (Std.isOfType(constraint, PhysicsConstraint))
+				physics.push(cast(constraint, PhysicsConstraint));
+			constraints.push(constraint);
 		}
 
-		ikConstraints = new Array<IkConstraint>();
-		for (ikConstraintData in data.ikConstraints) {
-			ikConstraints.push(new IkConstraint(ikConstraintData, this));
-		}
-
-		transformConstraints = new Array<TransformConstraint>();
-		for (transformConstraintData in data.transformConstraints) {
-			transformConstraints.push(new TransformConstraint(transformConstraintData, this));
-		}
-
-		pathConstraints = new Array<PathConstraint>();
-		for (pathConstraintData in data.pathConstraints) {
-			pathConstraints.push(new PathConstraint(pathConstraintData, this));
-		}
-
-		physicsConstraints = new Array<PhysicsConstraint>();
-		for (physicConstraintData in data.physicsConstraints) {
-			physicsConstraints.push(new PhysicsConstraint(physicConstraintData, this));
-		}
+		color = new Color(1, 1, 1, 1);
 
 		updateCache();
 	}
 
-	/** Caches information about bones and constraints. Must be called if bones, constraints, or weighted path attachments are
-	 * added or removed. */
+	/** Caches information about bones and constraints. Must be called if the Skeleton.skin is modified or if bones,
+	 * constraints, or weighted path attachments are added or removed. */
 	public function updateCache():Void {
 		_updateCache.resize(0);
+		resetCache.resize(0);
+
+		drawOrder.unconstrained();
+		for (slot in slots)
+			slot.unconstrained();
 
 		for (bone in bones) {
 			bone.sorted = bone.data.skinRequired;
 			bone.active = !bone.sorted;
+			bone.unconstrained();
 		}
 
 		if (skin != null) {
-			var skinBones:Array<BoneData> = skin.bones;
+			var skinBones = skin.bones;
 			for (i in 0...skin.bones.length) {
 				var bone:Bone = bones[skinBones[i].index];
 				do {
@@ -132,325 +175,120 @@ class Skeleton {
 			}
 		}
 
-		// IK first, lowest hierarchy depth first.
-		var ikCount:Int = ikConstraints.length;
-		var transformCount:Int = transformConstraints.length;
-		var pathCount:Int = pathConstraints.length;
-		var physicCount:Int = physicsConstraints.length;
-		var constraintCount:Int = ikCount + transformCount + pathCount + physicCount;
-
-		var continueOuter:Bool;
-		for (i in 0...constraintCount) {
-			continueOuter = false;
-			for (ikConstraint in ikConstraints) {
-				if (ikConstraint.data.order == i) {
-					sortIkConstraint(ikConstraint);
-					continueOuter = true;
-					break;
-				}
-			}
-			if (continueOuter)
-				continue;
-			for (transformConstraint in transformConstraints) {
-				if (transformConstraint.data.order == i) {
-					sortTransformConstraint(transformConstraint);
-					continueOuter = true;
-					break;
-				}
-			}
-			if (continueOuter)
-				continue;
-			for (pathConstraint in pathConstraints) {
-				if (pathConstraint.data.order == i) {
-					sortPathConstraint(pathConstraint);
-					break;
-				}
-			}
-			if (continueOuter)
-				continue;
-			for (physicConstraint in physicsConstraints) {
-				if (physicConstraint.data.order == i) {
-					sortPhysicsConstraint(physicConstraint);
-					break;
-				}
-			}
+		for (constraint in constraints)
+			constraint.unconstrained();
+		for (c in constraints) {
+			var constraint:Constraint<Dynamic, Dynamic, Dynamic> = c;
+			constraint.active = constraint.isSourceActive()
+				&& (!constraint.data.skinRequired || (skin != null && contains(skin.constraints, cast constraint.data)));
+			if (constraint.active)
+				constraint.sort(this);
 		}
 
-		for (bone in bones) {
+		for (bone in bones)
 			sortBone(bone);
+
+		var updateCache = this._updateCache;
+		var n = updateCache.length;
+		for (i in 0...n) {
+			var updatable = updateCache[i];
+			if (Std.isOfType(updatable, Bone)) {
+				var b:Bone = cast updatable;
+				updateCache[i] = b.appliedPose;
+			}
 		}
 	}
 
-	private static function contains(list:Array<ConstraintData>, element:ConstraintData):Bool {
+	private static function contains(list:Array<ConstraintData<Dynamic, Dynamic>>, element:Dynamic):Bool {
 		return list.indexOf(element) != -1;
 	}
 
-	private function sortIkConstraint(constraint:IkConstraint):Void {
-		constraint.active = constraint.target.isActive()
-			&& (!constraint.data.skinRequired || (this.skin != null && contains(this.skin.constraints, constraint.data)));
-		if (!constraint.active)
+	public function constrained(object:Posed<Dynamic, Dynamic>) {
+		if (object.pose == object.appliedPose) {
+			object.constrained();
+			resetCache.push(object);
+		}
+	}
+
+	public function sortBone(bone:Bone):Void {
+		if (bone.sorted || !bone.active)
 			return;
-
-		var target:Bone = constraint.target;
-		sortBone(target);
-
-		var constrained:Array<Bone> = constraint.bones;
-		var parent:Bone = constrained[0];
-		sortBone(parent);
-
-		if (constrained.length == 1) {
-			_updateCache.push(constraint);
-			sortReset(parent.children);
-		} else {
-			var child:Bone = constrained[constrained.length - 1];
-			sortBone(child);
-
-			_updateCache.push(constraint);
-
-			sortReset(parent.children);
-			child.sorted = true;
-		}
-
-		_updateCache.push(constraint);
-
-		sortReset(parent.children);
-		constrained[constrained.length - 1].sorted = true;
-	}
-
-	private function sortPathConstraint(constraint:PathConstraint):Void {
-		constraint.active = constraint.target.bone.isActive()
-			&& (!constraint.data.skinRequired || (this.skin != null && contains(this.skin.constraints, constraint.data)));
-		if (!constraint.active)
-			return;
-
-		var slot:Slot = constraint.target;
-		var slotIndex:Int = slot.data.index;
-		var slotBone:Bone = slot.bone;
-		if (skin != null)
-			sortPathConstraintAttachment(skin, slotIndex, slotBone);
-		if (data.defaultSkin != null && data.defaultSkin != skin) {
-			sortPathConstraintAttachment(data.defaultSkin, slotIndex, slotBone);
-		}
-		for (i in 0...data.skins.length) {
-			sortPathConstraintAttachment(data.skins[i], slotIndex, slotBone);
-		}
-
-		var attachment:Attachment = slot.attachment;
-		if (Std.isOfType(attachment, PathAttachment))
-			sortPathConstraintAttachment2(attachment, slotBone);
-
-		var constrainedBones:Array<Bone> = constraint.bones;
-		for (bone in constrainedBones) {
-			sortBone(bone);
-		}
-
-		_updateCache.push(constraint);
-
-		for (bone in constrainedBones) {
-			sortReset(bone.children);
-		}
-		for (bone in constrainedBones) {
-			bone.sorted = true;
-		}
-	}
-
-	private function sortTransformConstraint(constraint:TransformConstraint):Void {
-		constraint.active = constraint.target.isActive()
-			&& (!constraint.data.skinRequired || (this.skin != null && contains(this.skin.constraints, constraint.data)));
-		if (!constraint.active)
-			return;
-
-		sortBone(constraint.target);
-
-		var constrainedBones:Array<Bone> = constraint.bones;
-		if (constraint.data.local) {
-			for (bone in constrainedBones) {
-				sortBone(bone.parent);
-				sortBone(bone);
-			}
-		} else {
-			for (bone in constrainedBones) {
-				sortBone(bone);
-			}
-		}
-
-		_updateCache.push(constraint);
-		for (bone in constrainedBones) {
-			sortReset(bone.children);
-		}
-		for (bone in constrainedBones) {
-			bone.sorted = true;
-		}
-	}
-
-	private function sortPathConstraintAttachment(skin:Skin, slotIndex:Int, slotBone:Bone):Void {
-		var dict:StringMap<Attachment> = skin.attachments[slotIndex];
-		if (dict != null) {
-			for (attachment in dict.keyValueIterator()) {
-				sortPathConstraintAttachment2(attachment.value, slotBone);
-			}
-		}
-	}
-
-	private function sortPathConstraintAttachment2(attachment:Attachment, slotBone:Bone):Void {
-		var pathAttachment:PathAttachment = cast(attachment, PathAttachment);
-		if (pathAttachment == null)
-			return;
-		var pathBones:Array<Int> = pathAttachment.bones;
-		if (pathBones == null) {
-			sortBone(slotBone);
-		} else {
-			var i:Int = 0;
-			var n:Int = pathBones.length;
-			while (i < n) {
-				var nn:Int = pathBones[i++];
-				nn += i;
-				while (i < nn) {
-					sortBone(bones[pathBones[i++]]);
-				}
-			}
-		}
-	}
-
-	private function sortPhysicsConstraint (constraint: PhysicsConstraint) {
-		var bone:Bone = constraint.bone;
-		constraint.active = bone.active && (!constraint.data.skinRequired || (skin != null && contains(skin.constraints, constraint.data)));
-		if (!constraint.active) return;
-
-		sortBone(bone);
-
-		_updateCache.push(constraint);
-
-		sortReset(bone.children);
-		bone.sorted = true;
-	}
-
-	private function sortBone(bone:Bone):Void {
-		if (bone.sorted)
-			return;
-		var parent:Bone = bone.parent;
+		var parent = bone.parent;
 		if (parent != null)
 			sortBone(parent);
 		bone.sorted = true;
 		_updateCache.push(bone);
 	}
 
-	private function sortReset(bones:Array<Bone>):Void {
+	public function sortReset(bones:Array<Bone>):Void {
 		for (bone in bones) {
-			if (!bone.active)
-				continue;
-			if (bone.sorted)
-				sortReset(bone.children);
-			bone.sorted = false;
+			if (bone.active) {
+				if (bone.sorted)
+					sortReset(bone.children);
+				bone.sorted = false;
+			}
 		}
 	}
 
-	/** Updates the world transform for each bone and applies constraints. */
+	/** Updates the world transform for each bone and applies all constraints.
+	 *
+	 * @see https://esotericsoftware.com/spine-runtime-skeletons#World-transforms World transforms in the Spine Runtimes Guide
+	 */
 	public function updateWorldTransform(physics:Physics):Void {
-		if (physics == null) throw new SpineException("physics is undefined");
-		for (bone in bones) {
-			bone.ax = bone.x;
-			bone.ay = bone.y;
-			bone.arotation = bone.rotation;
-			bone.ascaleX = bone.scaleX;
-			bone.ascaleY = bone.scaleY;
-			bone.ashearX = bone.shearX;
-			bone.ashearY = bone.shearY;
-		}
+		_update++;
 
-		for (updatable in _updateCache) {
-			updatable.update(physics);
-		}
+		if (drawOrder.appliedPose == drawOrder.constrainedPose)
+			drawOrder.resetConstrained();
+		for (resetable in resetCache)
+			resetable.resetConstrained();
+
+		for (updatable in _updateCache)
+			updatable.update(this, physics);
 	}
 
-	public function updateWorldTransformWith(physics:Physics, parent:Bone):Void {
-		// Apply the parent bone transform to the root bone. The root bone always inherits scale, rotation and reflection.
-		var rootBone:Bone = rootBone;
-		var pa:Float = parent.a,
-			pb:Float = parent.b,
-			pc:Float = parent.c,
-			pd:Float = parent.d;
-		rootBone.worldX = pa * x + pb * y + parent.worldX;
-		rootBone.worldY = pc * x + pd * y + parent.worldY;
-
-		var rx:Float = (rootBone.rotation + rootBone.shearX) * MathUtils.degRad;
-		var ry:Float = (rootBone.rotation + 90 + rootBone.shearY) * MathUtils.degRad;
-		var la:Float = Math.cos(rx) * rootBone.scaleX;
-		var lb:Float = Math.cos(ry) * rootBone.scaleY;
-		var lc:Float = Math.sin(rx) * rootBone.scaleX;
-		var ld:Float = Math.sin(ry) * rootBone.scaleY;
-		rootBone.a = (pa * la + pb * lc) * scaleX;
-		rootBone.b = (pa * lb + pb * ld) * scaleX;
-		rootBone.c = (pc * la + pd * lc) * scaleY;
-		rootBone.d = (pc * lb + pd * ld) * scaleY;
-
-		// Update everything except root bone.
-		for (updatable in _updateCache) {
-			if (updatable != rootBone)
-				updatable.update(physics);
-		}
-	}
-
-	/** Sets the bones, constraints, and slots to their setup pose values. */
-	public function setToSetupPose():Void {
-		setBonesToSetupPose();
-		setSlotsToSetupPose();
+	/** Sets the bones, constraints, slots, and draw order to their setup pose values. */
+	public function setupPose():Void {
+		setupPoseBones();
+		setupPoseSlots();
 	}
 
 	/** Sets the bones and constraints to their setup pose values. */
-	public function setBonesToSetupPose():Void {
-		for (bone in this.bones) bone.setToSetupPose();
-		for (constraint in this.ikConstraints) constraint.setToSetupPose();
-		for (constraint in this.transformConstraints) constraint.setToSetupPose();
-		for (constraint in this.pathConstraints) constraint.setToSetupPose();
-		for (constraint in this.physicsConstraints) constraint.setToSetupPose();
+	public function setupPoseBones():Void {
+		for (bone in this.bones)
+			bone.setupPose();
+		for (constraint in this.constraints)
+			constraint.setupPose();
 	}
 
-	public function setSlotsToSetupPose():Void {
-		var i:Int = 0;
-		for (slot in slots) {
-			drawOrder[i++] = slot;
-			slot.setToSetupPose();
-		}
+	/** Sets the slots and draw order to their setup pose values. */
+	public function setupPoseSlots():Void {
+		drawOrder.setupPose();
+		for (slot in slots)
+			slot.setupPose();
 	}
 
-	public var data(get, never):SkeletonData;
-
-	private function get_data():SkeletonData {
-		return _data;
-	}
-
-	public var getUpdateCache(get, never):Array<Updatable>;
-
-	private function get_getUpdateCache():Array<Updatable> {
-		return _updateCache;
-	}
-
+	/** Returns the root bone, or null if the skeleton has no bones. */
 	public var rootBone(get, never):Bone;
 
 	private function get_rootBone():Bone {
-		if (bones.length == 0)
-			return null;
-		return bones[0];
+		return bones.length == 0 ? null : bones[0];
 	}
 
-	/** @return May be null. */
+	/** Finds a bone by comparing each bone's name. It is more efficient to cache the results of this method than to call it
+	 * repeatedly. */
 	public function findBone(boneName:String):Bone {
-		if (boneName == null) {
+		if (boneName == null)
 			throw new SpineException("boneName cannot be null.");
-		}
-		for (bone in bones) {
+		for (bone in bones)
 			if (bone.data.name == boneName)
 				return bone;
-		}
 		return null;
 	}
 
 	/** @return -1 if the bone was not found. */
 	public function findBoneIndex(boneName:String):Int {
-		if (boneName == null) {
+		if (boneName == null)
 			throw new SpineException("boneName cannot be null.");
-		}
 		var i:Int = 0;
 		for (bone in bones) {
 			if (bone.data.name == boneName)
@@ -460,20 +298,23 @@ class Skeleton {
 		return -1;
 	}
 
-	/** @return May be null. */
+	/** Finds a slot by comparing each slot's name. It is more efficient to cache the results of this method than to call it
+	 * repeatedly. */
 	public function findSlot(slotName:String):Slot {
-		if (slotName == null) {
+		if (slotName == null)
 			throw new SpineException("slotName cannot be null.");
-		}
-		for (slot in slots) {
+		for (slot in slots)
 			if (slot.data.name == slotName)
 				return slot;
-		}
 		return null;
 	}
 
+	/** The skeleton's current skin. */
 	public var skinName(get, set):String;
 
+	/** Sets a skin by name.
+	 *
+	 * See Skeleton.skin. */
 	private function set_skinName(skinName:String):String {
 		var skin:Skin = data.findSkin(skinName);
 		if (skin == null)
@@ -484,21 +325,21 @@ class Skeleton {
 
 	/** @return May be null. */
 	private function get_skinName():String {
-		return _skin == null ? null : _skin.name;
+		return skin == null ? null : skin.name;
 	}
 
-	public var skin(get, set):Skin;
-
-	private function get_skin():Skin {
-		return _skin;
-	}
-
-	/** Sets the skin used to look up attachments before looking in the {@link SkeletonData#getDefaultSkin() default skin}.
-	 * Attachments from the new skin are attached if the corresponding attachment from the old skin was attached. If there was
-	 * no old skin, each slot's setup mode attachment is attached from the new skin.
-	 * @param newSkin May be null. */
+	/** Sets the skin used to look up attachments before looking in the spine.SkeletonData default skin. If the
+	 * skin is changed, Skeleton.updateCache() is called.
+	 *
+	 * Attachments from the new skin are attached if the corresponding attachment from the old skin was attached. If there was no
+	 * old skin, each slot's setup mode attachment is attached from the new skin.
+	 *
+	 * After changing the skin, the visible attachments can be reset to those attached in the setup pose by calling
+	 * Skeleton.setSlotsToSetupPose(). Also, often spine.AnimationState.apply() is called before the next time the
+	 * skeleton is rendered to allow any attachment keys in the current animation(s) to hide or show attachments from the new
+	 * skin. */
 	private function set_skin(newSkin:Skin):Skin {
-		if (newSkin == _skin)
+		if (newSkin == skin)
 			return null;
 		if (newSkin != null) {
 			if (skin != null) {
@@ -510,51 +351,60 @@ class Skeleton {
 					if (name != null) {
 						var attachment:Attachment = newSkin.getAttachment(i, name);
 						if (attachment != null)
-							slot.attachment = attachment;
+							slot.pose.attachment = attachment;
 					}
 					i++;
 				}
 			}
 		}
-		_skin = newSkin;
+		skin = newSkin;
 		updateCache();
-		return _skin;
+		return skin;
 	}
 
-	/** @return May be null. */
-	public function getAttachmentForSlotName(slotName:String, attachmentName:String):Attachment {
-		return getAttachmentForSlotIndex(data.findSlot(slotName).index, attachmentName);
+	/** Finds an attachment by looking in the Skeleton.skin and spine.SkeletonData defaultSkin using the slot name and skin placeholder
+	 * name.
+	 *
+	 * See Skeleton.getAttachmentForSlotIndex(). */
+	public function getAttachmentForSlotName(slotName:String, placeholder:String):Attachment {
+		return getAttachmentForSlotIndex(data.findSlot(slotName).index, placeholder);
 	}
 
-	/** @return May be null. */
-	public function getAttachmentForSlotIndex(slotIndex:Int, attachmentName:String):Attachment {
-		if (attachmentName == null)
-			throw new SpineException("attachmentName cannot be null.");
+	/** Finds an attachment by looking in the Skeleton.skin and spine.SkeletonData defaultSkin using the slot index and skin
+	 * placeholder name. First the skin is checked and if the attachment was not found, the default skin is checked.
+	 *
+	 * @see https://esotericsoftware.com/spine-runtime-skins Runtime skins in the Spine Runtimes Guide
+	 */
+	public function getAttachmentForSlotIndex(slotIndex:Int, placeholder:String):Attachment {
+		if (placeholder == null)
+			throw new SpineException("placeholder cannot be null.");
 		if (skin != null) {
-			var attachment:Attachment = skin.getAttachment(slotIndex, attachmentName);
+			var attachment:Attachment = skin.getAttachment(slotIndex, placeholder);
 			if (attachment != null)
 				return attachment;
 		}
 		if (data.defaultSkin != null)
-			return data.defaultSkin.getAttachment(slotIndex, attachmentName);
+			return data.defaultSkin.getAttachment(slotIndex, placeholder);
 		return null;
 	}
 
-	/** @param attachmentName May be null. */
-	public function setAttachment(slotName:String, attachmentName:String):Void {
+	/** A convenience method to set an attachment by finding the slot with Skeleton.findSlot(), finding the attachment with
+	 * Skeleton.getAttachmentForSlotIndex(), then setting the slot's spine.Slot attachment.
+	 * @param placeholder May be null to clear the slot's attachment. */
+	public function setAttachment(slotName:String, placeholder:String):Void {
 		if (slotName == null)
 			throw new SpineException("slotName cannot be null.");
 		var i:Int = 0;
 		for (slot in slots) {
 			if (slot.data.name == slotName) {
 				var attachment:Attachment = null;
-				if (attachmentName != null) {
-					attachment = getAttachmentForSlotIndex(i, attachmentName);
+				if (placeholder != null) {
+					attachment = getAttachmentForSlotIndex(i, placeholder);
 					if (attachment == null) {
-						throw new SpineException("Attachment not found: " + attachmentName + ", for slot: " + slotName);
+						throw new SpineException("Attachment not found: " + placeholder + ", for slot: " + slotName);
 					}
 				}
-				slot.attachment = attachment;
+				slot.pose.attachment = attachment;
 				return;
 			}
 			i++;
@@ -562,106 +412,74 @@ class Skeleton {
 		throw new SpineException("Slot not found: " + slotName);
 	}
 
-	/** @return May be null. */
-	public function findIkConstraint(constraintName:String):IkConstraint {
+	public function findConstraint<T:Constraint<Dynamic, Dynamic, Dynamic>>(constraintName:String, type:Class<T>):Null<T> {
 		if (constraintName == null)
 			throw new SpineException("constraintName cannot be null.");
-		for (ikConstraint in ikConstraints) {
-			if (ikConstraint.data.name == constraintName)
-				return ikConstraint;
-		}
+		if (type == null)
+			throw new SpineException("type cannot be null.");
+		for (constraint in constraints)
+			if (Std.isOfType(constraint, type) && constraint.data.name == constraintName)
+				return Std.downcast(constraint, type);
 		return null;
-	}
-
-	/** @return May be null. */
-	public function findTransformConstraint(constraintName:String):TransformConstraint {
-		if (constraintName == null)
-			throw new SpineException("constraintName cannot be null.");
-		for (transformConstraint in transformConstraints) {
-			if (transformConstraint.data.name == constraintName)
-				return transformConstraint;
-		}
-		return null;
-	}
-
-	/** @return May be null. */
-	public function findPathConstraint(constraintName:String):PathConstraint {
-		if (constraintName == null)
-			throw new SpineException("constraintName cannot be null.");
-		for (pathConstraint in pathConstraints) {
-			if (pathConstraint.data.name == constraintName)
-				return pathConstraint;
-		}
-		return null;
-	}
-
-	/** @return May be null. */
-	public function findPhysicsConstraint(constraintName:String):PhysicsConstraint {
-		if (constraintName == null)
-			throw new SpineException("constraintName cannot be null.");
-		for (physicsConstraint in physicsConstraints) {
-			if (physicsConstraint.data.name == constraintName)
-				return physicsConstraint;
-		}
-		return null;
-	}
-
-	public function toString():String {
-		return _data.name != null ? _data.name : "Skeleton?";
 	}
 
 	private var _tempVertices = new Array<Float>();
 	private var _bounds = new Rectangle();
 
-	public function getBounds(clipper: SkeletonClipping = null):Rectangle {
-		var minX:Float = Math.POSITIVE_INFINITY;
-		var minY:Float = Math.POSITIVE_INFINITY;
-		var maxX:Float = Math.NEGATIVE_INFINITY;
-		var maxY:Float = Math.NEGATIVE_INFINITY;
-		for (slot in drawOrder) {
+	/** Returns the axis aligned bounding box (AABB) of the region and mesh attachments for the current pose. Optionally applies
+	 * clipping. */
+	public function getBounds(clipper:SkeletonClipping = null):Rectangle {
+		var minX = Math.POSITIVE_INFINITY;
+		var minY = Math.POSITIVE_INFINITY;
+		var maxX = Math.NEGATIVE_INFINITY;
+		var maxY = Math.NEGATIVE_INFINITY;
+		for (slot in drawOrder.appliedPose) {
 			var verticesLength:Int = 0;
 			var vertices:Array<Float> = null;
 			var triangles:Array<Int> = null;
-			var attachment:Attachment = slot.attachment;
-
-			if (Std.isOfType(attachment, RegionAttachment)) {
-				verticesLength = 8;
-				_tempVertices.resize(verticesLength);
-				vertices = _tempVertices;
-				cast(attachment, RegionAttachment).computeWorldVertices(slot, vertices, 0, 2);
-				triangles = Skeleton.quadTriangles;
-			} else if (Std.isOfType(attachment, MeshAttachment)) {
-				var mesh:MeshAttachment = cast(attachment, MeshAttachment);
-				verticesLength = mesh.worldVerticesLength;
-				_tempVertices.resize(verticesLength);
-				vertices = _tempVertices;
-				mesh.computeWorldVertices(slot, 0, verticesLength, vertices, 0, 2);
-				triangles = mesh.triangles;
-			} else if (Std.isOfType(attachment, ClippingAttachment) && clipper != null) {
-				clipper.clipStart(slot, cast(attachment, ClippingAttachment));
-				continue;
-			}
-
-			if (vertices != null) {
-				if (clipper != null && clipper.isClipping()) {
-					clipper.clipTriangles(vertices, triangles, triangles.length);
-					vertices = clipper.clippedVertices;
-					verticesLength = clipper.clippedVertices.length;
+			var attachment:Attachment = slot.appliedPose.attachment;
+			if (attachment != null) {
+				if (Std.isOfType(attachment, RegionAttachment)) {
+					verticesLength = 8;
+					_tempVertices.resize(verticesLength);
+					vertices = _tempVertices;
+					var region:RegionAttachment = cast(attachment, RegionAttachment);
+					region.computeWorldVertices(slot, region.getOffsets(slot.appliedPose), vertices, 0, 2);
+					triangles = Skeleton.quadTriangles;
+				} else if (Std.isOfType(attachment, MeshAttachment)) {
+					var mesh:MeshAttachment = cast(attachment, MeshAttachment);
+					verticesLength = mesh.worldVerticesLength;
+					_tempVertices.resize(verticesLength);
+					vertices = _tempVertices;
+					mesh.computeWorldVertices(this, slot, 0, verticesLength, vertices, 0, 2);
+					triangles = mesh.triangles;
+				} else if (Std.isOfType(attachment, ClippingAttachment) && clipper != null) {
+					clipper.clipEnd(slot);
+					clipper.clipStart(this, slot, cast(attachment, ClippingAttachment));
+					continue;
 				}
-				var ii:Int = 0;
-				var nn:Int = vertices.length;
-				while (ii < nn) {
-					var x:Float = vertices[ii], y:Float = vertices[ii + 1];
-					minX = Math.min(minX, x);
-					minY = Math.min(minY, y);
-					maxX = Math.max(maxX, x);
-					maxY = Math.max(maxY, y);
-					ii += 2;
+				if (vertices != null) {
+					if (clipper != null && clipper.isClipping() && clipper.clipTriangles(vertices, triangles, triangles.length)) {
+						vertices = clipper.clippedVertices;
+						verticesLength = clipper.clippedVertices.length;
+					}
+					var ii:Int = 0;
+					var nn:Int = vertices.length;
+					while (ii < nn) {
+						var x:Float = vertices[ii], y:Float = vertices[ii + 1];
+						minX = Math.min(minX, x);
+						minY = Math.min(minY, y);
+						maxX = Math.max(maxX, x);
+						maxY = Math.max(maxY, y);
+						ii += 2;
+					}
 				}
+				if (clipper != null)
+					clipper.clipEnd(slot);
 			}
-			if (clipper != null) clipper.clipEndWithSlot(slot);
 		}
-		if (clipper != null) clipper.clipEnd();
+		if (clipper != null)
+			clipper.clipEnd();
 		_bounds.x = minX;
 		_bounds.y = minY;
 		_bounds.width = maxX - minX;
@@ -669,17 +487,24 @@ class Skeleton {
 		return _bounds;
 	}
 
-	public function update (delta:Float):Void {
+	/** Increments the skeleton's Skeleton.time. */
+	public function update(delta:Float):Void {
 		time += delta;
 	}
 
-	public function physicsTranslate (x:Float, y:Float):Void {
-		for (physicsConstraint in physicsConstraints)
+	/** Calls spine.PhysicsConstraint.translate() for each physics constraint. */
+	public function physicsTranslate(x:Float, y:Float):Void {
+		for (physicsConstraint in physics)
 			physicsConstraint.translate(x, y);
 	}
 
-	public function physicsRotate (x:Float, y:Float, degrees:Float):Void {
-		for (physicsConstraint in physicsConstraints)
+	/** Calls spine.PhysicsConstraint.rotate() for each physics constraint. */
+	public function physicsRotate(x:Float, y:Float, degrees:Float):Void {
+		for (physicsConstraint in physics)
 			physicsConstraint.rotate(x, y, degrees);
+	}
+
+	public function toString():String {
+		return data.name != null ? data.name : "Skeleton?";
 	}
 }

@@ -1,31 +1,31 @@
-///
-/// Spine Runtimes License Agreement
-/// Last updated July 28, 2023. Replaces all prior versions.
-///
-/// Copyright (c) 2013-2023, Esoteric Software LLC
-///
-/// Integration of the Spine Runtimes into software or otherwise creating
-/// derivative works of the Spine Runtimes is permitted under the terms and
-/// conditions of Section 2 of the Spine Editor License Agreement:
-/// http://esotericsoftware.com/spine-editor-license
-///
-/// Otherwise, it is permitted to integrate the Spine Runtimes into software or
-/// otherwise create derivative works of the Spine Runtimes (collectively,
-/// "Products"), provided that each user of the Products must obtain their own
-/// Spine Editor license and redistribution of the Products in any form must
-/// include this license and copyright notice.
-///
-/// THE SPINE RUNTIMES ARE PROVIDED BY ESOTERIC SOFTWARE LLC "AS IS" AND ANY
-/// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-/// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-/// DISCLAIMED. IN NO EVENT SHALL ESOTERIC SOFTWARE LLC BE LIABLE FOR ANY
-/// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-/// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
-/// BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
-/// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-/// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
-/// SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-///
+//
+// Spine Runtimes License Agreement
+// Last updated April 5, 2025. Replaces all prior versions.
+//
+// Copyright (c) 2013-2025, Esoteric Software LLC
+//
+// Integration of the Spine Runtimes into software or otherwise creating
+// derivative works of the Spine Runtimes is permitted under the terms and
+// conditions of Section 2 of the Spine Editor License Agreement:
+// http://esotericsoftware.com/spine-editor-license
+//
+// Otherwise, it is permitted to integrate the Spine Runtimes into software
+// or otherwise create derivative works of the Spine Runtimes (collectively,
+// "Products"), provided that each user of the Products must obtain their own
+// Spine Editor license and redistribution of the Products in any form must
+// include this license and copyright notice.
+//
+// THE SPINE RUNTIMES ARE PROVIDED BY ESOTERIC SOFTWARE LLC "AS IS" AND ANY
+// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL ESOTERIC SOFTWARE LLC BE LIABLE FOR ANY
+// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
+// BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
+// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+// THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//
 
 import 'dart:math';
 
@@ -36,7 +36,7 @@ import 'package:flutter/material.dart';
 
 class SpineComponent extends PositionComponent {
   final BoundsProvider _boundsProvider;
-  final SkeletonDrawable _drawable;
+  final SkeletonDrawableFlutter _drawable;
   late final Bounds _bounds;
   final bool _ownsDrawable;
 
@@ -69,15 +69,17 @@ class SpineComponent extends PositionComponent {
     Iterable<Component>? children,
     int? priority,
   }) async {
-    return SpineComponent(await SkeletonDrawable.fromAsset(atlasFile, skeletonFile, bundle: bundle),
-        ownsDrawable: true,
-        boundsProvider: boundsProvider,
-        position: position,
-        scale: scale,
-        angle: angle,
-        anchor: anchor,
-        children: children,
-        priority: priority);
+    return SpineComponent(
+      await SkeletonDrawableFlutter.fromAsset(atlasFile, skeletonFile, bundle: bundle),
+      ownsDrawable: true,
+      boundsProvider: boundsProvider,
+      position: position,
+      scale: scale,
+      angle: angle,
+      anchor: anchor,
+      children: children,
+      priority: priority,
+    );
   }
 
   void dispose() {
@@ -114,11 +116,16 @@ class SimpleFlameExample extends FlameGame {
     // Load the Spineboy atlas and skeleton data from asset files
     // and create a SpineComponent from them, scaled down and
     // centered on the screen
-    spineboy = await SpineComponent.fromAssets("assets/spineboy.atlas", "assets/spineboy-pro.json",
-        scale: Vector2(0.4, 0.4), anchor: Anchor.center, position: Vector2(size.x / 2, size.y / 2));
+    spineboy = await SpineComponent.fromAssets(
+      "assets/spineboy.atlas",
+      "assets/spineboy-pro.json",
+      scale: Vector2(0.4, 0.4),
+      anchor: Anchor.center,
+      position: Vector2(size.x / 2, size.y / 2),
+    );
 
     // Set the "walk" animation on track 0 in looping mode
-    spineboy.animationState.setAnimationByName(0, "walk", true);
+    spineboy.animationState.setAnimation(0, "walk", true);
     await add(spineboy);
   }
 
@@ -130,23 +137,23 @@ class SimpleFlameExample extends FlameGame {
 }
 
 class DragonExample extends FlameGame {
-  late final Atlas cachedAtlas;
+  late final AtlasFlutter cachedAtlas;
   late final SkeletonData cachedSkeletonData;
   late final SpineComponent dragon;
 
   @override
   Future<void> onLoad() async {
-    cachedAtlas = await Atlas.fromAsset("assets/dragon.atlas");
-    cachedSkeletonData =  await SkeletonData.fromAsset(cachedAtlas, "assets/dragon-ess.skel");
-    final drawable = SkeletonDrawable(cachedAtlas, cachedSkeletonData, false);
+    cachedAtlas = await AtlasFlutter.fromAsset("assets/dragon.atlas");
+    cachedSkeletonData = await SkeletonDataFlutter.fromAsset(cachedAtlas, "assets/dragon-ess.skel");
+    final drawable = SkeletonDrawableFlutter(cachedAtlas, cachedSkeletonData, false);
     dragon = SpineComponent(
       drawable,
       scale: Vector2(0.4, 0.4),
       anchor: Anchor.center,
-      position: Vector2(size.x / 2, size.y / 2 - 150),
+      position: Vector2(size.x / 2, size.y / 2),
     );
     // Set the "walk" animation on track 0 in looping mode
-    dragon.animationState.setAnimationByName(0, "flying", true);
+    dragon.animationState.setAnimation(0, "flying", true);
     await add(dragon);
   }
 
@@ -161,25 +168,25 @@ class DragonExample extends FlameGame {
 
 class PreloadAndShareSpineDataExample extends FlameGame {
   late final SkeletonData cachedSkeletonData;
-  late final Atlas cachedAtlas;
+  late final AtlasFlutter cachedAtlas;
   late final List<SpineComponent> spineboys = [];
 
   @override
   Future<void> onLoad() async {
     // Pre-load the atlas and skeleton data once.
-    cachedAtlas = await Atlas.fromAsset("assets/spineboy.atlas");
-    cachedSkeletonData = await SkeletonData.fromAsset(cachedAtlas, "assets/spineboy-pro.skel");
+    cachedAtlas = await AtlasFlutter.fromAsset("assets/spineboy.atlas");
+    cachedSkeletonData = await SkeletonDataFlutter.fromAsset(cachedAtlas, "assets/spineboy-pro.skel");
 
     // Instantiate many spineboys from the pre-loaded data. Each SpineComponent
     // gets their own SkeletonDrawable copy derived from the cached data. The
     // SkeletonDrawable copies do not own the underlying skeleton data and atlas.
     final rng = Random();
     for (int i = 0; i < 100; i++) {
-      final drawable = SkeletonDrawable(cachedAtlas, cachedSkeletonData, false);
+      final drawable = SkeletonDrawableFlutter(cachedAtlas, cachedSkeletonData, false);
       final scale = 0.1 + rng.nextDouble() * 0.2;
       final position = Vector2(rng.nextDouble() * size.x, rng.nextDouble() * size.y);
       final spineboy = SpineComponent(drawable, scale: Vector2(scale, scale), position: position);
-      spineboy.animationState.setAnimationByName(0, "walk", true);
+      spineboy.animationState.setAnimation(0, "walk", true);
       spineboys.add(spineboy);
       await add(spineboy);
     }
@@ -205,6 +212,9 @@ class SpineFlameGameWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(appBar: AppBar(title: const Text('Flame Integration')), body: GameWidget(game: game));
+    return Scaffold(
+      appBar: AppBar(title: const Text('Flame Integration')),
+      body: GameWidget(game: game),
+    );
   }
 }

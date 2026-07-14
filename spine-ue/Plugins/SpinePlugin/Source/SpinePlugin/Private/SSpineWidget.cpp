@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,8 +23,8 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 #include "SSpineWidget.h"
@@ -46,14 +46,33 @@ static int brushNameId = 0;
 // Workaround for https://github.com/EsotericSoftware/spine-runtimes/issues/1458
 // See issue comments for more information.
 struct SpineSlateMaterialBrush : public FSlateBrush {
+	static TArray<FName> NamePool;
+	static FCriticalSection NamePoolLock;
+
 	SpineSlateMaterialBrush(class UMaterialInterface &InMaterial, const FVector2D &InImageSize)
-		: FSlateBrush(ESlateBrushDrawType::Image, FName(TEXT("None")), FMargin(0), ESlateBrushTileType::NoTile, ESlateBrushImageType::FullColor, InImageSize, FLinearColor::White, &InMaterial) {
+		: FSlateBrush(ESlateBrushDrawType::Image, FName(TEXT("None")), FMargin(0), ESlateBrushTileType::NoTile, ESlateBrushImageType::FullColor,
+					  InImageSize, FLinearColor::White, &InMaterial) {
 		// Workaround for https://github.com/EsotericSoftware/spine-runtimes/issues/2006
-		FString brushName = TEXT("spineslatebrush");
-		brushName.AppendInt(brushNameId++);
-		ResourceName = FName(brushName);
+		FScopeLock Lock(&NamePoolLock);
+
+		if (NamePool.Num() > 0) {
+			ResourceName = NamePool.Pop(false);
+		} else {
+			static uint32 NextId = 0;
+			FString brushName = TEXT("SpineSlateMatBrush");
+			brushName.AppendInt(NextId++);
+			ResourceName = FName(*brushName);
+		}
+	}
+
+	~SpineSlateMaterialBrush() {
+		FScopeLock Lock(&NamePoolLock);
+		NamePool.Add(ResourceName);
 	}
 };
+
+TArray<FName> SpineSlateMaterialBrush::NamePool;
+FCriticalSection SpineSlateMaterialBrush::NamePoolLock;
 
 void SSpineWidget::Construct(const FArguments &args) {
 }
@@ -62,11 +81,10 @@ void SSpineWidget::SetData(USpineWidget *Widget) {
 	this->widget = Widget;
 	if (widget && widget->skeleton && widget->Atlas) {
 		Skeleton *skeleton = widget->skeleton;
-		skeleton->setToSetupPose();
+		skeleton->setupPose();
 		skeleton->updateWorldTransform(Physics_None);
-		Vector<float> scratchBuffer;
 		float x, y, w, h;
-		skeleton->getBounds(x, y, w, h, scratchBuffer);
+		skeleton->getBounds(x, y, w, h);
 		boundsMin.X = x;
 		boundsMin.Y = y;
 		boundsSize.X = w;
@@ -88,8 +106,8 @@ static void setVertex(FSlateVertex *vertex, float x, float y, float u, float v, 
 	vertex->PixelSize[1] = 1;
 }
 
-int32 SSpineWidget::OnPaint(const FPaintArgs &Args, const FGeometry &AllottedGeometry, const FSlateRect &MyClippingRect, FSlateWindowElementList &OutDrawElements,
-							int32 LayerId, const FWidgetStyle &InWidgetStyle, bool bParentEnabled) const {
+int32 SSpineWidget::OnPaint(const FPaintArgs &Args, const FGeometry &AllottedGeometry, const FSlateRect &MyClippingRect,
+							FSlateWindowElementList &OutDrawElements, int32 LayerId, const FWidgetStyle &InWidgetStyle, bool bParentEnabled) const {
 
 	SSpineWidget *self = (SSpineWidget *) this;
 	UMaterialInstanceDynamic *MatNow = nullptr;
@@ -182,7 +200,9 @@ int32 SSpineWidget::OnPaint(const FPaintArgs &Args, const FGeometry &AllottedGeo
 	return LayerId;
 }
 
-void SSpineWidget::Flush(int32 LayerId, FSlateWindowElementList &OutDrawElements, const FGeometry &AllottedGeometry, int &Idx, TArray<FVector> &Vertices, TArray<int32> &Indices, TArray<FVector2D> &Uvs, TArray<FColor> &Colors, TArray<FVector> &Colors2, UMaterialInstanceDynamic *Material) {
+void SSpineWidget::Flush(int32 LayerId, FSlateWindowElementList &OutDrawElements, const FGeometry &AllottedGeometry, int &Idx,
+						 TArray<FVector> &Vertices, TArray<int32> &Indices, TArray<FVector2D> &Uvs, TArray<FColor> &Colors, TArray<FVector> &Colors2,
+						 UMaterialInstanceDynamic *Material) {
 	if (Vertices.Num() == 0) return;
 	SSpineWidget *self = (SSpineWidget *) this;
 
@@ -191,7 +211,8 @@ void SSpineWidget::Flush(int32 LayerId, FSlateWindowElementList &OutDrawElements
 	const float setupScale = sizeScale.GetMin();
 
 	for (int i = 0; i < Vertices.Num(); i++) {
-		Vertices[i] = (Vertices[i] + FVector(-boundsMin.X - boundsSize.X / 2, boundsMin.Y + boundsSize.Y / 2, 0)) * setupScale + FVector(widgetSize.X / 2, widgetSize.Y / 2, 0);
+		Vertices[i] = (Vertices[i] + FVector(-boundsMin.X - boundsSize.X / 2, boundsMin.Y + boundsSize.Y / 2, 0)) * setupScale +
+			FVector(widgetSize.X / 2, widgetSize.Y / 2, 0);
 	}
 
 	self->renderData.IndexData.SetNumUninitialized(Indices.Num());
@@ -217,7 +238,8 @@ void SSpineWidget::Flush(int32 LayerId, FSlateWindowElementList &OutDrawElements
 	}
 
 	if (renderData.RenderingResourceHandle.IsValid()) {
-		FSlateDrawElement::MakeCustomVerts(OutDrawElements, LayerId, renderData.RenderingResourceHandle, renderData.VertexData, renderData.IndexData, nullptr, 0, 0);
+		FSlateDrawElement::MakeCustomVerts(OutDrawElements, LayerId, renderData.RenderingResourceHandle, renderData.VertexData, renderData.IndexData,
+										   nullptr, 0, 0);
 	}
 
 	Vertices.SetNum(0);
@@ -248,13 +270,13 @@ void SSpineWidget::UpdateMesh(int32 LayerId, FSlateWindowElementList &OutDrawEle
 	UMaterialInstanceDynamic *lastMaterial = nullptr;
 
 	SkeletonClipping &clipper = widget->clipper;
-	Vector<float> &worldVertices = widget->worldVertices;
+	Array<float> &worldVertices = widget->worldVertices;
 
 	float depthOffset = 0;
 	unsigned short quadIndices[] = {0, 1, 2, 0, 2, 3};
 
 	for (int i = 0; i < (int) Skeleton->getSlots().size(); ++i) {
-		Vector<float> *attachmentVertices = &worldVertices;
+		Array<float> *attachmentVertices = &worldVertices;
 		unsigned short *attachmentIndices = nullptr;
 		int numVertices;
 		int numIndices;
@@ -263,45 +285,51 @@ void SSpineWidget::UpdateMesh(int32 LayerId, FSlateWindowElementList &OutDrawEle
 		attachmentColor.set(1, 1, 1, 1);
 		float *attachmentUvs = nullptr;
 
-		Slot *slot = Skeleton->getDrawOrder()[i];
+		Slot *slot = Skeleton->getDrawOrder().getAppliedPose()[i];
+		SlotPose &slotPose = slot->getAppliedPose();
 		if (!slot->getBone().isActive()) {
 			clipper.clipEnd(*slot);
 			continue;
 		}
 
-		Attachment *attachment = slot->getAttachment();
+		Attachment *attachment = slotPose.getAttachment();
 		if (!attachment) {
 			clipper.clipEnd(*slot);
 			continue;
 		}
-		if (!attachment->getRTTI().isExactly(RegionAttachment::rtti) && !attachment->getRTTI().isExactly(MeshAttachment::rtti) && !attachment->getRTTI().isExactly(ClippingAttachment::rtti)) {
+		if (!attachment->getRTTI().isExactly(RegionAttachment::rtti) && !attachment->getRTTI().isExactly(MeshAttachment::rtti) &&
+			!attachment->getRTTI().isExactly(ClippingAttachment::rtti)) {
 			clipper.clipEnd(*slot);
 			continue;
 		}
 
 		if (attachment->getRTTI().isExactly(RegionAttachment::rtti)) {
 			RegionAttachment *regionAttachment = (RegionAttachment *) attachment;
+			Sequence &sequence = regionAttachment->getSequence();
+			int sequenceIndex = sequence.resolveIndex(slotPose);
 			attachmentColor.set(regionAttachment->getColor());
 			attachmentVertices->setSize(8, 0);
-			regionAttachment->computeWorldVertices(*slot, *attachmentVertices, 0, 2);
-			attachmentAtlasRegion = (AtlasRegion *) regionAttachment->getRegion();
+			regionAttachment->computeWorldVertices(*slot, regionAttachment->getOffsets(slotPose), *attachmentVertices, 0, 2);
+			attachmentAtlasRegion = (AtlasRegion *) sequence.getRegion(sequenceIndex);
 			attachmentIndices = quadIndices;
-			attachmentUvs = regionAttachment->getUVs().buffer();
+			attachmentUvs = sequence.getUVs(sequenceIndex).buffer();
 			numVertices = 4;
 			numIndices = 6;
 		} else if (attachment->getRTTI().isExactly(MeshAttachment::rtti)) {
 			MeshAttachment *mesh = (MeshAttachment *) attachment;
+			Sequence &sequence = mesh->getSequence();
+			int sequenceIndex = sequence.resolveIndex(slotPose);
 			attachmentColor.set(mesh->getColor());
 			attachmentVertices->setSize(mesh->getWorldVerticesLength(), 0);
-			mesh->computeWorldVertices(*slot, 0, mesh->getWorldVerticesLength(), attachmentVertices->buffer(), 0, 2);
-			attachmentAtlasRegion = (AtlasRegion *) mesh->getRegion();
+			mesh->computeWorldVertices(*Skeleton, *slot, 0, mesh->getWorldVerticesLength(), attachmentVertices->buffer(), 0, 2);
+			attachmentAtlasRegion = (AtlasRegion *) sequence.getRegion(sequenceIndex);
 			attachmentIndices = mesh->getTriangles().buffer();
-			attachmentUvs = mesh->getUVs().buffer();
+			attachmentUvs = sequence.getUVs(sequenceIndex).buffer();
 			numVertices = mesh->getWorldVerticesLength() >> 1;
 			numIndices = mesh->getTriangles().size();
 		} else /* clipping */ {
 			ClippingAttachment *clip = (ClippingAttachment *) attachment;
-			clipper.clipStart(*slot, clip);
+			clipper.clipStart(*Skeleton, *slot, clip);
 			continue;
 		}
 
@@ -311,39 +339,39 @@ void SSpineWidget::UpdateMesh(int32 LayerId, FSlateWindowElementList &OutDrawEle
 		UMaterialInstanceDynamic *material = nullptr;
 		switch (slot->getData().getBlendMode()) {
 			case BlendMode_Normal:
-				if (!widget->pageToNormalBlendMaterial.Contains(attachmentAtlasRegion->page)) {
+				if (!widget->pageToNormalBlendMaterial.Contains(attachmentAtlasRegion->getPage())) {
 					clipper.clipEnd(*slot);
 					continue;
 				}
-				material = widget->pageToNormalBlendMaterial[attachmentAtlasRegion->page];
+				material = widget->pageToNormalBlendMaterial[attachmentAtlasRegion->getPage()];
 				break;
 			case BlendMode_Additive:
-				if (!widget->pageToAdditiveBlendMaterial.Contains(attachmentAtlasRegion->page)) {
+				if (!widget->pageToAdditiveBlendMaterial.Contains(attachmentAtlasRegion->getPage())) {
 					clipper.clipEnd(*slot);
 					continue;
 				}
-				material = widget->pageToAdditiveBlendMaterial[attachmentAtlasRegion->page];
+				material = widget->pageToAdditiveBlendMaterial[attachmentAtlasRegion->getPage()];
 				break;
 			case BlendMode_Multiply:
-				if (!widget->pageToMultiplyBlendMaterial.Contains(attachmentAtlasRegion->page)) {
+				if (!widget->pageToMultiplyBlendMaterial.Contains(attachmentAtlasRegion->getPage())) {
 					clipper.clipEnd(*slot);
 					continue;
 				}
-				material = widget->pageToMultiplyBlendMaterial[attachmentAtlasRegion->page];
+				material = widget->pageToMultiplyBlendMaterial[attachmentAtlasRegion->getPage()];
 				break;
 			case BlendMode_Screen:
-				if (!widget->pageToScreenBlendMaterial.Contains(attachmentAtlasRegion->page)) {
+				if (!widget->pageToScreenBlendMaterial.Contains(attachmentAtlasRegion->getPage())) {
 					clipper.clipEnd(*slot);
 					continue;
 				}
-				material = widget->pageToScreenBlendMaterial[attachmentAtlasRegion->page];
+				material = widget->pageToScreenBlendMaterial[attachmentAtlasRegion->getPage()];
 				break;
 			default:
-				if (!widget->pageToNormalBlendMaterial.Contains(attachmentAtlasRegion->page)) {
+				if (!widget->pageToNormalBlendMaterial.Contains(attachmentAtlasRegion->getPage())) {
 					clipper.clipEnd(*slot);
 					continue;
 				}
-				material = widget->pageToNormalBlendMaterial[attachmentAtlasRegion->page];
+				material = widget->pageToNormalBlendMaterial[attachmentAtlasRegion->getPage()];
 		}
 
 		if (clipper.isClipping()) {
@@ -365,14 +393,14 @@ void SSpineWidget::UpdateMesh(int32 LayerId, FSlateWindowElementList &OutDrawEle
 			idx = 0;
 		}
 
-		uint8 r = static_cast<uint8>(Skeleton->getColor().r * slot->getColor().r * attachmentColor.r * 255);
-		uint8 g = static_cast<uint8>(Skeleton->getColor().g * slot->getColor().g * attachmentColor.g * 255);
-		uint8 b = static_cast<uint8>(Skeleton->getColor().b * slot->getColor().b * attachmentColor.b * 255);
-		uint8 a = static_cast<uint8>(Skeleton->getColor().a * slot->getColor().a * attachmentColor.a * 255);
+		uint8 r = static_cast<uint8>(Skeleton->getColor().r * slot->getAppliedPose().getColor().r * attachmentColor.r * 255);
+		uint8 g = static_cast<uint8>(Skeleton->getColor().g * slot->getAppliedPose().getColor().g * attachmentColor.g * 255);
+		uint8 b = static_cast<uint8>(Skeleton->getColor().b * slot->getAppliedPose().getColor().b * attachmentColor.b * 255);
+		uint8 a = static_cast<uint8>(Skeleton->getColor().a * slot->getAppliedPose().getColor().a * attachmentColor.a * 255);
 
-		float dr = slot->hasDarkColor() ? slot->getDarkColor().r : 0.0f;
-		float dg = slot->hasDarkColor() ? slot->getDarkColor().g : 0.0f;
-		float db = slot->hasDarkColor() ? slot->getDarkColor().b : 0.0f;
+		float dr = slot->getAppliedPose().hasDarkColor() ? slot->getAppliedPose().getDarkColor().r : 0.0f;
+		float dg = slot->getAppliedPose().hasDarkColor() ? slot->getAppliedPose().getDarkColor().g : 0.0f;
+		float db = slot->getAppliedPose().hasDarkColor() ? slot->getAppliedPose().getDarkColor().b : 0.0f;
 
 		float *verticesPtr = attachmentVertices->buffer();
 		for (int j = 0; j < numVertices << 1; j += 2) {

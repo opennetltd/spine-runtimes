@@ -10,7 +10,7 @@
 
   <body>
     <script>
-      (async function () {
+      (async () => {
         var app = new PIXI.Application({
           width: window.innerWidth,
           height: window.innerHeight,
@@ -23,12 +23,12 @@
         document.body.appendChild(app.view);
 
         // Pre-load the skeleton data and atlas. You can also load .json skeleton data.
-        PIXI.Assets.add("snowglobeData", "./assets/snowglobe-pro.skel");
-        PIXI.Assets.add("snowglobeAtlas", "./assets/snowglobe-pma.atlas");
+        PIXI.Assets.add("snowglobeData", "/assets/snowglobe-pro.skel");
+        PIXI.Assets.add("snowglobeAtlas", "/assets/snowglobe-pma.atlas");
         await PIXI.Assets.load(["snowglobeData", "snowglobeAtlas"]);
 
         // Create the spine display object
-        const snowglobe = spine.Spine.from({skeleton: "snowglobeData", atlas: "snowglobeAtlas",
+        const snowglobe = new spine.Spine({skeleton: "snowglobeData", atlas: "snowglobeAtlas",
           scale: 0.25,
         });
 

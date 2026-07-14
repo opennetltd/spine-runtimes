@@ -13,6 +13,7 @@
 		76381FDB2C2EF4F10087712B /* spineboy-pma.atlas in Resources */ = {isa = PBXBuildFile; fileRef = 76381FD52C2EF4F00087712B /* spineboy-pma.atlas */; };
 		76381FDE2C2EF53A0087712B /* mix-and-match-pma.png in Resources */ = {isa = PBXBuildFile; fileRef = 76381FDC2C2EF53A0087712B /* mix-and-match-pma.png */; };
 		76381FDF2C2EF53A0087712B /* mix-and-match-pma.atlas in Resources */ = {isa = PBXBuildFile; fileRef = 76381FDD2C2EF53A0087712B /* mix-and-match-pma.atlas */; };
+		76DD66952E5DE75400963397 /* SpineiOS in Frameworks */ = {isa = PBXBuildFile; productRef = 76DD66942E5DE75400963397 /* SpineiOS */; };
 		9205FCD42C0760B1006EE07E /* SimpleAnimationViewControllerRepresentable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9205FCD32C0760B1006EE07E /* SimpleAnimationViewControllerRepresentable.swift */; };
 		920BD1162BEBC52D0050A5A9 /* spineboy-pro.skel in Resources */ = {isa = PBXBuildFile; fileRef = 920BD1122BEBC52D0050A5A9 /* spineboy-pro.skel */; };
 		920BD1182BEBC52D0050A5A9 /* spineboy-pro.json in Resources */ = {isa = PBXBuildFile; fileRef = 920BD1142BEBC52D0050A5A9 /* spineboy-pro.json */; };
@@ -25,6 +26,7 @@
 		920BD12A2BEBDCD80050A5A9 /* dragon_3.png in Resources */ = {isa = PBXBuildFile; fileRef = 920BD1232BEBDCD80050A5A9 /* dragon_3.png */; };
 		920BD12B2BEBDCD80050A5A9 /* dragon.png in Resources */ = {isa = PBXBuildFile; fileRef = 920BD1242BEBDCD80050A5A9 /* dragon.png */; };
 		920BD12C2BEBDCD80050A5A9 /* dragon.atlas in Resources */ = {isa = PBXBuildFile; fileRef = 920BD1252BEBDCD80050A5A9 /* dragon.atlas */; };
+		920BD12D2BEBDCD80050A5A9 /* dragon_6.png in Resources */ = {isa = PBXBuildFile; fileRef = 920BD12E2BEBDCD80050A5A9 /* dragon_6.png */; };
 		921C1EAF2BF609F60001A0BA /* DressUp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 921C1EAE2BF609F60001A0BA /* DressUp.swift */; };
 		921C1EBA2BF60AE90001A0BA /* mix-and-match-pro.skel in Resources */ = {isa = PBXBuildFile; fileRef = 921C1EB72BF60AE90001A0BA /* mix-and-match-pro.skel */; };
 		922839DF2BF4F7D8006DA9F6 /* AnimationStateEvents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 922839DE2BF4F7D8006DA9F6 /* AnimationStateEvents.swift */; };
@@ -33,10 +35,8 @@
 		924C0C182BCFCF21004E63F7 /* SimpleAnimation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 924C0C172BCFCF21004E63F7 /* SimpleAnimation.swift */; };
 		924C0C1A2BCFCF22004E63F7 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 924C0C192BCFCF22004E63F7 /* Assets.xcassets */; };
 		92579E772C1B0E9500FDC7D5 /* DisableRendering.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92579E762C1B0E9500FDC7D5 /* DisableRendering.swift */; };
-		925CB7E92C19BC5A00C8F47F /* Spine in Frameworks */ = {isa = PBXBuildFile; productRef = 925CB7E82C19BC5A00C8F47F /* Spine */; };
 		9270C16E2BFE356000BD25BC /* Physics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9270C16D2BFE356000BD25BC /* Physics.swift */; };
 		9270C1742BFE389600BD25BC /* celestial-circus-pro.skel in Resources */ = {isa = PBXBuildFile; fileRef = 9270C1712BFE389600BD25BC /* celestial-circus-pro.skel */; };
-		928A8CC22BCFE7DF00D9D35B /* Spine in Frameworks */ = {isa = PBXBuildFile; productRef = 928A8CC12BCFE7DF00D9D35B /* Spine */; };
 		92D7DDA82BFF3C8800EB9E3A /* DebugRendering.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92D7DDA72BFF3C8800EB9E3A /* DebugRendering.swift */; };
 		92FE93292BF4AB9600CCDF48 /* IKFollowing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92FE93282BF4AB9600CCDF48 /* IKFollowing.swift */; };
 /* End PBXBuildFile section */
@@ -60,6 +60,7 @@
 		920BD1232BEBDCD80050A5A9 /* dragon_3.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = dragon_3.png; sourceTree = "<group>"; };
 		920BD1242BEBDCD80050A5A9 /* dragon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = dragon.png; sourceTree = "<group>"; };
 		920BD1252BEBDCD80050A5A9 /* dragon.atlas */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = dragon.atlas; sourceTree = "<group>"; };
+		920BD12E2BEBDCD80050A5A9 /* dragon_6.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = dragon_6.png; sourceTree = "<group>"; };
 		921C1EAE2BF609F60001A0BA /* DressUp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DressUp.swift; sourceTree = "<group>"; };
 		921C1EB72BF60AE90001A0BA /* mix-and-match-pro.skel */ = {isa = PBXFileReference; lastKnownFileType = file; path = "mix-and-match-pro.skel"; sourceTree = "<group>"; };
 		922839DE2BF4F7D8006DA9F6 /* AnimationStateEvents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnimationStateEvents.swift; sourceTree = "<group>"; };
@@ -83,8 +84,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				925CB7E92C19BC5A00C8F47F /* Spine in Frameworks */,
-				928A8CC22BCFE7DF00D9D35B /* Spine in Frameworks */,
+				76DD66952E5DE75400963397 /* SpineiOS in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -112,6 +112,7 @@
 				920BD1232BEBDCD80050A5A9 /* dragon_3.png */,
 				920BD1242BEBDCD80050A5A9 /* dragon.png */,
 				920BD1252BEBDCD80050A5A9 /* dragon.atlas */,
+				920BD12E2BEBDCD80050A5A9 /* dragon_6.png */,
 			);
 			path = dragon;
 			sourceTree = "<group>";
@@ -212,8 +213,7 @@
 			);
 			name = "Spine iOS Example";
 			packageProductDependencies = (
-				928A8CC12BCFE7DF00D9D35B /* Spine */,
-				925CB7E82C19BC5A00C8F47F /* Spine */,
+				76DD66942E5DE75400963397 /* SpineiOS */,
 			);
 			productName = "Spine iOS Example";
 			productReference = 924C0C122BCFCF21004E63F7 /* Spine iOS Example.app */;
@@ -245,7 +245,7 @@
 			);
 			mainGroup = 924C0C092BCFCF21004E63F7;
 			packageReferences = (
-				925CB7E72C19BC5A00C8F47F /* XCLocalSwiftPackageReference "../.." */,
+				76DD668F2E5DE75400963397 /* XCLocalSwiftPackageReference "../../../spine-runtimes" */,
 			);
 			productRefGroup = 924C0C132BCFCF21004E63F7 /* Products */;
 			projectDirPath = "";
@@ -274,6 +274,7 @@
 				920BD1162BEBC52D0050A5A9 /* spineboy-pro.skel in Resources */,
 				920BD12B2BEBDCD80050A5A9 /* dragon.png in Resources */,
 				920BD1272BEBDCD80050A5A9 /* dragon_5.png in Resources */,
+				920BD12D2BEBDCD80050A5A9 /* dragon_6.png in Resources */,
 				76381FDF2C2EF53A0087712B /* mix-and-match-pma.atlas in Resources */,
 				920BD1262BEBDCD80050A5A9 /* dragon_4.png in Resources */,
 				76381FD72C2EF4F10087712B /* spineboy-pma.png in Resources */,
@@ -462,7 +463,7 @@
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OBJC_BRIDGING_HEADER = "Spine iOS Example/Spine iOS Example-Bridging-Header.h";
-				SWIFT_OBJC_INTEROP_MODE = objcxx;
+				SWIFT_OBJC_INTEROP_MODE = objc;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -506,7 +507,7 @@
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OBJC_BRIDGING_HEADER = "Spine iOS Example/Spine iOS Example-Bridging-Header.h";
-				SWIFT_OBJC_INTEROP_MODE = objcxx;
+				SWIFT_OBJC_INTEROP_MODE = objc;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -536,20 +537,16 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		925CB7E72C19BC5A00C8F47F /* XCLocalSwiftPackageReference "../.." */ = {
+		76DD668F2E5DE75400963397 /* XCLocalSwiftPackageReference "../../../spine-runtimes" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = ../..;
+			relativePath = "../../../spine-runtimes";
 		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		925CB7E82C19BC5A00C8F47F /* Spine */ = {
+		76DD66942E5DE75400963397 /* SpineiOS */ = {
 			isa = XCSwiftPackageProductDependency;
-			productName = Spine;
-		};
-		928A8CC12BCFE7DF00D9D35B /* Spine */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = Spine;
+			productName = SpineiOS;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

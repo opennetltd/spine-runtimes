@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,26 +23,25 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 #include "SpinePhysicsConstraintData.h"
+#include "SpinePhysicsConstraintPose.h"
 #include "SpineCommon.h"
 
 void SpinePhysicsConstraintData::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_bone"), &SpinePhysicsConstraintData::get_bone);
+	ClassDB::bind_method(D_METHOD("get_x"), &SpinePhysicsConstraintData::get_x);
+	ClassDB::bind_method(D_METHOD("get_y"), &SpinePhysicsConstraintData::get_y);
+	ClassDB::bind_method(D_METHOD("get_rotate"), &SpinePhysicsConstraintData::get_rotate);
 	ClassDB::bind_method(D_METHOD("get_scale_x"), &SpinePhysicsConstraintData::get_scale_x);
 	ClassDB::bind_method(D_METHOD("get_shear_x"), &SpinePhysicsConstraintData::get_shear_x);
 	ClassDB::bind_method(D_METHOD("get_limit"), &SpinePhysicsConstraintData::get_limit);
 	ClassDB::bind_method(D_METHOD("get_step"), &SpinePhysicsConstraintData::get_step);
-	ClassDB::bind_method(D_METHOD("get_inertia"), &SpinePhysicsConstraintData::get_inertia);
-	ClassDB::bind_method(D_METHOD("get_strength"), &SpinePhysicsConstraintData::get_strength);
-	ClassDB::bind_method(D_METHOD("get_damping"), &SpinePhysicsConstraintData::get_damping);
-	ClassDB::bind_method(D_METHOD("get_mass_inverse"), &SpinePhysicsConstraintData::get_mass_inverse);
-	ClassDB::bind_method(D_METHOD("get_wind"), &SpinePhysicsConstraintData::get_wind);
-	ClassDB::bind_method(D_METHOD("get_gravity"), &SpinePhysicsConstraintData::get_gravity);
-	ClassDB::bind_method(D_METHOD("get_mix"), &SpinePhysicsConstraintData::get_mix);
+	ClassDB::bind_method(D_METHOD("get_scale_y_mode"), &SpinePhysicsConstraintData::get_scale_y_mode);
+	ClassDB::bind_method(D_METHOD("set_scale_y_mode", "v"), &SpinePhysicsConstraintData::set_scale_y_mode);
 	ClassDB::bind_method(D_METHOD("is_inertia_global"), &SpinePhysicsConstraintData::is_inertia_global);
 	ClassDB::bind_method(D_METHOD("is_strength_global"), &SpinePhysicsConstraintData::is_strength_global);
 	ClassDB::bind_method(D_METHOD("is_damping_global"), &SpinePhysicsConstraintData::is_damping_global);
@@ -50,12 +49,13 @@ void SpinePhysicsConstraintData::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("is_wind_global"), &SpinePhysicsConstraintData::is_wind_global);
 	ClassDB::bind_method(D_METHOD("is_gravity_global"), &SpinePhysicsConstraintData::is_gravity_global);
 	ClassDB::bind_method(D_METHOD("is_mix_global"), &SpinePhysicsConstraintData::is_mix_global);
+	ClassDB::bind_method(D_METHOD("get_setup_pose"), &SpinePhysicsConstraintData::get_setup_pose);
 }
 
 
 Ref<SpineBoneData> SpinePhysicsConstraintData::get_bone() {
 	SPINE_CHECK(get_spine_constraint_data(), nullptr)
-	auto bone = get_spine_constraint_data()->getBone();
+	auto bone = &get_spine_constraint_data()->getBone();
 	if (!bone) return nullptr;
 	Ref<SpineBoneData> slot_ref(memnew(SpineBoneData));
 	slot_ref->set_spine_object(get_spine_owner(), bone);
@@ -82,72 +82,71 @@ float SpinePhysicsConstraintData::get_step() {
 	return get_spine_constraint_data()->getStep();
 }
 
-float SpinePhysicsConstraintData::get_inertia() {
+float SpinePhysicsConstraintData::get_x() {
 	SPINE_CHECK(get_spine_constraint_data(), 0)
-	return get_spine_constraint_data()->getInertia();
+	return get_spine_constraint_data()->getX();
 }
 
-float SpinePhysicsConstraintData::get_strength() {
-	SPINE_CHECK(get_spine_constraint_data(), 0)
-	return get_spine_constraint_data()->getStrength();
+SpineConstant::ScaleYMode SpinePhysicsConstraintData::get_scale_y_mode() {
+	SPINE_CHECK(get_spine_constraint_data(), SpineConstant::ScaleYMode_None)
+	return (SpineConstant::ScaleYMode) get_spine_constraint_data()->getScaleYMode();
 }
 
-float SpinePhysicsConstraintData::get_damping() {
-	SPINE_CHECK(get_spine_constraint_data(), 0)
-	return get_spine_constraint_data()->getDamping();
+void SpinePhysicsConstraintData::set_scale_y_mode(SpineConstant::ScaleYMode v) {
+	SPINE_CHECK(get_spine_constraint_data(), )
+	get_spine_constraint_data()->setScaleYMode((spine::ScaleYMode) v);
 }
 
-float SpinePhysicsConstraintData::get_mass_inverse() {
+float SpinePhysicsConstraintData::get_y() {
 	SPINE_CHECK(get_spine_constraint_data(), 0)
-	return get_spine_constraint_data()->getMassInverse();
+	return get_spine_constraint_data()->getY();
 }
 
-float SpinePhysicsConstraintData::get_wind() {
+float SpinePhysicsConstraintData::get_rotate() {
 	SPINE_CHECK(get_spine_constraint_data(), 0)
-	return get_spine_constraint_data()->getWind();
+	return get_spine_constraint_data()->getRotate();
 }
 
-float SpinePhysicsConstraintData::get_gravity() {
-	SPINE_CHECK(get_spine_constraint_data(), 0)
-	return get_spine_constraint_data()->getGravity();
-}
-
-float SpinePhysicsConstraintData::get_mix() {
-	SPINE_CHECK(get_spine_constraint_data(), 0)
-	return get_spine_constraint_data()->getMix();
-}
 
 bool SpinePhysicsConstraintData::is_inertia_global() {
 	SPINE_CHECK(get_spine_constraint_data(), false)
-	return get_spine_constraint_data()->isInertiaGlobal();
+	return get_spine_constraint_data()->getInertiaGlobal();
 }
 
 bool SpinePhysicsConstraintData::is_strength_global() {
 	SPINE_CHECK(get_spine_constraint_data(), false)
-	return get_spine_constraint_data()->isStrengthGlobal();
+	return get_spine_constraint_data()->getStrengthGlobal();
 }
 
 bool SpinePhysicsConstraintData::is_damping_global() {
 	SPINE_CHECK(get_spine_constraint_data(), false)
-	return get_spine_constraint_data()->isDampingGlobal();
+	return get_spine_constraint_data()->getDampingGlobal();
 }
 
 bool SpinePhysicsConstraintData::is_mass_global() {
 	SPINE_CHECK(get_spine_constraint_data(), false)
-	return get_spine_constraint_data()->isMassGlobal();
+	return get_spine_constraint_data()->getMassGlobal();
 }
 
 bool SpinePhysicsConstraintData::is_wind_global() {
 	SPINE_CHECK(get_spine_constraint_data(), false)
-	return get_spine_constraint_data()->isWindGlobal();
+	return get_spine_constraint_data()->getWindGlobal();
 }
 
 bool SpinePhysicsConstraintData::is_gravity_global() {
 	SPINE_CHECK(get_spine_constraint_data(), false)
-	return get_spine_constraint_data()->isGravityGlobal();
+	return get_spine_constraint_data()->getGravityGlobal();
 }
 
 bool SpinePhysicsConstraintData::is_mix_global() {
 	SPINE_CHECK(get_spine_constraint_data(), false)
-	return get_spine_constraint_data()->isMixGlobal();
+	return get_spine_constraint_data()->getMixGlobal();
+}
+
+Ref<SpinePhysicsConstraintPose> SpinePhysicsConstraintData::get_setup_pose() {
+	SPINE_CHECK(get_spine_object(), nullptr)
+	auto &pose = get_spine_constraint_data()->getSetupPose();
+	Ref<SpinePhysicsConstraintPose> pose_ref(memnew(SpinePhysicsConstraintPose));
+	pose_ref->set_spine_object(get_spine_owner(), &pose);
+	return pose_ref;
 }

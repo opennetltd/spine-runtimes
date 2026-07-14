@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,71 +23,56 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
+import { BonePose } from "./BonePose.js";
+import { PosedData } from "./PosedData.js";
+import type { Skeleton } from "./Skeleton.js";
 import { Color } from "./Utils.js";
 
-/** Stores the setup pose for a {@link Bone}. */
-export class BoneData {
-	/** The index of the bone in {@link Skeleton#getBones()}. */
+/** The setup pose for a bone. */
+export class BoneData extends PosedData<BonePose> {
+	/** The index of the bone in {@link Skeleton.bones}. */
 	index: number = 0;
 
-	/** The name of the bone, which is unique across all bones in the skeleton. */
-	name: string;
-
-	/** @returns May be null. */
+	/** The parent bone, or null if this bone is the root. */
 	parent: BoneData | null = null;
 
 	/** The bone's length. */
 	length: number = 0;
 
-	/** The local x translation. */
-	x = 0;
-
-	/** The local y translation. */
-	y = 0;
-
-	/** The local rotation in degrees, counter clockwise. */
-	rotation = 0;
-
-	/** The local scaleX. */
-	scaleX = 1;
-
-	/** The local scaleY. */
-	scaleY = 1;
-
-	/** The local shearX. */
-	shearX = 0;
-
-	/** The local shearX. */
-	shearY = 0;
-
-	/** The transform mode for how parent world transforms affect this bone. */
-	inherit = Inherit.Normal;
-
-	/** When true, {@link Skeleton#updateWorldTransform()} only updates this bone if the {@link Skeleton#skin} contains this
-	  * bone.
-	  * @see Skin#bones */
-	skinRequired = false;
-
+	// Nonessential.
 	/** The color of the bone as it was in Spine. Available only when nonessential data was exported. Bones are not usually
 	 * rendered at runtime. */
-	color = new Color();
+	readonly color = new Color();
 
-	/** The bone icon as it was in Spine, or null if nonessential data was not exported. */
+	/** The bone icon name as it was in Spine, or null if nonessential data was not exported. */
 	icon?: string;
+
+	/** The bone icon's display size scale, or 1 if nonessential data was not exported. */
+	iconSize = 1;
+
+	/** The bone icon's display rotation in degrees, or 0 if nonessential data was not exported. */
+	iconRotation = 0;
 
 	/** False if the bone was hidden in Spine and nonessential data was exported. Does not affect runtime rendering. */
 	visible = false;
 
 	constructor (index: number, name: string, parent: BoneData | null) {
+		super(name, new BonePose());
 		if (index < 0) throw new Error("index must be >= 0.");
 		if (!name) throw new Error("name cannot be null.");
 		this.index = index;
-		this.name = name;
 		this.parent = parent;
+	}
+
+	copy (parent: BoneData | null): BoneData {
+		const copy = new BoneData(this.index, this.name, parent);
+		copy.length = this.length;
+		copy.setupPose.set(this.setupPose);
+		return copy;
 	}
 }
 

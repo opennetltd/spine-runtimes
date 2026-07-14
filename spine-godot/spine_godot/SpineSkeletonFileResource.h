@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,8 +23,8 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 #pragma once
@@ -41,7 +41,7 @@
 #include "core/io/resource_loader.h"
 #include "core/io/resource_saver.h"
 #endif
-#include <spine/Vector.h>
+#include <spine/Array.h>
 
 class SpineSkeletonFileResource : public Resource {
 	GDCLASS(SpineSkeletonFileResource, Resource);
@@ -57,15 +57,23 @@ protected:
 #endif
 
 public:
-	bool is_binary() { return binary.size() > 0; }
+	bool is_binary() {
+		return binary.size() > 0;
+	}
 
 #ifdef SPINE_GODOT_EXTENSION
-	const PackedByteArray &get_binary() { return binary; }
+	const PackedByteArray &get_binary() {
+		return binary;
+	}
 #else
-	const Vector<uint8_t> &get_binary() { return binary; }
+	const Vector<uint8_t> &get_binary() {
+		return binary;
+	}
 #endif
 
-	const String &get_json() { return json; }
+	const String &get_json() {
+		return json;
+	}
 
 	Error load_from_file(const String &path);
 
@@ -83,7 +91,7 @@ class SpineSkeletonFileResourceFormatLoader : public ResourceFormatLoader {
 
 public:
 #ifdef SPINE_GODOT_EXTENSION
-	static void _bind_methods(){};
+	static void _bind_methods() {};
 
 	PackedStringArray _get_recognized_extensions();
 
@@ -116,7 +124,7 @@ class SpineSkeletonFileResourceFormatSaver : public ResourceFormatSaver {
 
 public:
 #ifdef SPINE_GODOT_EXTENSION
-	static void _bind_methods(){};
+	static void _bind_methods() {};
 
 	Error _save(const Ref<Resource> &resource, const String &path, uint32_t flags) override;
 

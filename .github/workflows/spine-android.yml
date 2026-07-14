@@ -2,8 +2,12 @@ name: Build spine-android
 
 on:
   push:
+    branches:
+      - '**'
     paths:
+      - '.github/workflows/spine-android.yml'
       - 'spine-android/**'
+      - 'spine-libgdx/gradle.properties'
   workflow_dispatch:
 
 jobs:
@@ -32,4 +36,4 @@ jobs:
 
     - name: Build spine-android
       working-directory: spine-android
-      run: ./gradlew publishReleasePublicationToSonaType -PossrhUsername=${{ secrets.SONATYPE_USER }} -PossrhPassword=${{ secrets.SONATYPE_PASSWORD }}
+      run: ./gradlew :spine-android:publishReleasePublicationToSonaTypeRepository -PMAVEN_USERNAME=${{ secrets.MAVEN_USERNAME }} -PMAVEN_PASSWORD=${{ secrets.MAVEN_PASSWORD }}

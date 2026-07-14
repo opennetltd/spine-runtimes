@@ -1,0 +1,39 @@
+name: Check C# Formatting
+
+on:
+  push:
+    branches:
+      - '**'
+    paths:
+      - 'spine-csharp/**'
+      - 'spine-monogame/**'
+      - 'spine-unity/**'
+      - 'formatters/.editorconfig'
+      - 'formatters/format-csharp.sh'
+      - '.github/workflows/format-check-csharp.yml'
+  workflow_dispatch:
+
+jobs:
+  check-csharp:
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install dotnet
+      uses: actions/setup-dotnet@v3
+      with:
+          dotnet-version: "8.0.x"
+
+    - name: Format C#
+      run: ./formatters/format-csharp.sh
+
+    - name: Check for changes
+      run: |
+        git add .
+        git reset .
+        git ls-files -m
+        if [[ `git ls-files -m` ]]; then
+          git diff
+          git diff > format-diff.txt
+          echo "Detected C# formatting errors!" & exit 1;
+        fi

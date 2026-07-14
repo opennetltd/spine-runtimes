@@ -1,16 +1,16 @@
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -23,15 +23,14 @@
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 package com.esotericsoftware.spine.android;
 
 import com.badlogic.gdx.graphics.g2d.TextureAtlas.AtlasRegion;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
-import com.badlogic.gdx.utils.Null;
 import com.esotericsoftware.spine.Skin;
 import com.esotericsoftware.spine.attachments.AttachmentLoader;
 import com.esotericsoftware.spine.attachments.BoundingBoxAttachment;
@@ -55,54 +54,38 @@ public class AndroidAtlasAttachmentLoader implements AttachmentLoader {
 		this.atlas = atlas;
 	}
 
-	private void loadSequence (String name, String basePath, Sequence sequence) {
+	protected void findRegions (String name, String basePath, Sequence sequence) {
 		TextureRegion[] regions = sequence.getRegions();
 		for (int i = 0, n = regions.length; i < n; i++) {
 			String path = sequence.getPath(basePath, i);
 			regions[i] = atlas.findRegion(path);
-			if (regions[i] == null) throw new RuntimeException("Region not found in atlas: " + path + " (sequence: " + name + ")");
+			if (regions[i] == null) throw new RuntimeException("Region not found in atlas: " + path + " (attachment: " + name + ")");
 		}
 	}
 
-	public RegionAttachment newRegionAttachment (Skin skin, String name, String path, @Null Sequence sequence) {
-		RegionAttachment attachment = new RegionAttachment(name);
-		if (sequence != null)
-			loadSequence(name, path, sequence);
-		else {
-			AtlasRegion region = atlas.findRegion(path);
-			if (region == null)
-				throw new RuntimeException("Region not found in atlas: " + path + " (region attachment: " + name + ")");
-			attachment.setRegion(region);
-		}
-		return attachment;
+	public RegionAttachment newRegionAttachment (Skin skin, String placeholder, String name, String path, Sequence sequence) {
+		findRegions(name, path, sequence);
+		return new RegionAttachment(name, sequence);
 	}
 
-	public MeshAttachment newMeshAttachment (Skin skin, String name, String path, @Null Sequence sequence) {
-		MeshAttachment attachment = new MeshAttachment(name);
-		if (sequence != null)
-			loadSequence(name, path, sequence);
-		else {
-			AtlasRegion region = atlas.findRegion(path);
-			if (region == null)
-				throw new RuntimeException("Region not found in atlas: " + path + " (mesh attachment: " + name + ")");
-			attachment.setRegion(region);
-		}
-		return attachment;
+	public MeshAttachment newMeshAttachment (Skin skin, String placeholder, String name, String path, Sequence sequence) {
+		findRegions(name, path, sequence);
+		return new MeshAttachment(name, sequence);
 	}
 
-	public BoundingBoxAttachment newBoundingBoxAttachment (Skin skin, String name) {
+	public BoundingBoxAttachment newBoundingBoxAttachment (Skin skin, String placeholder, String name) {
 		return new BoundingBoxAttachment(name);
 	}
 
-	public ClippingAttachment newClippingAttachment (Skin skin, String name) {
+	public ClippingAttachment newClippingAttachment (Skin skin, String placeholder, String name) {
 		return new ClippingAttachment(name);
 	}
 
-	public PathAttachment newPathAttachment (Skin skin, String name) {
+	public PathAttachment newPathAttachment (Skin skin, String placeholder, String name) {
 		return new PathAttachment(name);
 	}
 
-	public PointAttachment newPointAttachment (Skin skin, String name) {
+	public PointAttachment newPointAttachment (Skin skin, String placeholder, String name) {
 		return new PointAttachment(name);
 	}
 }
