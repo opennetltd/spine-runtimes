@@ -416,16 +416,6 @@ public class SpineRenderer: NSObject, MTKViewDelegate {
         context.draw(cgImage, in: CGRect(origin: .zero, size: size))
         return UIGraphicsGetImageFromCurrentImageContext()
     }
-
-    public func drawToEncoder(_ encoder: MTLRenderCommandEncoder, size: CGSize) {
-        guard let renderCommands = dataSource?.renderCommands(self) else { return }
-
-        self.sizeInPoints = size
-        self.viewPortSize = vector_uint2(UInt32(size.width), UInt32(size.height))
-
-        let dummyView = DummyMTKView(size: size)
-        draw(renderCommands: renderCommands, renderEncoder: encoder, in: dummyView)
-    }
 }
 
 fileprivate extension BlendMode {
