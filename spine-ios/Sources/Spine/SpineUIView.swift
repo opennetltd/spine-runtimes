@@ -224,6 +224,18 @@ public final class SpineUIView: MTKView {
             }
         }
     }
+    
+    /// Captures the current skeleton pose as a `UIImage` (with alpha) by rendering offscreen.
+    /// Safe to call during continuous on-screen rendering; does not use `currentDrawable`.
+    /// Returns `nil` if the renderer is not ready or the drawable size is zero.
+    public func snapshotImage() -> UIImage? {
+        // Ensure transform/viewport match the latest laid-out size before offscreen draw.
+        let size = drawableSize
+        if size.width > 0, size.height > 0 {
+            renderer?.mtkView(self, drawableSizeWillChange: size)
+        }
+        return renderer?.snapshotImage(pixelFormat: colorPixelFormat)
+    }
 }
 
 extension SpineUIView {

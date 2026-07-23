@@ -29,6 +29,7 @@
 
 import Foundation
 import MetalKit
+import UIKit
 import SpineShadersStructs
 import Spine
 import SpineCppLite
@@ -168,7 +169,7 @@ internal final class SpineRenderer: NSObject, MTKViewDelegate {
         }
         
         delegate?.spineRendererWillDraw(self)
-        draw(renderCommands: renderCommands, renderEncoder: renderEncoder, in: view)
+        draw(renderCommands: renderCommands, renderEncoder: renderEncoder)
         delegate?.spineRendererDidDraw(self)
         
         renderEncoder.endEncoding()
@@ -182,6 +183,60 @@ internal final class SpineRenderer: NSObject, MTKViewDelegate {
         if waitUntilCompleted {
             commandBuffer.waitUntilCompleted()
         }
+    }
+    
+    /// Renders the current skeleton pose into an offscreen texture and returns a `UIImage`.
+    /// Does not advance animation time and does not use the view's on-screen drawable, so it is
+    /// safe to call during continuous rendering (e.g. while a character is flying).
+    func snapshotImage(pixelFormat: MTLPixelFormat) -> UIImage? {
+        let width = Int(viewPortSize.x)
+        let height = Int(viewPortSize.y)
+        guard width > 0, height > 0 else { return nil }
+        
+        bufferingSemaphore.wait()
+        currentBufferIndex = (currentBufferIndex + 1) % SpineRenderer.numberOfBuffers
+        
+        guard let renderCommands = dataSource?.renderCommands(self),
+              let commandBuffer = commandQueue.makeCommandBuffer() else {
+            bufferingSemaphore.signal()
+            return nil
+        }
+        
+        let textureDescriptor = MTLTextureDescriptor.texture2DDescriptor(
+            pixelFormat: pixelFormat,
+            width: width,
+            height: height,
+            mipmapped: false
+        )
+        textureDescriptor.usage = [.renderTarget, .shaderRead]
+        textureDescriptor.storageMode = .shared
+        
+        guard let texture = device.makeTexture(descriptor: textureDescriptor) else {
+            bufferingSemaphore.signal()
+            return nil
+        }
+        
+        let passDescriptor = MTLRenderPassDescriptor()
+        passDescriptor.colorAttachments[0].texture = texture
+        passDescriptor.colorAttachments[0].loadAction = .clear
+        passDescriptor.colorAttachments[0].storeAction = .store
+        passDescriptor.colorAttachments[0].clearColor = MTLClearColorMake(0, 0, 0, 0)
+        
+        guard let renderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: passDescriptor) else {
+            bufferingSemaphore.signal()
+            return nil
+        }
+        
+        delegate?.spineRendererWillDraw(self)
+        draw(renderCommands: renderCommands, renderEncoder: renderEncoder)
+        delegate?.spineRendererDidDraw(self)
+        renderEncoder.endEncoding()
+        
+        commandBuffer.commit()
+        commandBuffer.waitUntilCompleted()
+        bufferingSemaphore.signal()
+        
+        return Self.makeUIImage(from: texture)
     }
     
     private func setTransform(bounds: CGRect, mode: Spine.ContentMode, alignment: Spine.Alignment) {
@@ -230,7 +285,7 @@ internal final class SpineRenderer: NSObject, MTKViewDelegate {
         delegate?.spineRendererDidUpdate(self)
     }
         
-    private func draw(renderCommands: [RenderCommand], renderEncoder: MTLRenderCommandEncoder, in view: MTKView) {
+    private func draw(renderCommands: [RenderCommand], renderEncoder: MTLRenderCommandEncoder) {
         let allVertices = renderCommands.map { renderCommand in
             Array(renderCommand.getVertices())
         }
@@ -314,6 +369,51 @@ internal final class SpineRenderer: NSObject, MTKViewDelegate {
         buffers = (0 ..< SpineRenderer.numberOfBuffers).map { _ in
             device.makeBuffer(length: size, options: .storageModeShared)!
         }
+    }
+    
+    private static func makeUIImage(from texture: MTLTexture) -> UIImage? {
+        let width = texture.width
+        let height = texture.height
+        let bytesPerPixel = 4
+        let bytesPerRow = bytesPerPixel * width
+        var rawData = [UInt8](repeating: 0, count: bytesPerRow * height)
+        texture.getBytes(
+            &rawData,
+            bytesPerRow: bytesPerRow,
+            from: MTLRegionMake2D(0, 0, width, height),
+            mipmapLevel: 0
+        )
+        
+        guard let provider = CGDataProvider(data: Data(rawData) as CFData),
+              let cgImage = CGImage(
+                width: width,
+                height: height,
+                bitsPerComponent: 8,
+                bitsPerPixel: 32,
+                bytesPerRow: bytesPerRow,
+                space: CGColorSpaceCreateDeviceRGB(),
+                bitmapInfo: CGBitmapInfo.byteOrder32Little.union(
+                    .init(rawValue: CGImageAlphaInfo.premultipliedFirst.rawValue)
+                ),
+                provider: provider,
+                decode: nil,
+                shouldInterpolate: false,
+                intent: .defaultIntent
+              ) else {
+            return nil
+        }
+        
+        // Metal textures are origin-bottom-left; flip for UIKit.
+        let size = CGSize(width: width, height: height)
+        UIGraphicsBeginImageContextWithOptions(size, false, 1)
+        defer { UIGraphicsEndImageContext() }
+        guard let context = UIGraphicsGetCurrentContext() else {
+            return UIImage(cgImage: cgImage)
+        }
+        context.translateBy(x: 0, y: CGFloat(height))
+        context.scaleBy(x: 1, y: -1)
+        context.draw(cgImage, in: CGRect(origin: .zero, size: size))
+        return UIGraphicsGetImageFromCurrentImageContext()
     }
 }
 
