@@ -46,11 +46,12 @@ protocol SpineRendererDelegate: AnyObject {
 }
 
 protocol SpineRendererDataSource: AnyObject {
+    var skeletonDrawable: SkeletonDrawableWrapper { get }
     func isPlaying(_ spineRenderer: SpineRenderer) -> Bool
     func renderCommands(_ spineRenderer: SpineRenderer) -> [RenderCommand]
 }
 
-internal final class SpineRenderer: NSObject, MTKViewDelegate {
+public class SpineRenderer: NSObject, MTKViewDelegate {
     
     private let device: MTLDevice
     private let textures: [MTLTexture]
@@ -77,7 +78,7 @@ internal final class SpineRenderer: NSObject, MTKViewDelegate {
     weak var dataSource: SpineRendererDataSource?
     weak var delegate: SpineRendererDelegate?
     
-    internal init(
+    init(
         device: MTLDevice,
         commandQueue: MTLCommandQueue,
         pixelFormat: MTLPixelFormat,
@@ -132,7 +133,7 @@ internal final class SpineRenderer: NSObject, MTKViewDelegate {
         increaseBuffersSize(to: SpineRenderer.defaultBufferSize)
     }
     
-    func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
+    public func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
         guard let spineView = view as? SpineUIView else { return }
         
         sizeInPoints = CGSize(width: size.width / UIScreen.main.scale, height: size.height / UIScreen.main.scale)
@@ -144,7 +145,7 @@ internal final class SpineRenderer: NSObject, MTKViewDelegate {
         )
     }
     
-    func draw(in view: MTKView) {
+    public func draw(in view: MTKView) {
         guard dataSource?.isPlaying(self) ?? false else {
             lastDraw = CACurrentMediaTime()
             return
@@ -415,6 +416,16 @@ internal final class SpineRenderer: NSObject, MTKViewDelegate {
         context.draw(cgImage, in: CGRect(origin: .zero, size: size))
         return UIGraphicsGetImageFromCurrentImageContext()
     }
+
+    public func drawToEncoder(_ encoder: MTLRenderCommandEncoder, size: CGSize) {
+        guard let renderCommands = dataSource?.renderCommands(self) else { return }
+
+        self.sizeInPoints = size
+        self.viewPortSize = vector_uint2(UInt32(size.width), UInt32(size.height))
+
+        let dummyView = DummyMTKView(size: size)
+        draw(renderCommands: renderCommands, renderEncoder: encoder, in: dummyView)
+    }
 }
 
 fileprivate extension BlendMode {
@@ -490,4 +501,15 @@ fileprivate extension MTLRenderPipelineColorAttachmentDescriptor {
 		destinationRGBBlendFactor = blendMode.destinationRGBBlendFactor
 		destinationAlphaBlendFactor = blendMode.destinationAlphaBlendFactor
 	}
+}
+
+class DummyMTKView: MTKView {
+    init(size: CGSize) {
+        super.init(frame: .zero, device: MTLCreateSystemDefaultDevice())
+        self.drawableSize = size
+    }
+
+    required init(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
 }
